@@ -27,7 +27,7 @@ const DashboardCards = ({ dynamicStats = [] }) => {
         const IconComponent = iconMap[stat.icon] || LightbulbIcon;
         const isUp = stat.trend === 'up';
         return (
-          <Grid item xs={12} sm={6} lg={3} key={stat.id}>
+          <Grid xs={12} sm={6} lg={3} key={stat.id}>
             <Card
               sx={{
                 borderRadius: 3,

@@ -153,6 +153,7 @@ export const formStore = {
               formId: s.form?._id || s.form,
               formTitle: s.form?.title || 'Unknown Form',
               answers: s.answers || {},
+              formData: s.formData || {},
               formVersion: s.formVersion || {},
               parsedTitle: parsed.title,
               employeeName: parsed.employeeName,
@@ -162,11 +163,29 @@ export const formStore = {
               benefits: parsed.benefits,
               rmValue: parsed.rmValue,
               hodValue: parsed.hodValue,
+              rmEmail: parsed.rmEmail,
+              rmName: parsed.rmName,
+              hodEmail: parsed.hodEmail,
+              hodName: parsed.hodName,
+              budget: parsed.budget,
               submitterEmail: s.submitterEmail || '',
-              status: s.status.toLowerCase(), // 'new', 'reviewing', 'approved', 'rejected'
+              status: s.status.toLowerCase(),
+              businessId: parsed.businessId,
+              trackingId: s.trackingId || '',
+              submissionType: parsed.submissionType,
               createdAt: s.createdAt,
               updatedAt: s.updatedAt,
               attachments: s.attachments || [],
+              timeline: s.timeline || [],
+              workflow: s.workflow || {},
+              projectDetails: parsed.projectDetails || {
+                owner: null,
+                implementationStatus: 'Approved',
+                progressPercentage: 0,
+                updates: [],
+                expectedBenefits: '',
+                actualBenefits: ''
+              },
             };
           });
         }
@@ -468,6 +487,22 @@ export const formStore = {
       }
     } catch (err) {
       console.error('Failed to update submission status:', err);
+      throw err;
+    }
+  },
+
+  async updateProjectDetails(id, details){
+    try {
+      const res = await api.patch(`/admin/submissions/${id}/project-details`, details);
+      if (res.data && res.data.success) {
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          projectDetails: res.data.data.submission.projectDetails
+        } : s);
+        notify();
+      }
+    } catch (err) {
+      console.error('Failed to update project details:', err);
       throw err;
     }
   },

@@ -111,30 +111,34 @@ exports.submitReview = async (req, res, next) => {
     if (decision === 'APPROVED') {
       submission.status = 'EVALUATION';
       submission.timeline.push({
-        event: 'RM Approved',
-        actor: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+        stage: 'RM Approved',
+        actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+        role: 'Reporting Manager',
         remarks: remarks || 'Reporting Manager approved the proposal.',
         timestamp: new Date()
       });
       submission.timeline.push({
-        event: 'Evaluation Started',
-        actor: 'System',
+        stage: 'Evaluation Started',
+        actionBy: 'System',
+        role: 'System',
         remarks: 'Proposal moved to Evaluation Committee queue.',
         timestamp: new Date()
       });
     } else if (decision === 'REJECTED') {
       submission.status = 'REJECTED';
       submission.timeline.push({
-        event: 'RM Rejected',
-        actor: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+        stage: 'RM Rejected',
+        actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+        role: 'Reporting Manager',
         remarks: remarks || 'Reporting Manager rejected the proposal.',
         timestamp: new Date()
       });
     } else if (decision === 'CLARIFICATION') {
       submission.status = 'REVIEWING'; // Send back to initial review queue
       submission.timeline.push({
-        event: 'RM Clarification Requested',
-        actor: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+        stage: 'RM Clarification Requested',
+        actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+        role: 'Reporting Manager',
         remarks: remarks || 'Reporting Manager requested clarification.',
         timestamp: new Date()
       });
@@ -149,7 +153,7 @@ exports.submitReview = async (req, res, next) => {
       resource: 'Submission',
       details: {
         submissionId: submission._id,
-        stage: isRmReview ? 'RM' : 'HOD',
+        stage: 'RM',
         decision,
         remarks
       },
@@ -157,7 +161,114 @@ exports.submitReview = async (req, res, next) => {
       userAgent: req.headers['user-agent'],
     }).catch(err => console.error("AuditLog save failed (might need valid user ID): ", err));
 
-    res.status(200).json(new ApiResponse(200, { success: true, status: submission.status }, 'Review submitted successfully'));
+    res.status(200).json(new ApiResponse(200, { submission }, 'Review submitted successfully'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Get all submissions for an RM batch review
+// @route   GET /api/v1/public/submissions/rm-batch/:token
+// @access  Public
+exports.getRmBatch = async (req, res, next) => {
+  try {
+    const submissions = await Submission.find({ 'workflow.rmMasterToken': req.params.token })
+      .populate('form', 'title description')
+      .populate('formVersion', 'schema');
+
+    if (!submissions || submissions.length === 0) {
+      return next(new ApiError(404, 'Batch not found or link expired'));
+    }
+
+    res.status(200).json(new ApiResponse(200, { submissions }, 'RM batch retrieved successfully'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Submit reviews for an RM batch
+// @route   POST /api/v1/public/submissions/rm-batch/:token
+// @access  Public
+exports.submitRmBatch = async (req, res, next) => {
+  try {
+    const { reviews } = req.body; // reviews: { [submissionId]: { decision, remarks } }
+    
+    if (!reviews || typeof reviews !== 'object') {
+      return next(new ApiError(400, 'Invalid reviews format'));
+    }
+
+    const submissions = await Submission.find({ 'workflow.rmMasterToken': req.params.token });
+    
+    if (!submissions || submissions.length === 0) {
+      return next(new ApiError(404, 'Batch not found or link expired'));
+    }
+
+    for (const submission of submissions) {
+      const reviewData = reviews[submission._id.toString()];
+      if (!reviewData || !reviewData.decision) continue;
+
+      const { decision, remarks } = reviewData;
+      
+      if (!submission.workflow) submission.workflow = {};
+      if (!submission.workflow.rmReview) submission.workflow.rmReview = {};
+
+      let reviewerName = 'Manager';
+      let reviewerEmail = 'RM';
+      if (submission.answers) {
+        reviewerName = submission.answers.managerName || submission.answers.reportingManagerName || submission.answers.rmName || '';
+        reviewerEmail = submission.answers.managerEmail || submission.answers.reportingManagerEmail || submission.answers.rmEmail || '';
+      }
+
+      submission.workflow.rmReview.decision = decision;
+      submission.workflow.rmReview.remarks = remarks;
+      submission.workflow.rmReview.reviewerEmail = reviewerEmail;
+      submission.workflow.rmReview.reviewerName = reviewerName;
+      submission.workflow.rmReview.timestamp = new Date();
+      
+      if (decision === 'APPROVED') {
+        submission.status = 'EVALUATION';
+        submission.timeline.push({
+          stage: 'RM Approved',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
+          remarks: remarks || 'Reporting Manager approved the proposal.',
+          timestamp: new Date()
+        });
+        submission.timeline.push({
+          stage: 'Evaluation Started',
+          actionBy: 'System',
+          role: 'System',
+          remarks: 'Proposal moved to Evaluation Committee queue.',
+          timestamp: new Date()
+        });
+      } else if (decision === 'REJECTED') {
+        submission.status = 'REJECTED';
+        submission.timeline.push({
+          stage: 'RM Rejected',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
+          remarks: remarks || 'Reporting Manager rejected the proposal.',
+          timestamp: new Date()
+        });
+      } else if (decision === 'CLARIFICATION') {
+        submission.status = 'REVIEWING';
+        submission.timeline.push({
+          stage: 'RM Clarification Requested',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
+          remarks: remarks || 'Reporting Manager requested clarification.',
+          timestamp: new Date()
+        });
+      }
+      
+      // Optionally remove the token so they can't review again
+      submission.workflow.rmMasterToken = null;
+      submission.workflow.rmReviewToken = null;
+
+      await submission.save();
+    }
+
+    res.status(200).json(new ApiResponse(200, null, 'Batch reviews submitted successfully'));
   } catch (err) {
     next(err);
   }

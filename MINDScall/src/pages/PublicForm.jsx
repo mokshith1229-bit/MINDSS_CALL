@@ -5,7 +5,7 @@ import {
   FormControl, Select, MenuItem, RadioGroup, FormControlLabel,
   Radio, Stepper, Step, StepLabel, Snackbar, Alert,
   Grid, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
-  List, ListItem, ListItemIcon, ListItemText, IconButton, Container, Divider
+  List, ListItem, ListItemIcon, ListItemText, IconButton, Container, Divider, Fade
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -183,6 +183,7 @@ const PublicForm = () => {
   const [errors, setErrors] = useState({});
   const [snack, setSnack] = useState({ open: false, msg: '', type: 'info' });
   const [submitted, setSubmitted] = useState(false);
+  const [trackingId, setTrackingId] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const subDepts = formData.department ? (SUB_DEPARTMENTS[formData.department] || []) : [];
@@ -256,6 +257,10 @@ const PublicForm = () => {
         });
 
         if (res.ok) {
+          const data = await res.json();
+          if (data.data?.trackingId) {
+            setTrackingId(data.data.trackingId);
+          }
           setPreviewOpen(false);
           setSubmitted(true);
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -275,8 +280,22 @@ const PublicForm = () => {
         <Card sx={{ maxWidth: 500, p: 5, textAlign: 'center', borderRadius: 2, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
           <CheckIcon sx={{ fontSize: 64, color: '#107C10', mb: 2 }} />
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, color: '#323130' }}>Submission Successful</Typography>
-          <Typography variant="body1" sx={{ color: '#605E5C', mb: 4 }}>Thank you for submitting your {formData.submissionType || 'idea'}. A confirmation email has been sent to you.</Typography>
-          <MsButton variant="contained" onClick={() => window.location.reload()} size="large" sx={{ bgcolor: '#0078D4', '&:hover': { bgcolor: '#106EBE' } }}>Submit Another</MsButton>
+          
+          {trackingId && (
+            <Box sx={{ my: 3, p: 2, bgcolor: '#F3F9FD', borderRadius: 1, border: '1px dashed #0078D4' }}>
+              <Typography variant="body2" sx={{ color: '#605E5C', mb: 0.5 }}>Your Tracking ID</Typography>
+              <Typography variant="h6" sx={{ color: '#0078D4', fontWeight: 700, letterSpacing: 1 }}>{trackingId}</Typography>
+            </Box>
+          )}
+
+          <Typography variant="body1" sx={{ color: '#605E5C', mb: 4 }}>
+            Thank you for submitting your {formData.submissionType || 'idea'}. A confirmation email has been sent to you.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <MsButton variant="outlined" onClick={() => window.location.href='/track'} size="large" sx={{ borderColor: '#0078D4', color: '#0078D4', '&:hover': { bgcolor: '#F3F9FD' } }}>Track Status</MsButton>
+            <MsButton variant="contained" onClick={() => window.location.reload()} size="large" sx={{ bgcolor: '#0078D4', '&:hover': { bgcolor: '#106EBE' } }}>Submit Another</MsButton>
+          </Box>
         </Card>
       </Box>
     );
@@ -320,6 +339,7 @@ const PublicForm = () => {
               <CardContent sx={{ p: { xs: 3, md: 4 }, minHeight: 400, bgcolor: '#ffffff' }}>
                 {/* Step 1 */}
                 {activeStep === 0 && (
+                  <Fade in={true} timeout={300}>
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 3, color: '#323130' }}>What type of submission is this? <span style={{ color: '#d13438' }}>*</span></Typography>
                     <Grid container spacing={3}>
@@ -359,10 +379,12 @@ const PublicForm = () => {
                     </Grid>
                     {errors.submissionType && <Typography color="error" variant="caption" sx={{ display: 'block', mt: 2 }}>{errors.submissionType}</Typography>}
                   </Box>
+                  </Fade>
                 )}
 
                 {/* Step 2 */}
                 {activeStep === 1 && (
+                  <Fade in={true} timeout={300}>
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#323130' }}>Employee Name <span style={{ color: '#d13438' }}>*</span></Typography>
@@ -370,17 +392,19 @@ const PublicForm = () => {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#323130' }}>Date of Birth <span style={{ color: '#d13438' }}>*</span></Typography>
-                      <MsTextField fullWidth type="date" value={formData.dob} onChange={e => handleChange('dob', e.target.value)} error={!!errors.dob} helperText={errors.dob} InputLabelProps={{ shrink: true }} />
+                      <MsTextField fullWidth type="date" value={formData.dob} onChange={e => handleChange('dob', e.target.value)} error={!!errors.dob} helperText={errors.dob} InputLabelProps={{ shrink: true }} inputProps={{ max: new Date().toISOString().split('T')[0] }} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#323130' }}>Employee Code <span style={{ color: '#d13438' }}>*</span></Typography>
                       <MsTextField fullWidth placeholder="e.g. EMP-1029" value={formData.employeeCode} onChange={e => handleChange('employeeCode', e.target.value)} error={!!errors.employeeCode} helperText={errors.employeeCode} />
                     </Grid>
                   </Grid>
+                  </Fade>
                 )}
 
                 {/* Step 3 */}
                 {activeStep === 2 && (
+                  <Fade in={true} timeout={300}>
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#323130' }}>Department <span style={{ color: '#d13438' }}>*</span></Typography>
@@ -413,10 +437,12 @@ const PublicForm = () => {
                       </FormControl>
                     </Grid>
                   </Grid>
+                  </Fade>
                 )}
 
                 {/* Step 4 */}
                 {activeStep === 3 && (
+                  <Fade in={true} timeout={300}>
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: '#323130' }}>Classification <span style={{ color: '#d13438' }}>*</span></Typography>
                     <FormControl component="fieldset" error={!!errors.classification} sx={{ width: '100%' }}>
@@ -434,10 +460,12 @@ const PublicForm = () => {
                       {errors.classification && <Typography color="error" variant="caption" sx={{ mt: 1 }}>{errors.classification}</Typography>}
                     </FormControl>
                   </Box>
+                  </Fade>
                 )}
 
                 {/* Step 5 */}
                 {activeStep === 4 && (
+                  <Fade in={true} timeout={300}>
                   <Grid container spacing={4}>
                     <Grid item xs={12} md={6}>
                       <Box sx={{ p: 3, bgcolor: '#FAFAFA', borderRadius: 1, border: '1px solid #EDEBE9' }}>
@@ -458,10 +486,12 @@ const PublicForm = () => {
                       </Box>
                     </Grid>
                   </Grid>
+                  </Fade>
                 )}
 
                 {/* Step 6 */}
                 {activeStep === 5 && (
+                  <Fade in={true} timeout={300}>
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#323130' }}>Title <span style={{ color: '#d13438' }}>*</span></Typography>
@@ -480,14 +510,17 @@ const PublicForm = () => {
                       <MsTextField fullWidth multiline rows={8} placeholder="Write your abstract here..." value={formData.abstract} onChange={e => handleChange('abstract', e.target.value)} error={!!errors.abstract} helperText={errors.abstract} />
                     </Grid>
                   </Grid>
+                  </Fade>
                 )}
 
                 {/* Step 7 */}
                 {activeStep === 6 && (
+                  <Fade in={true} timeout={300}>
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: '#323130' }}>Supporting Documents (Optional)</Typography>
                     <FileZone files={files} setFiles={setFiles} />
                   </Box>
+                  </Fade>
                 )}
 
               </CardContent>

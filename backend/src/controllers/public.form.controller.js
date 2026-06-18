@@ -4,6 +4,8 @@ const Submission = require('../models/Submission.model');
 const Counter = require('../models/Counter.model');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
+const crypto = require('crypto');
+const sendEmail = require('../utils/emailSender');
 
 // @desc    Get form schema for public access
 // @route   GET /api/v1/public/forms/:slug
@@ -78,24 +80,146 @@ exports.submitForm = async (req, res, next) => {
     );
     const businessId = `${counterId}-${String(counter.seq).padStart(3, '0')}`;
 
+    // Generate random tracking ID
+    const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 chars
+    const trackingPrefix = submissionType === 'Proposal' ? 'MCP' : 'MCI';
+    const trackingId = `${trackingPrefix}-${randomHex}`;
+
+    // Build formData with labels from schema for downstream modules
+    const formData = {};
+    if (activeVersion.schema && Array.isArray(activeVersion.schema)) {
+      for (const section of activeVersion.schema) {
+        if (section.fields && Array.isArray(section.fields)) {
+          for (const field of section.fields) {
+            // Try matching by field ID first, then by label (camelCase)
+            const labelKey = field.label ? field.label.replace(/\s+/g, '') : '';
+            const labelCamel = labelKey.charAt(0).toLowerCase() + labelKey.slice(1);
+            const val = parsedAnswers[field.id] ?? parsedAnswers[field.label] ?? parsedAnswers[labelCamel] ?? null;
+            if (val !== null && val !== undefined && val !== '') {
+              formData[field.label] = {
+                fieldId: field.id,
+                value: val,
+                type: field.type || 'text',
+                section: section.title || ''
+              };
+            }
+          }
+        }
+      }
+    }
+
     const submission = await Submission.create({
       form: form._id,
       formVersion: activeVersion._id,
       businessId,
+      trackingId,
       submissionType,
       answers: parsedAnswers,
+      formData,
       submitterEmail: submitterEmail || '',
       attachments: files,
       timeline: [
         {
-          event: 'Submitted',
-          actor: submitterEmail || parsedAnswers.name || parsedAnswers.fullName || 'Employee',
+          stage: 'Submission Created',
+          actionBy: submitterEmail || parsedAnswers.name || parsedAnswers.fullName || 'Employee',
+          role: 'Submitter',
           remarks: 'Proposal submitted successfully.'
         }
       ]
     });
 
-    res.status(201).json(new ApiResponse(201, { submissionId: submission._id }, 'Submission successful'));
+    // Send confirmation email if submitterEmail is provided
+    if (submitterEmail) {
+      const emailHtml = `
+        <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+          <h3 style="color: #1976D2;">MINDScall Submission Received</h3>
+          <p>Dear ${parsedAnswers.name || parsedAnswers.fullName || 'Submitter'},</p>
+          <p>Thank you for your ${submissionType.toLowerCase()} submission.</p>
+          <p>Your tracking ID is: <b>${trackingId}</b></p>
+          <p>You can track the progress of your submission at any time using the Public Tracking Portal.</p>
+          <div style="margin: 25px 0;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/track" style="padding: 12px 24px; background-color: #2E7D32; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Track Submission</a>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #eee;" />
+          <p style="color: #888;"><small>Best regards,<br>CubeTech Innovation Team</small></p>
+        </div>
+      `;
+      await sendEmail({
+        email: submitterEmail,
+        subject: `Submission Received: ${trackingId}`,
+        html: emailHtml
+      }).catch(err => console.error('Failed to send submission confirmation email:', err));
+    }
+
+    res.status(201).json(new ApiResponse(201, { submissionId: submission._id, trackingId }, 'Submission successful'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Track a submission by tracking ID
+// @route   GET /api/v1/public/track/:trackingId
+// @access  Public
+exports.trackSubmission = async (req, res, next) => {
+  try {
+    const { trackingId } = req.params;
+
+    const submission = await Submission.findOne({ trackingId }).lean();
+    
+    if (!submission) {
+      return next(new ApiError(404, 'No submission found with this Tracking ID'));
+    }
+
+    // Expose only necessary fields, hide ObjectIDs and sensitive info
+    const safeData = {
+      trackingId: submission.trackingId,
+      title: submission.answers?.title || submission.answers?.proposaltitle || submission.answers?.IdeaTitle || 'Untitled',
+      submissionType: submission.submissionType,
+      status: submission.status,
+      createdAt: submission.createdAt,
+      timeline: submission.timeline.map(t => ({
+        stage: t.stage,
+        actionBy: t.actionBy,
+        role: t.role,
+        remarks: t.remarks,
+        timestamp: t.timestamp
+      })),
+      workflow: {
+        rmReview: submission.workflow?.rmReview ? {
+          reviewerName: submission.workflow.rmReview.reviewerName,
+          decision: submission.workflow.rmReview.decision,
+          remarks: submission.workflow.rmReview.remarks,
+          timestamp: submission.workflow.rmReview.timestamp
+        } : null,
+        evaluationReview: submission.workflow?.evaluationReview ? {
+          committeeName: submission.workflow.evaluationReview.committeeName,
+          decision: submission.workflow.evaluationReview.decision,
+          remarks: submission.workflow.evaluationReview.remarks,
+          timestamp: submission.workflow.evaluationReview.timestamp
+        } : null,
+        financeReview: submission.workflow?.financeReview ? {
+          reviewerName: submission.workflow.financeReview.reviewerName,
+          decision: submission.workflow.financeReview.decision,
+          remarks: submission.workflow.financeReview.remarks,
+          timestamp: submission.workflow.financeReview.timestamp
+        } : null
+      },
+      projectDetails: null
+    };
+
+    // If approved, expose R&D details
+    if (['APPROVED', 'FINANCE_APPROVED', 'APPROVAL_COMMITTEE'].includes(submission.status)) {
+      safeData.projectDetails = {
+        owner: submission.projectDetails?.owner,
+        implementationStatus: submission.projectDetails?.implementationStatus,
+        progressPercentage: submission.projectDetails?.progressPercentage,
+        latestUpdate: submission.projectDetails?.updates && submission.projectDetails.updates.length > 0 
+          ? submission.projectDetails.updates[submission.projectDetails.updates.length - 1] 
+          : null
+      };
+    }
+
+    res.status(200).json(new ApiResponse(200, { tracking: safeData }, 'Tracking info retrieved successfully'));
   } catch (err) {
     next(err);
   }

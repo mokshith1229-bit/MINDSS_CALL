@@ -27,12 +27,12 @@ const COLLAPSED_WIDTH = 72;
 const navItems = [
   { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { label: 'Form Upload', icon: <UploadIcon />, path: '/form-upload' },
-  { label: 'R&D Review', icon: <ScienceIcon />, path: '/rd-review' },
   { label: 'Auto Assign Email', icon: <EmailIcon />, path: '/auto-assign-email' },
+  { label: 'R&D Review', icon: <ScienceIcon />, path: '/rd-review' },
   { label: 'Evaluation', icon: <EvaluationIcon />, path: '/evaluation' },
-  { label: 'Meeting', icon: <MeetingIcon />, path: '/meeting' },
-  { label: 'Approval', icon: <ApprovalIcon />, path: '/approval' },
   { label: 'Finance Approval', icon: <FinanceIcon />, path: '/finance-approval' },
+  { label: 'Approval', icon: <ApprovalIcon />, path: '/approval' },
+  { label: 'R&D Ongoing Projects', icon: <BusinessIcon />, path: '/rd-ongoing-projects' },
   { label: 'Reports', icon: <ReportsIcon />, path: '/reports' },
   { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];

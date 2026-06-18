@@ -13,9 +13,10 @@ import {
 } from '@mui/icons-material';
 
 const EVENT_CONFIG = {
-  'Submitted': { color: '#0288D1', bg: '#E1F5FE', icon: <SubmittedIcon /> },
+  'Submission Created': { color: '#0288D1', bg: '#E1F5FE', icon: <SubmittedIcon /> },
   'R&D Reviewed': { color: '#7B1FA2', bg: '#F3E5F5', icon: <ReviewedIcon /> },
   'RM Assigned': { color: '#F57C00', bg: '#FFF3E0', icon: <AssignedIcon /> },
+  'RM Assigned (Auto Batch)': { color: '#F57C00', bg: '#FFF3E0', icon: <AssignedIcon /> },
   'HOD Assigned': { color: '#F57C00', bg: '#FFF3E0', icon: <AssignedIcon /> },
   'RM Approved': { color: '#2E7D32', bg: '#E8F5E9', icon: <ApprovedIcon /> },
   'RM Rejected': { color: '#C62828', bg: '#FFEBEE', icon: <RejectedIcon /> },
@@ -24,13 +25,17 @@ const EVENT_CONFIG = {
   'RM Clarification Requested': { color: '#EF6C00', bg: '#FFF3E0', icon: <PendingIcon /> },
   'HOD Clarification Requested': { color: '#EF6C00', bg: '#FFF3E0', icon: <PendingIcon /> },
   'Evaluation Started': { color: '#00796B', bg: '#E0F2F1', icon: <StartedIcon /> },
+  'Evaluation Assigned': { color: '#00796B', bg: '#E0F2F1', icon: <AssignedIcon /> },
+  'Evaluation Approved': { color: '#2E7D32', bg: '#E8F5E9', icon: <ApprovedIcon /> },
+  'Evaluation Rejected': { color: '#C62828', bg: '#FFEBEE', icon: <RejectedIcon /> },
+  'Evaluation Clarification': { color: '#EF6C00', bg: '#FFF3E0', icon: <PendingIcon /> },
   'Finance Approved': { color: '#FBC02D', bg: '#FFFDE7', icon: <FinanceIcon /> },
   'Final Approval': { color: '#2E7D32', bg: '#E8F5E9', icon: <ApprovedIcon /> },
   'Rejected': { color: '#C62828', bg: '#FFEBEE', icon: <RejectedIcon /> },
 };
 
-const getEventConfig = (event) => {
-  return EVENT_CONFIG[event] || { color: '#546E7A', bg: '#ECEFF1', icon: <PendingIcon /> };
+const getEventConfig = (stage) => {
+  return EVENT_CONFIG[stage] || { color: '#546E7A', bg: '#ECEFF1', icon: <PendingIcon /> };
 };
 
 const Timeline = ({ timeline }) => {
@@ -51,7 +56,7 @@ const Timeline = ({ timeline }) => {
         </Box>
         <Stepper orientation="vertical" sx={{ '& .MuiStepConnector-line': { minHeight: 24, ml: '1px', borderColor: '#E2E8F0' } }}>
           {timeline.map((step, index) => {
-            const config = getEventConfig(step.event);
+            const config = getEventConfig(step.stage || step.event); // Fallback to step.event for legacy records
             const dateStr = new Date(step.timestamp).toLocaleDateString('en-IN', {
               day: 'numeric',
               month: 'short',
@@ -80,10 +85,10 @@ const Timeline = ({ timeline }) => {
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1, ml: 1 }}>
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#1E293B' }}>{step.event}</Typography>
-                      {step.actor && (
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#1E293B' }}>{step.stage || step.event}</Typography>
+                      {(step.actionBy || step.actor) && (
                         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block', mt: 0.25 }}>
-                          by {step.actor}
+                          by {step.actionBy || step.actor} {step.role ? `(${step.role})` : ''}
                         </Typography>
                       )}
                     </Box>

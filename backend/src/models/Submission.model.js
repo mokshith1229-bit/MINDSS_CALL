@@ -17,6 +17,11 @@ const submissionSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    trackingId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     submissionType: {
       type: String,
       enum: ['Idea', 'Proposal'],
@@ -39,6 +44,7 @@ const submissionSchema = new mongoose.Schema(
       default: 'NEW',
     },
     workflow: {
+      rmMasterToken: { type: String },
       rmReviewToken: { type: String },
       hodReviewToken: { type: String },
       rmReview: {
@@ -58,14 +64,24 @@ const submissionSchema = new mongoose.Schema(
       financeReview: {
         reviewerName: { type: String, default: '' },
         remarks: { type: String, default: '' },
+        approvedBudget: { type: Number, default: null },
         decision: { type: String, enum: ['PENDING', 'APPROVABLE', 'NOT_APPROVABLE', 'CLARIFICATION'], default: 'PENDING' },
+        timestamp: { type: Date, default: null }
+      },
+      evaluationReview: {
+        committeeName: { type: String, default: '' },
+        remarks: { type: String, default: '' },
+        decision: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED', 'CLARIFICATION'], default: 'PENDING' },
         timestamp: { type: Date, default: null }
       }
     },
     timeline: [
       {
-        event: { type: String, required: true },
-        actor: { type: String },
+        stage: { type: String },
+        event: { type: String }, // For legacy records
+        actionBy: { type: String },
+        actor: { type: String }, // For legacy records
+        role: { type: String },
         remarks: { type: String },
         timestamp: { type: Date, default: Date.now }
       }
@@ -78,6 +94,22 @@ const submissionSchema = new mongoose.Schema(
         size: Number,
       }
     ],
+    projectDetails: {
+      owner: { type: String, default: null },
+      implementationStatus: { 
+        type: String, 
+        enum: ['Approved', 'Not Started', 'In Progress', 'Pilot Testing', 'Completed', 'On Hold'],
+        default: 'Approved' 
+      },
+      progressPercentage: { type: Number, default: 0, min: 0, max: 100 },
+      updates: [{
+        text: String,
+        user: String,
+        timestamp: { type: Date, default: Date.now }
+      }],
+      expectedBenefits: { type: String, default: '' },
+      actualBenefits: { type: String, default: '' }
+    },
   },
   {
     timestamps: true,

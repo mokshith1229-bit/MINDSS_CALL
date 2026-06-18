@@ -1,5 +1,6 @@
 const Form = require('../models/Form.model');
 const FormVersion = require('../models/FormVersion.model');
+const Submission = require('../models/Submission.model');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 
@@ -161,8 +162,9 @@ exports.deleteForm = async (req, res, next) => {
     if (!form) {
       return next(new ApiError(404, 'Form not found'));
     }
-    // Delete associated versions
+    // Delete associated versions and submissions (Cascade Delete)
     await FormVersion.deleteMany({ form: form._id });
+    await Submission.deleteMany({ form: form._id });
     res.status(200).json(new ApiResponse(200, {}, 'Form deleted successfully'));
   } catch (err) {
     next(err);

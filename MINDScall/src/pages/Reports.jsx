@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Box, Typography, Card, CardContent, Grid, Button, Tabs, Tab, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, Card, CardContent, Grid, Button, Tabs, Tab, Snackbar, Alert, Chip } from '@mui/material';
 import { Download as DownloadIcon, BarChart as ChartIcon } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../utils/api';
+import DataTable, { UserCell } from '../components/DataTable';
 
 const COLORS = ['#0277BD', '#2E7D32', '#F57C00', '#6A1B9A', '#7C3AED', '#DC2626'];
 
@@ -11,17 +12,23 @@ const Reports = () => {
   const [snackbar, setSnackbar] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [forms, setForms] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [emailLogs, setEmailLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
     const loadData = async () => {
       try {
-        const [subsRes, formsRes] = await Promise.all([
+        const [subsRes, formsRes, auditRes, emailRes] = await Promise.all([
           api.get('/admin/submissions'),
-          api.get('/admin/forms')
+          api.get('/admin/forms'),
+          api.get('/admin/audit-logs').catch(() => ({ data: { data: { logs: [] } } })),
+          api.get('/admin/email-logs').catch(() => ({ data: { data: { logs: [] } } }))
         ]);
         setSubmissions(subsRes.data.data.submissions || []);
         setForms(formsRes.data.data.forms || []);
+        setAuditLogs(auditRes.data.data.logs || []);
+        setEmailLogs(emailRes.data.data.logs || []);
       } catch (err) {
         console.error('Failed to load reports data', err);
       } finally {
@@ -100,6 +107,65 @@ const Reports = () => {
 
   const handleExport = () => setSnackbar(true);
 
+  const auditColumns = [
+    {
+      field: 'createdAt',
+      headerName: 'Date',
+      renderCell: (row) => new Date(row.createdAt).toLocaleString('en-IN')
+    },
+    {
+      field: 'user',
+      headerName: 'User',
+      renderCell: (row) => row.user ? <UserCell avatar={row.user.name?.charAt(0) || 'U'} name={row.user.name || 'Unknown'} subtitle={row.user.email} /> : 'System / Public'
+    },
+    {
+      field: 'action',
+      headerName: 'Action',
+      renderCell: (row) => <Chip label={row.action} size="small" color="primary" variant="outlined" />
+    },
+    { field: 'resource', headerName: 'Resource' },
+    {
+      field: 'details',
+      headerName: 'Details',
+      renderCell: (row) => (
+        <Box sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {JSON.stringify(row.details || {})}
+        </Box>
+      )
+    },
+    { field: 'ipAddress', headerName: 'IP Address' }
+  ];
+
+  const emailColumns = [
+    {
+      field: 'sentAt',
+      headerName: 'Sent At',
+      renderCell: (row) => new Date(row.sentAt).toLocaleString('en-IN')
+    },
+    {
+      field: 'recipients',
+      headerName: 'Recipients',
+      renderCell: (row) => row.recipients?.join(', ')
+    },
+    { field: 'subject', headerName: 'Subject' },
+    {
+      field: 'status',
+      headerName: 'Status',
+      renderCell: (row) => (
+        <Chip 
+          label={row.status} 
+          size="small" 
+          sx={{
+            bgcolor: row.status === 'SUCCESS' ? '#E8F5E9' : '#FFEBEE',
+            color: row.status === 'SUCCESS' ? '#2E7D32' : '#C62828',
+            fontWeight: 600
+          }} 
+        />
+      )
+    },
+    { field: 'error', headerName: 'Error Details' }
+  ];
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -119,6 +185,8 @@ const Reports = () => {
         <Tab label="Evaluation Report" />
         <Tab label="Approval Report" />
         <Tab label="Department Report" />
+        <Tab label="Audit Logs" />
+        <Tab label="Email Logs" />
       </Tabs>
 
       {tab === 0 && (
@@ -165,9 +233,21 @@ const Reports = () => {
         </Grid>
       )}
 
-      {tab !== 0 && (
+      {tab > 0 && tab < 4 && (
         <Card sx={{ borderRadius: 3, p: 4, textAlign: 'center' }}>
           <Typography variant="body1" sx={{ color: '#78909C' }}>Detailed charts for {['Submissions', 'Evaluations', 'Approvals', 'Departments'][tab]} will be rendered here.</Typography>
+        </Card>
+      )}
+
+      {tab === 4 && (
+        <Card sx={{ borderRadius: 3, p: 0, boxShadow: 'none', border: '1px solid #E2E8F0' }}>
+          <DataTable columns={auditColumns} rows={auditLogs} rowsPerPageDefault={10} />
+        </Card>
+      )}
+
+      {tab === 5 && (
+        <Card sx={{ borderRadius: 3, p: 0, boxShadow: 'none', border: '1px solid #E2E8F0' }}>
+          <DataTable columns={emailColumns} rows={emailLogs} rowsPerPageDefault={10} />
         </Card>
       )}
 

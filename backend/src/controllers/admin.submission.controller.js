@@ -5,6 +5,7 @@ const ApiResponse = require('../utils/ApiResponse');
 const { Parser } = require('json2csv');
 const AuditLog = require('../models/AuditLog.model');
 const crypto = require('crypto');
+const sendEmail = require('../utils/emailSender');
 
 // @desc    Get all submissions (with filtering)
 // @route   GET /api/v1/admin/submissions
@@ -15,7 +16,15 @@ exports.getSubmissions = async (req, res, next) => {
 
     let query = {};
     if (formId) query.form = formId;
-    if (status) query.status = status;
+    if (status) {
+      // Support comma-separated statuses: ?status=EVALUATION,FINANCE_APPROVED
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        query.status = statuses[0];
+      } else if (statuses.length > 1) {
+        query.status = { $in: statuses };
+      }
+    }
     if (search) {
       query.businessId = { $regex: search, $options: 'i' };
     }
@@ -87,8 +96,9 @@ exports.updateSubmissionStatus = async (req, res, next) => {
 
     if (eventName) {
       submission.timeline.push({
-        event: eventName,
-        actor: req.user?.email || 'Admin',
+        stage: eventName,
+        actionBy: req.user?.email || 'Admin',
+        role: 'Admin',
         remarks: remarksText,
         timestamp: new Date()
       });
@@ -136,30 +146,34 @@ exports.updateSubmissionReview = async (req, res, next) => {
       if (decision === 'APPROVED') {
         submission.status = 'EVALUATION';
         submission.timeline.push({
-          event: 'RM Approved',
-          actor: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          stage: 'RM Approved',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
           remarks: remarks || 'Reporting Manager approved the proposal.',
           timestamp: new Date()
         });
         submission.timeline.push({
-          event: 'Evaluation Started',
-          actor: 'System',
+          stage: 'Evaluation Started',
+          actionBy: 'System',
+          role: 'System',
           remarks: 'Proposal moved to Evaluation Committee queue.',
           timestamp: new Date()
         });
       } else if (decision === 'REJECTED') {
         submission.status = 'REJECTED';
         submission.timeline.push({
-          event: 'RM Rejected',
-          actor: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          stage: 'RM Rejected',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
           remarks: remarks || 'Reporting Manager rejected the proposal.',
           timestamp: new Date()
         });
       } else if (decision === 'CLARIFICATION') {
         submission.status = 'REVIEWING';
         submission.timeline.push({
-          event: 'RM Clarification Requested',
-          actor: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          stage: 'RM Clarification Requested',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
           remarks: remarks || 'Reporting Manager requested clarification.',
           timestamp: new Date()
         });
@@ -252,7 +266,7 @@ exports.deleteSubmission = async (req, res, next) => {
 // @access  Private (SUPER_ADMIN, ADMIN)
 exports.updateFinanceReview = async (req, res, next) => {
   try {
-    const { decision, remarks, reviewerName } = req.body;
+    const { decision, remarks, reviewerName, reviewers, approvedBudget } = req.body;
     
     if (!['APPROVABLE', 'NOT_APPROVABLE', 'CLARIFICATION'].includes(decision)) {
       return next(new ApiError(400, 'Invalid decision'));
@@ -269,7 +283,9 @@ exports.updateFinanceReview = async (req, res, next) => {
 
     submission.workflow.financeReview = {
       reviewerName,
+      reviewers,
       remarks,
+      approvedBudget: approvedBudget !== undefined && approvedBudget !== null ? Number(approvedBudget) : null,
       decision,
       timestamp: new Date()
     };
@@ -279,19 +295,99 @@ exports.updateFinanceReview = async (req, res, next) => {
 
     if (decision === 'APPROVABLE') {
       statusUpdate = 'APPROVAL_COMMITTEE';
-      eventName = 'Finance Review: Approvable';
+      eventName = 'Finance Approved';
     } else if (decision === 'NOT_APPROVABLE') {
       statusUpdate = 'REJECTED';
-      eventName = 'Finance Review: Not Approvable';
+      eventName = 'Finance Rejected';
     } else if (decision === 'CLARIFICATION') {
       statusUpdate = 'REVIEWING';
-      eventName = 'Finance Review: Clarification Requested';
+      eventName = 'Needs Revision';
+      
+      // Send email to selected reviewers
+      if (reviewers && reviewers.length > 0) {
+        const title = (submission.answers && (submission.answers.title || submission.answers.proposaltitle)) || 'Untitled Proposal';
+        const businessId = submission.businessId || `SUB-${submission._id.toString().substring(18).toUpperCase()}`;
+        const emailSubject = `Clarification Requested for Proposal: ${businessId}`;
+        
+        const ans = submission.answers || {};
+        const findVal = (keywords) => {
+          for (const key of Object.keys(ans)) {
+            const kLower = key.toLowerCase();
+            if (keywords.some(kw => kLower.includes(kw))) return ans[key];
+          }
+          return null;
+        };
+
+        const userBudget = findVal(['budget', 'amount', 'cost', 'capex', 'opex']) || 'Not Specified';
+        const committeeBudget = submission.workflow?.financeReview?.approvedBudget 
+          ? `₹ ${Number(submission.workflow.financeReview.approvedBudget).toLocaleString('en-IN')}` 
+          : 'Not Allotted';
+
+        let detailsHtml = '';
+        Object.entries(ans).forEach(([key, value]) => {
+           if (typeof value !== 'object' && value !== '' && value != null) {
+              const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+              detailsHtml += `<tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 30%; background-color: #f9f9f9;">${formattedKey}</td><td style="padding: 8px; border: 1px solid #ddd; white-space: pre-wrap;">${value}</td></tr>`;
+           }
+        });
+
+        const emailHtml = `
+          <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+            <h3 style="color: #1976D2;">MINDScall Finance Clarification</h3>
+            <p>Hello,</p>
+            <p>Clarification has been requested for the following proposal during Finance Review:</p>
+            
+            <table style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 30%; background-color: #f9f9f9;">Proposal ID</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${businessId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">Title</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${title}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">User Estimated Budget</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${userBudget}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">Committee Allotted Budget</td>
+                <td style="padding: 8px; border: 1px solid #ddd;"><b>${committeeBudget}</b></td>
+              </tr>
+            </table>
+
+            <p style="font-weight: bold; color: #E65100; margin-top: 20px;">Clarification Remarks from Finance:</p>
+            <blockquote style="border-left: 4px solid #E65100; padding-left: 15px; margin-left: 0; color: #333; background-color: #FFF3E0; padding: 10px; border-radius: 4px;">
+              ${remarks || 'No remarks provided.'}
+            </blockquote>
+            
+            <h4 style="margin-top: 30px; border-bottom: 2px solid #1976D2; padding-bottom: 5px;">Detailed Proposal Information</h4>
+            <table style="border-collapse: collapse; width: 100%; text-align: left; font-size: 14px;">
+              <tbody>
+                ${detailsHtml}
+              </tbody>
+            </table>
+
+            <p style="margin-top: 30px;">Please review the proposal in the MINDScall system and provide the necessary details by replying or logging into the portal.</p>
+            <hr style="margin-top: 30px; border: 0; border-top: 1px solid #eee;" />
+            <p style="color: #888;"><small>This is an automated message from MINDScall.</small></p>
+          </div>
+        `;
+        
+        await sendEmail({
+          email: reviewers.join(', '),
+          subject: emailSubject,
+          html: emailHtml
+        }).catch(err => console.error('Failed to send finance clarification email:', err));
+      }
     }
 
     submission.status = statusUpdate;
+    const actorStr = reviewers && reviewers.length > 0 ? reviewers.join(', ') : (reviewerName || req.user?.email || 'Finance Reviewer');
     submission.timeline.push({
-      event: eventName,
-      actor: reviewerName || req.user?.email || 'Finance Reviewer',
+      stage: eventName,
+      actionBy: actorStr,
+      role: 'Finance Committee',
       remarks: remarks || `Finance marked budget as ${decision}`,
       timestamp: new Date()
     });
@@ -330,8 +426,9 @@ exports.assignSubmissionEmail = async (req, res, next) => {
     submission.status = 'AWAITING_RM_REVIEW';
     submission.workflow.rmReviewToken = token;
     submission.timeline.push({
-      event: 'RM Assigned',
-      actor: req.user?.email || 'Admin',
+      stage: 'RM Assigned',
+      actionBy: req.user?.email || 'Admin',
+      role: 'Admin',
       remarks: `Assigned to RM: ${managerName} (${managerEmail})`,
       timestamp: new Date()
     });
@@ -353,6 +450,126 @@ exports.assignSubmissionEmail = async (req, res, next) => {
     });
 
     res.status(200).json(new ApiResponse(200, { submission, token }, 'Email assigned and logged successfully'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Auto assign all pending proposals to an RM and send one email
+// @route   POST /api/v1/admin/submissions/auto-assign-rm
+// @access  Private (SUPER_ADMIN, ADMIN)
+exports.autoAssignRM = async (req, res, next) => {
+  try {
+    const { email, managerName, proposalIds } = req.body;
+    
+    if (!email || !proposalIds || proposalIds.length === 0) {
+      return next(new ApiError(400, 'Email and proposalIds are required'));
+    }
+
+    const submissions = await Submission.find({ _id: { $in: proposalIds } });
+    
+    if (submissions.length === 0) {
+      return next(new ApiError(404, 'No valid submissions found to assign'));
+    }
+
+    const links = [];
+    
+    // Generate ONE master token for this entire batch of assignments
+    const masterToken = crypto.randomBytes(24).toString('hex');
+
+    for (const sub of submissions) {
+      sub.status = 'AWAITING_RM_REVIEW';
+      if (!sub.workflow) sub.workflow = {};
+      sub.workflow.rmMasterToken = masterToken; // Set the master token
+      
+      // We can also generate a distinct RM review token per submission just in case individual processing is still used,
+      // but for RM batch review we rely on rmMasterToken.
+      sub.workflow.rmReviewToken = crypto.randomBytes(24).toString('hex');
+
+      sub.timeline.push({
+        stage: 'RM Assigned (Auto Batch)',
+        actionBy: req.user?.email || 'Admin',
+        role: 'Admin',
+        remarks: `Auto-assigned to RM: ${managerName || email} (${email}) in batch`,
+        timestamp: new Date()
+      });
+      await sub.save();
+      
+      links.push(`<li style="margin-bottom: 5px;">
+        <b>${sub.businessId || 'Proposal'}</b> - ${sub.answers?.title || sub.answers?.proposaltitle || 'Untitled'}
+      </li>`);
+    }
+    
+    const masterReviewLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/rm-batch-review/${masterToken}`;
+
+    // Send email
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+        <h3 style="color: #1976D2;">MINDScall Proposal Review</h3>
+        <p>Dear ${managerName || 'Manager'},</p>
+        <p>You have been assigned <b>${submissions.length} new proposal(s)</b> to review.</p>
+        <p>Please click the secure Master Link below to access the review portal and process all your proposals:</p>
+        
+        <div style="margin: 25px 0;">
+          <a href="${masterReviewLink}" style="padding: 12px 24px; background-color: #2E7D32; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold; font-size: 16px;">Open Review Portal</a>
+        </div>
+        
+        <p>Proposals included in this batch:</p>
+        <ul style="padding-left: 20px;">
+          ${links.join('')}
+        </ul>
+        <br>
+        <hr style="border: 0; border-top: 1px solid #eee;" />
+        <p style="color: #888;"><small>Best regards,<br>CubeTech Innovation Team</small></p>
+      </div>
+    `;
+
+    await sendEmail({
+      email,
+      subject: `MINDScall: Action Required - ${submissions.length} Proposals Assigned for Review`,
+      html: emailHtml
+    });
+
+    res.status(200).json(new ApiResponse(200, { assignedCount: submissions.length, masterToken }, 'Auto-assigned successfully and master email sent.'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Update project details
+// @route   PATCH /api/v1/admin/submissions/:id/project-details
+// @access  Private (SUPER_ADMIN, ADMIN)
+exports.updateProjectDetails = async (req, res, next) => {
+  try {
+    const { owner, implementationStatus, progressPercentage, updateText, expectedBenefits, actualBenefits } = req.body;
+
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) {
+      return next(new ApiError(404, 'Submission not found'));
+    }
+
+    if (!submission.projectDetails) {
+      submission.projectDetails = {};
+    }
+
+    if (owner !== undefined) submission.projectDetails.owner = owner;
+    if (implementationStatus !== undefined) submission.projectDetails.implementationStatus = implementationStatus;
+    if (progressPercentage !== undefined) submission.projectDetails.progressPercentage = Number(progressPercentage);
+    if (expectedBenefits !== undefined) submission.projectDetails.expectedBenefits = expectedBenefits;
+    if (actualBenefits !== undefined) submission.projectDetails.actualBenefits = actualBenefits;
+
+    if (updateText) {
+      if (!submission.projectDetails.updates) submission.projectDetails.updates = [];
+      submission.projectDetails.updates.push({
+        text: updateText,
+        user: req.user?.name || req.user?.email || 'Admin',
+        timestamp: new Date()
+      });
+    }
+
+    await submission.save();
+
+    res.status(200).json(new ApiResponse(200, { submission }, 'Project details updated successfully'));
   } catch (err) {
     next(err);
   }

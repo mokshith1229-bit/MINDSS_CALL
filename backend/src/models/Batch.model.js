@@ -9,8 +9,10 @@ const batchSchema = new mongoose.Schema({
   committeeId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Committee',
-    required: true
+    required: false,
+    default: null
   },
+  reviewerEmails: [{ type: String }],
   submissions: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Submission'

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, InputAdornment,
   Button, Drawer, IconButton, Chip, Tabs, Tab, Divider, CircularProgress,
-  List, ListItem, ListItemButton, ListItemText, Tooltip, Avatar
+  List, ListItem, ListItemButton, ListItemText, Tooltip, Avatar, Fade
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -32,6 +32,9 @@ const RDReview = () => {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSub, setSelectedSub] = useState(null);
+
+  const submissionBrowserRef = useRef(null);
+  const drawerContentRef = useRef(null);
 
   useEffect(() => {
     fetchData();
@@ -101,6 +104,12 @@ const RDReview = () => {
   const handleOpenDetails = (row) => {
     setSelectedSub(row);
     setDrawerOpen(true);
+    setTimeout(() => drawerContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  };
+
+  const handleFormSelect = (id) => {
+    setSelectedFormId(id);
+    setTimeout(() => submissionBrowserRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   };
 
   const filteredSubs = submissions.filter(s => {
@@ -191,7 +200,7 @@ const RDReview = () => {
                 <ListItem disablePadding divider>
                   <ListItemButton 
                     selected={selectedFormId === 'ALL'} 
-                    onClick={() => setSelectedFormId('ALL')}
+                    onClick={() => handleFormSelect('ALL')}
                     sx={{ '&.Mui-selected': { bgcolor: '#E3F2FD' } }}
                   >
                     <ListItemText 
@@ -205,7 +214,7 @@ const RDReview = () => {
                   <ListItem disablePadding divider key={f.id}>
                     <ListItemButton 
                       selected={selectedFormId === f.id} 
-                      onClick={() => setSelectedFormId(f.id)}
+                      onClick={() => handleFormSelect(f.id)}
                       sx={{ '&.Mui-selected': { bgcolor: '#E3F2FD' } }}
                     >
                       <ListItemText 
@@ -248,7 +257,11 @@ const RDReview = () => {
                 />
               </Box>
 
-              <DataTable columns={columns} rows={filteredSubs} />
+              <Fade in={true} timeout={400}>
+                <Box ref={submissionBrowserRef}>
+                  <DataTable columns={columns} rows={filteredSubs} />
+                </Box>
+              </Fade>
             </CardContent>
           </Card>
         </Grid>
@@ -269,7 +282,7 @@ const RDReview = () => {
               <IconButton onClick={() => setDrawerOpen(false)}><CloseIcon /></IconButton>
             </Box>
 
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+            <Box ref={drawerContentRef} sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <Card sx={{ p: 3, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none' }}>
@@ -342,19 +355,22 @@ const RDReview = () => {
                   <Grid item xs={12}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Attachments</Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {selectedSub.attachments.map((att, i) => (
-                        <Chip 
-                          key={i} 
-                          icon={<PdfIcon />} 
-                          label={att.filename || att.name || 'Document'} 
-                          variant="outlined" 
-                          component="a" 
-                          href={att.url || '#'} 
-                          target="_blank" 
-                          clickable 
-                          sx={{ bgcolor: '#fff', '&:hover': { bgcolor: '#F5F5F5' } }}
-                        />
-                      ))}
+                      {selectedSub.attachments.map((att, i) => {
+                        const fullUrl = att.url ? (att.url.startsWith('http') ? att.url : `${api.defaults.baseURL.replace('/api/v1', '')}${att.url}`) : '#';
+                        return (
+                          <Chip 
+                            key={i} 
+                            icon={<PdfIcon />} 
+                            label={att.filename || att.name || 'Document'} 
+                            variant="outlined" 
+                            component="a" 
+                            href={fullUrl} 
+                            target="_blank" 
+                            clickable 
+                            sx={{ bgcolor: '#fff', '&:hover': { bgcolor: '#F5F5F5' } }}
+                          />
+                        );
+                      })}
                     </Box>
                   </Grid>
                 )}

@@ -757,6 +757,7 @@ const FormBuilderPage = () => {
               error={!!errors.dob}
               helperText={errors.dob}
               InputLabelProps={{ shrink: true }}
+              inputProps={{ max: new Date().toISOString().split('T')[0] }}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>

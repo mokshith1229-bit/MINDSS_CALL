@@ -3,7 +3,10 @@ const mongoose = require('mongoose');
 const emailLogSchema = new mongoose.Schema({
   batchId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Batch',
+    ref: 'Batch'
+  },
+  subject: {
+    type: String,
     required: true
   },
   recipients: [{

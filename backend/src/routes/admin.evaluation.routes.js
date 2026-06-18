@@ -6,7 +6,11 @@ const {
   deleteCommittee,
   createBatch,
   getBatches,
-  sendBatchEmail
+  sendBatchEmail,
+  autoAssignCommittee,
+  autoAssignEvalByEmail,
+  autoAssignFinance,
+  getFinanceBatches
 } = require('../controllers/admin.evaluation.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
@@ -26,5 +30,15 @@ router.delete('/committees/:id', deleteCommittee);
 router.post('/batches', createBatch);
 router.get('/batches', getBatches);
 router.post('/batches/:id/send-email', sendBatchEmail);
+
+// Auto-Assign Committee (creates batch + sends email + updates submission statuses)
+router.post('/auto-assign-committee', autoAssignCommittee);
+
+// Auto-Assign Eval by Email (no fixed committee — user enters emails manually)
+router.post('/auto-assign-eval-by-email', autoAssignEvalByEmail);
+
+// Finance Assignment Routes
+router.post('/auto-assign-finance', autoAssignFinance);
+router.get('/finance-batches', getFinanceBatches);
 
 module.exports = router;

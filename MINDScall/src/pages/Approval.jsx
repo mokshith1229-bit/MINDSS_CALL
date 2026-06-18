@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box, Card, CardContent, Typography, Tabs, Tab, Chip, Button, Grid,
   Dialog, DialogTitle, DialogContent, DialogActions, Drawer, IconButton,
-  TextField, FormControl, InputLabel, Select, MenuItem
+  TextField, FormControl, InputLabel, Select, MenuItem, Fade
 } from '@mui/material';
 import {
   Close as CloseIcon, CheckCircle as ApproveIcon, Cancel as RejectIcon,
@@ -12,6 +12,7 @@ import DataTable, { StatusChip, SLACell, UserCell, TypeBadge } from '../componen
 import AuditTrail from '../components/AuditTrail';
 import DiscussionBoard from '../components/DiscussionBoard';
 import api from '../utils/api';
+import { parseSubmissionFields, formatKey } from '../utils/submissionParser';
 import Timeline from '../components/Timeline';
 
 const TabPanel = ({ children, value, index }) => (
@@ -27,6 +28,9 @@ const Approval = () => {
   const [appData, setAppData] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const summaryRef = useRef(null);
+  const decisionRef = useRef(null);
+
   React.useEffect(() => {
     fetchSubmissions();
   }, []);
@@ -35,23 +39,38 @@ const Approval = () => {
     try {
       setLoading(true);
       const res = await api.get('/admin/submissions');
-      // Map API submissions to expected UI structure
-      const formatted = res.data.data.submissions.map(sub => ({
-        id: sub._id,
-        businessId: sub.businessId || `SUB-${sub._id.toString().substring(18).toUpperCase()}`,
-        submissionType: sub.submissionType || sub.answers?.SubmissionType || sub.answers?.submissionType || 'Idea',
-        title: sub.answers?.title || 'Untitled Submission',
-        requester: sub.answers?.name || 'Unknown',
-        dept: sub.answers?.department || '',
-        amount: sub.answers?.budget || '-', // Assuming budget might be collected
-        status: sub.status === 'FINANCE_APPROVED' || sub.status === 'NEW' || sub.status === 'REVIEWING' ? 'Pending Approval' :
-                sub.status === 'APPROVED' ? 'Approved' : 'Rejected',
-        slaDays: Math.floor((new Date() - new Date(sub.createdAt)) / (1000 * 60 * 60 * 24)),
-        slaStatus: 'On Track',
-        comments: [], // To be wired later
-        history: [], // To be wired later
-        timeline: sub.timeline || []
-      }));
+      // Map API submissions to expected UI structure using the unified parser
+      const formatted = res.data.data.submissions.map(sub => {
+        const parsed = parseSubmissionFields(sub);
+        return {
+          id: sub._id,
+          trackingId: sub.trackingId || sub.businessId,
+          businessId: parsed.businessId,
+          submissionType: parsed.submissionType,
+          title: parsed.title,
+          requester: parsed.employeeName,
+          employeeCode: parsed.employeeCode,
+          dept: parsed.dept,
+          abstract: parsed.abstract,
+          benefits: parsed.benefits,
+          rmValue: parsed.rmValue,
+          hodValue: parsed.hodValue,
+          amount: parsed.approvedBudget !== undefined && parsed.approvedBudget !== null ? parsed.approvedBudget : (parsed.userBudget || '-'),
+          evaluationReview: parsed.evaluationReview,
+          financeReview: parsed.financeReview,
+          attachments: parsed.attachments,
+          answers: parsed.answers,
+          // Fix: Only APPROVAL_COMMITTEE = Pending Approval, not NEW/REVIEWING
+          status: sub.status === 'APPROVAL_COMMITTEE' ? 'Pending Approval' :
+                  sub.status === 'APPROVED' ? 'Approved' :
+                  sub.status === 'REJECTED' ? 'Rejected' : null,
+          slaDays: Math.floor((new Date() - new Date(sub.createdAt)) / (1000 * 60 * 60 * 24)),
+          slaStatus: 'On Track',
+          comments: [],
+          history: [],
+          timeline: parsed.timeline,
+        };
+      }).filter(s => s.status !== null); // Only show proposals relevant to final approval
       setAppData(formatted);
     } catch (err) {
       console.error('Failed to fetch submissions', err);
@@ -67,6 +86,7 @@ const Approval = () => {
   const handleOpenDetails = (row) => {
     setSelectedApp(row);
     setDrawerOpen(true);
+    setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
   };
 
   const handleAddComment = (text) => {
@@ -95,6 +115,16 @@ const Approval = () => {
   };
 
   const columns = [
+    { 
+      field: 'trackingId', 
+      headerName: 'Tracking ID', 
+      width: 140, 
+      renderCell: (row) => (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827', fontFamily: 'monospace' }}>{row.trackingId}</Typography>
+        </Box>
+      ) 
+    },
     { 
       field: 'businessId', 
       headerName: 'ID', 
@@ -136,6 +166,7 @@ const Approval = () => {
         ))}
       </Grid>
 
+      <Fade in={true} timeout={300}>
       <Card sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Approval Queue</Typography>
@@ -150,26 +181,83 @@ const Approval = () => {
           <TabPanel value={tab} index={2}><DataTable columns={columns} rows={rejected} /></TabPanel>
         </CardContent>
       </Card>
+      </Fade>
 
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 600 }, bgcolor: '#F8FAFC' } }}>
         {selectedApp && (
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Box sx={{ p: 3, bgcolor: '#FFFFFF', borderBottom: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>Approval Review</Typography>
-                <Typography variant="caption" sx={{ color: '#546E7A', fontFamily: 'monospace' }}>{selectedApp.businessId}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827' }}>{selectedApp.parsedTitle || 'Untitled'}</Typography>
+                <Typography variant="caption" sx={{ color: '#546E7A', fontFamily: 'monospace' }}>{selectedApp.trackingId || selectedApp.businessId}</Typography>
               </Box>
-              <IconButton onClick={() => setDrawerOpen(false)}><CloseIcon /></IconButton>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Button size="small" onClick={() => summaryRef.current?.scrollIntoView({behavior: 'smooth'})} sx={{color: '#546E7A', textTransform: 'none', mr: 1}}>Summary</Button>
+                {selectedApp.status === 'Pending Approval' && <Button size="small" onClick={() => decisionRef.current?.scrollIntoView({behavior: 'smooth'})} sx={{color: '#546E7A', textTransform: 'none', mr: 1}}>Decision</Button>}
+                <IconButton onClick={() => setDrawerOpen(false)}><CloseIcon /></IconButton>
+              </Box>
             </Box>
 
             <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
               <Grid container spacing={3}>
+                {/* Employee & Management */}
+                <Grid item xs={12} ref={summaryRef}>
+                  <Card sx={{ p: 2, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Employee & Management Chain</Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Name</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{selectedApp.requester}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Employee Code</Typography><Typography variant="body2">{selectedApp.employeeCode}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Department</Typography><Typography variant="body2">{selectedApp.dept}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Reporting Manager</Typography><Typography variant="body2">{selectedApp.rmValue}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Head of Department</Typography><Typography variant="body2">{selectedApp.hodValue}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Budget / Amount</Typography><Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedApp.amount}</Typography></Grid>
+                    </Grid>
+                  </Card>
+                </Grid>
+
+                {/* Prior Approvals */}
+                <Grid item xs={12}>
+                  <Card sx={{ p: 2, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Committee Reviews</Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Evaluation Decision</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{selectedApp.evaluationReview?.decision || 'Pending'}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Evaluation Remarks</Typography><Typography variant="body2">{selectedApp.evaluationReview?.remarks || '-'}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Finance Decision</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{selectedApp.financeReview?.decision || 'Pending'}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Finance Remarks</Typography><Typography variant="body2">{selectedApp.financeReview?.remarks || '-'}</Typography></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Approved Budget</Typography><Typography variant="body2" sx={{ fontWeight: 700, color: '#1565C0' }}>{selectedApp.financeReview?.approvedBudget ? `₹ ${Number(selectedApp.financeReview.approvedBudget).toLocaleString('en-IN')}` : 'Not Set'}</Typography></Grid>
+                    </Grid>
+                  </Card>
+                </Grid>
+
+                {/* Proposal Content */}
                 <Grid item xs={12}>
                   <Card sx={{ p: 2, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{selectedApp.title}</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#546E7A', mb: 0.5, mt: 1.5 }}>Abstract</Typography>
+                    <Typography variant="body2" sx={{ color: '#37474F', whiteSpace: 'pre-line', mb: 1.5 }}>{selectedApp.abstract}</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#546E7A', mb: 0.5 }}>Benefits</Typography>
+                    <Typography variant="body2" sx={{ color: '#37474F', whiteSpace: 'pre-line' }}>{selectedApp.benefits}</Typography>
+                  </Card>
+                </Grid>
+
+                {/* Attachments */}
+                {selectedApp.attachments?.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Attachments</Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {selectedApp.attachments.map((att, i) => (
+                        <Chip key={i} icon={<PdfIcon />} label={att.filename || 'Document'} variant="outlined" component="a" href={att.url?.startsWith('http') ? att.url : `${api.defaults.baseURL?.replace('/api/v1', '')}${att.url}`} target="_blank" clickable />
+                      ))}
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* SLA */}
+                <Grid item xs={12}>
+                  <Card sx={{ p: 2, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none' }}>
                     <Grid container spacing={2}>
-                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Amount</Typography><Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedApp.amount}</Typography></Grid>
-                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>SLA</Typography><Box mt={0.5}><SLACell days={selectedApp.slaDays} status={selectedApp.slaStatus} /></Box></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>SLA Days</Typography><Box mt={0.5}><SLACell days={selectedApp.slaDays} status={selectedApp.slaStatus} /></Box></Grid>
+                      <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E' }}>Status</Typography><Box mt={0.5}><StatusChip status={selectedApp.status} /></Box></Grid>
                     </Grid>
                   </Card>
                 </Grid>
@@ -183,7 +271,7 @@ const Approval = () => {
                 </Grid>
 
                 {selectedApp.status === 'Pending Approval' && (
-                  <Grid item xs={12}>
+                  <Grid item xs={12} ref={decisionRef}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Final Decision</Typography>
                     <Grid container spacing={1.5}>
                       <Grid item xs={12} sm={4}>

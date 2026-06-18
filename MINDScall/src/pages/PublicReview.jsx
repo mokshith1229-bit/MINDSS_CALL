@@ -124,9 +124,12 @@ const PublicReview = () => {
               <Box sx={{ mb: 3 }}>
                 <Typography variant="caption" sx={{ color: '#9E9E9E', fontWeight: 600 }}>Attachments</Typography>
                 <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  {data.attachments.map((att, i) => (
-                    <Chip key={i} icon={<PdfIcon />} label={att.filename || 'Document'} variant="outlined" component="a" href={att.url || '#'} target="_blank" clickable />
-                  ))}
+                  {data.attachments.map((att, i) => {
+                    const fullUrl = att.url ? (att.url.startsWith('http') ? att.url : `${api.defaults.baseURL.replace('/api/v1', '')}${att.url}`) : '#';
+                    return (
+                      <Chip key={i} icon={<PdfIcon />} label={att.filename || 'Document'} variant="outlined" component="a" href={fullUrl} target="_blank" clickable />
+                    );
+                  })}
                 </Box>
               </Box>
             )}

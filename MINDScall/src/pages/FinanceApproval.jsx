@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Card, CardContent, Typography, Tabs, Tab, Chip, Button, Grid,
   Dialog, DialogTitle, DialogContent, DialogActions, Drawer, IconButton,
-  TextField, Avatar, Paper, MenuItem, Select, FormControl, InputLabel
+  TextField, Avatar, Paper, MenuItem, Select, FormControl, InputLabel, Autocomplete, Fade
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -18,6 +18,7 @@ import {
 } from '@mui/icons-material';
 import { TypeBadge } from '../components/DataTable';
 import api from '../utils/api';
+import { parseSubmissionFields } from '../utils/submissionParser';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const PRIORITY_META = {
@@ -47,52 +48,64 @@ const FinanceApproval = () => {
   const [dialog, setDialog] = useState({ open: false, action: null });
   const [dialogNote, setDialogNote] = useState('');
   const [reviewer, setReviewer] = useState('');
+  const [reviewers, setReviewers] = useState([]);
+  const [approvedBudget, setApprovedBudget] = useState('');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const infoRef = useRef(null);
+  const budgetRef = useRef(null);
 
   const fetchProposals = async () => {
     try {
       setLoading(true);
       const res = await api.get('/admin/submissions');
       const mapped = (res.data.data.submissions || []).map(p => {
-        const ans = p.answers || {};
-        
-        // Key-search fallbacks
-        const findVal = (keywords) => {
-          for (const key of Object.keys(ans)) {
-            const kLower = key.toLowerCase();
-            if (keywords.some(kw => kLower.includes(kw))) return ans[key];
-          }
-          return null;
-        };
+        const parsed = parseSubmissionFields(p);
 
-        const rawAmount = findVal(['budget', 'amount', 'cost', 'capex', 'opex']) || 0;
+        const approvedBudget = parsed.approvedBudget;
+        const userEstimatedAmount = parsed.userBudget || parsed.budget || 0;
+        const rawAmount = (approvedBudget !== undefined && approvedBudget !== null) ? approvedBudget : userEstimatedAmount;
         const numAmount = parseFloat(String(rawAmount).replace(/[^\d.-]/g, '')) || 0;
+        const userNumAmount = parseFloat(String(userEstimatedAmount).replace(/[^\d.-]/g, '')) || 0;
 
         return {
-          id: p._id,
-          businessId: p.businessId || `SUB-${p._id.toString().substring(18).toUpperCase()}`,
-          submissionType: p.submissionType || findVal(['submissionType', 'SubmissionType']) || 'Idea',
-          title: findVal(['title', 'proposaltitle']) || 'Untitled Proposal',
-          department: findVal(['department', 'dept']) || 'General',
-          requester: findVal(['name', 'fullname', 'submittername']) || p.submitterEmail || 'Unknown',
+          id: sub._id,
+          trackingId: sub.trackingId || sub.businessId,
+          businessId: parsed.businessId,
+          submissionType: parsed.submissionType,
+          title: parsed.title,
+          parsedTitle: parsed.title,
+          department: parsed.dept,
+          requester: parsed.employeeName,
+          employeeCode: parsed.employeeCode,
+          rmValue: parsed.rmValue,
+          hodValue: parsed.hodValue,
           amount: `₹ ${numAmount.toLocaleString('en-IN')}`,
           numAmount,
-          budget: findVal(['capex', 'opex']) ? 'CAPEX/OPEX' : 'General',
-          category: findVal(['category']) || 'Expenditure',
-          status: p.status === 'APPROVAL_COMMITTEE' ? 'Approved' : p.status === 'REJECTED' ? 'Rejected' : p.status === 'FINANCE_APPROVED' ? 'Pending' : 'Other',
+          userAmount: `₹ ${userNumAmount.toLocaleString('en-IN')}`,
+          budget: parsed.budget ? 'CAPEX/OPEX' : 'General',
+          category: parsed.category || 'Expenditure',
+          abstract: parsed.abstract,
+          benefits: parsed.benefits,
+          attachments: parsed.attachments,
+          answers: parsed.answers,
+          // Fix status mapping: FINANCE_APPROVED = Pending, APPROVAL_COMMITTEE = Approved
+          status: sub.status === 'FINANCE_APPROVED' ? 'Pending' :
+                  sub.status === 'APPROVAL_COMMITTEE' ? 'Approved' :
+                  sub.status === 'REJECTED' ? 'Rejected' : 'Other',
           priority: numAmount > 1500000 ? 'High' : numAmount > 500000 ? 'Medium' : 'Low',
-          submittedOn: new Date(p.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-          slaDays: p.status === 'FINANCE_APPROVED' ? 2 : 0,
-          description: findVal(['abstract', 'description']) || 'No description provided.',
-          history: (p.timeline || []).map(h => ({
+          submittedOn: new Date(sub.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+          slaDays: sub.status === 'FINANCE_APPROVED' ? 2 : 0,
+          description: parsed.abstract,
+          history: (parsed.timeline || []).map(h => ({
             user: h.actor || 'System',
             action: h.event,
             date: new Date(h.timestamp).toLocaleString(),
             note: h.remarks || '',
           })),
-          rmApproval: (p.timeline || []).some(t => t.event === 'RM Approved') ? 'Approved' : 'Pending',
-          committeeApproval: (p.timeline || []).some(t => t.event === 'Evaluation Approved') ? 'Approved' : 'Pending',
+          rmApproval: (parsed.timeline || []).some(t => t.event === 'RM Approved') ? 'Approved' : 'Pending',
+          committeeApproval: (parsed.timeline || []).some(t => t.event === 'Evaluation Approved') ? 'Approved' : 'Pending',
         };
       });
       
@@ -115,9 +128,19 @@ const FinanceApproval = () => {
 
   const totalValue = requests.reduce((sum, r) => sum + r.numAmount, 0);
 
-  const openDetail = (row) => { setSelected(row); setDrawerOpen(true); };
-  const openDialog = (action) => { setDialog({ open: true, action }); setReviewer(''); setDialogNote(''); };
-  const closeDialog = () => { setDialog({ open: false, action: null }); setDialogNote(''); setReviewer(''); };
+  const openDetail = (row) => { 
+    setSelected(row); 
+    setDrawerOpen(true); 
+    setTimeout(() => infoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  };
+  const openDialog = (action) => { 
+    setDialog({ open: true, action }); 
+    setReviewer(''); 
+    setReviewers(action === 'rework' ? ['Suman', 'Ravindranath'] : []); 
+    setDialogNote(''); 
+    setApprovedBudget(selected?.numAmount || '');
+  };
+  const closeDialog = () => { setDialog({ open: false, action: null }); setDialogNote(''); setReviewer(''); setReviewers([]); setApprovedBudget(''); };
 
   const confirmAction = async () => {
     try {
@@ -127,7 +150,9 @@ const FinanceApproval = () => {
       await api.patch(`/admin/submissions/${selected.id}/finance-review`, {
         decision,
         remarks: dialogNote,
-        reviewerName: reviewer
+        reviewerName: dialog.action === 'rework' ? reviewers.join(', ') : reviewer,
+        reviewers: dialog.action === 'rework' ? reviewers : [],
+        approvedBudget: approvedBudget ? Number(approvedBudget) : null
       });
 
       closeDialog();
@@ -168,6 +193,7 @@ const FinanceApproval = () => {
       </Grid>
 
       {/* ── Queue Table ── */}
+      <Fade in={true} timeout={300}>
       <Card sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
@@ -196,12 +222,11 @@ const FinanceApproval = () => {
               <Typography variant="body2" sx={{ fontWeight: 600 }}>No records in this category</Typography>
             </Box>
           ) : tableRows.map((row, i) => {
-            const sm = STATUS_META[row.status];
             const pm = PRIORITY_META[row.priority];
             return (
               <Box key={row.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.8fr 0.9fr 0.7fr 0.6fr 0.8fr', gap: 1, px: 1.5, py: 1.5, borderBottom: i < tableRows.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', '&:hover': { bgcolor: '#F8FAFC', borderRadius: 1.5 }, transition: 'all 0.15s' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-                  <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#1565C0' }}>{row.businessId}</Typography>
+                  <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#1565C0' }}>{row.trackingId || row.businessId}</Typography>
                   <TypeBadge type={row.submissionType} />
                 </Box>
                 <Box>
@@ -223,6 +248,7 @@ const FinanceApproval = () => {
           })}
         </CardContent>
       </Card>
+      </Fade>
 
       {/* ── Detail Drawer ── */}
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 560 }, bgcolor: '#F8FAFC' } }}>
@@ -231,10 +257,14 @@ const FinanceApproval = () => {
             {/* Header */}
             <Box sx={{ p: 3, bgcolor: '#1A2332', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>Finance Review</Typography>
-                <Typography variant="caption" sx={{ color: '#90CAF9', fontFamily: 'monospace' }}>{selected.businessId}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#FFFFFF' }}>{selected.parsedTitle}</Typography>
+                <Typography variant="caption" sx={{ color: '#90CAF9', fontFamily: 'monospace' }}>{selected.trackingId || selected.businessId}</Typography>
               </Box>
-              <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)', mt: -0.5 }}><CloseIcon /></IconButton>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Button size="small" onClick={() => infoRef.current?.scrollIntoView({behavior: 'smooth'})} sx={{color: '#90CAF9', textTransform: 'none', mr: 1}}>Info</Button>
+                <Button size="small" onClick={() => budgetRef.current?.scrollIntoView({behavior: 'smooth'})} sx={{color: '#90CAF9', textTransform: 'none', mr: 1}}>Budget</Button>
+                <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}><CloseIcon /></IconButton>
+              </Box>
             </Box>
 
             <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
@@ -254,20 +284,28 @@ const FinanceApproval = () => {
               <Typography variant="body2" sx={{ color: '#546E7A', mb: 2.5, lineHeight: 1.6 }}>{selected.description}</Typography>
 
               {/* Details */}
+              <Box ref={infoRef}>
               <Card sx={{ borderRadius: 2, mb: 2.5, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="caption" sx={{ fontWeight: 800, color: '#1565C0', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>Request Details</Typography>
-                  <InfoRow label="Request ID"   value={selected.businessId} bold />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <InfoRow label="Tracking ID"   value={selected.trackingId || selected.businessId} bold />
                   <InfoRow label="Type"         value={selected.submissionType} />
                   <InfoRow label="Department"   value={selected.department} />
                   <InfoRow label="Requester"    value={selected.requester} />
-                  <InfoRow label="Amount"       value={selected.amount} bold />
+                  <InfoRow label="Employee Code" value={selected.employeeCode} />
+                  <InfoRow label="Reporting Manager" value={selected.rmValue} />
+                  <InfoRow label="Head of Department" value={selected.hodValue} />
+                  <InfoRow label="Committee Allotment" value={selected.amount} bold />
+                  <InfoRow label="User Estimated" value={selected.userAmount} />
                   <InfoRow label="Budget Head"  value={selected.budget} />
                   <InfoRow label="Category"     value={selected.category} />
                   <InfoRow label="Submitted On" value={selected.submittedOn} />
                   <InfoRow label="Priority"     value={selected.priority} />
+                  </Box>
                 </CardContent>
               </Card>
+              </Box>
 
               {/* Approval Chain */}
               <Card sx={{ borderRadius: 2, mb: 2.5, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
@@ -325,7 +363,7 @@ const FinanceApproval = () => {
 
             {/* Action Footer */}
             {selected.status === 'Pending' && (
-              <Box sx={{ p: 3, borderTop: '1px solid #E0E0E0', bgcolor: '#fff', display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              <Box ref={budgetRef} sx={{ p: 3, borderTop: '1px solid #E0E0E0', bgcolor: '#fff', display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
                 <Button fullWidth variant="contained" color="success" startIcon={<ApproveIcon />} onClick={() => openDialog('approve')} sx={{ fontWeight: 700 }}>Mark Budget Approvable</Button>
                 <Button fullWidth variant="contained" color="error" startIcon={<RejectIcon />} onClick={() => openDialog('reject')} sx={{ fontWeight: 700 }}>Mark Budget Not Approvable</Button>
                 <Button fullWidth variant="outlined" color="warning" startIcon={<ReworkIcon />} onClick={() => openDialog('rework')} sx={{ fontWeight: 700, borderWidth: 2 }}>Request Clarification</Button>
@@ -347,13 +385,42 @@ const FinanceApproval = () => {
              'Request clarification before proceeding.'}
           </Typography>
 
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Reviewer Name *</InputLabel>
-            <Select value={reviewer} label="Reviewer Name *" onChange={e => setReviewer(e.target.value)}>
-              <MenuItem value="Ravindranath">Ravindranath</MenuItem>
-              <MenuItem value="Suman">Suman</MenuItem>
-            </Select>
-          </FormControl>
+          {dialog.action === 'rework' ? (
+            <Autocomplete
+              multiple
+              freeSolo
+              options={['Suman', 'Ravindranath']}
+              value={reviewers}
+              onChange={(e, val) => setReviewers(val)}
+              renderInput={(params) => (
+                <TextField {...params} label="Finance Committee Names/Emails *" placeholder="Select or type" />
+              )}
+              sx={{ mb: 2 }}
+            />
+          ) : (
+            <Autocomplete
+              freeSolo
+              options={['Suman', 'Ravindranath']}
+              value={reviewer}
+              onChange={(e, val) => setReviewer(val)}
+              onInputChange={(e, val) => setReviewer(val)}
+              renderInput={(params) => (
+                <TextField {...params} label="Reviewer Name *" placeholder="Select or type" />
+              )}
+              sx={{ mb: 2 }}
+            />
+          )}
+
+          {dialog.action !== 'rework' && (
+            <TextField
+              fullWidth
+              label="Approved Budget"
+              type="number"
+              value={approvedBudget}
+              onChange={e => setApprovedBudget(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+          )}
 
           <TextField
             fullWidth multiline rows={3}
@@ -367,7 +434,7 @@ const FinanceApproval = () => {
           <Button onClick={closeDialog} variant="outlined">Cancel</Button>
           <Button
             variant="contained"
-            disabled={!reviewer || ((dialog.action === 'reject' || dialog.action === 'rework') && !dialogNote.trim())}
+            disabled={(dialog.action === 'rework' ? reviewers.length === 0 : !reviewer) || ((dialog.action === 'reject' || dialog.action === 'rework') && !dialogNote.trim())}
             onClick={confirmAction}
             color={dialog.action === 'approve' ? 'success' : dialog.action === 'reject' ? 'error' : 'warning'}
             sx={{ fontWeight: 700 }}

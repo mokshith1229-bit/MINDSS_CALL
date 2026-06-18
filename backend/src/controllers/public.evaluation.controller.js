@@ -41,6 +41,9 @@ exports.getBatchByToken = async (req, res, next) => {
           benefits: findVal(['benefit']) || 'No benefits',
           employeeName: findVal(['name', 'fullname', 'submittername']) || 'Unknown',
           department: findVal(['department', 'dept']) || 'Unknown',
+          estimatedBudget: findVal(['budget', 'cost', 'estimatedbudget', 'amount', 'budgetrequired']) || 'Not specified',
+          answers: sub.answers || {},
+          formData: sub.formData || {},
           attachments: sub.attachments || [],
           rmRemarks: sub.workflow?.rmReview?.remarks || '',
           rmDecision: sub.workflow?.rmReview?.decision || '',
@@ -70,33 +73,61 @@ exports.submitBatchReview = async (req, res, next) => {
       return next(new ApiError(400, 'Batch review already completed'));
     }
 
-    const committeeName = batch.committeeId?.name || 'Evaluation Committee';
+    const committeeName = batch.committeeId?.name || batch.reviewerEmails?.[0] || 'Evaluation Committee';
 
     for (const review of reviews) {
       const { submissionId, decision, remarks } = review;
       const sub = await Submission.findById(submissionId);
       if (sub && sub.status === 'EVALUATION') {
+        
+        // Save evaluation review data
+        sub.workflow = sub.workflow || {};
+        sub.workflow.evaluationReview = {
+          committeeName,
+          remarks,
+          decision,
+          timestamp: new Date()
+        };
+
         if (decision === 'APPROVED') {
           sub.status = 'FINANCE_APPROVED';
           sub.timeline.push({
-            event: 'Evaluation Approved',
-            actor: committeeName,
+            stage: 'Evaluation Approved',
+            actionBy: committeeName,
+            role: 'Evaluation Committee',
             remarks: remarks || 'Committee approved the proposal.',
             timestamp: new Date()
           });
-        } else if (decision === 'REJECTED') {
-          sub.status = 'REJECTED';
           sub.timeline.push({
-            event: 'Evaluation Rejected',
-            actor: committeeName,
+            stage: 'Sent To Finance',
+            actionBy: 'System',
+            role: 'System',
+            remarks: 'Proposal routed to Finance Approval queue.',
+            timestamp: new Date()
+          });
+        } else if (decision === 'REJECTED') {
+          // Route to FINANCE_APPROVED so it appears in Finance tab with rejection tag
+          sub.status = 'FINANCE_APPROVED';
+          sub.timeline.push({
+            stage: 'Evaluation Rejected',
+            actionBy: committeeName,
+            role: 'Evaluation Committee',
             remarks: remarks || 'Committee rejected the proposal.',
+            timestamp: new Date()
+          });
+          sub.timeline.push({
+            stage: 'Sent To Finance (Rejected)',
+            actionBy: 'System',
+            role: 'System',
+            remarks: 'Rejected proposal routed to Finance tab for record.',
             timestamp: new Date()
           });
         } else if (decision === 'CLARIFICATION') {
           sub.status = 'REVIEWING'; // sends back
           sub.timeline.push({
-            event: 'Evaluation Clarification',
-            actor: committeeName,
+            stage: 'Evaluation Clarification',
+            actionBy: committeeName,
+            role: 'Evaluation Committee',
             remarks: remarks || 'Committee requested clarification.',
             timestamp: new Date()
           });

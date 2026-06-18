@@ -17,11 +17,12 @@ import api from '../utils/api';
 
 const recentColumns = [
   { 
-    field: 'businessId', 
-    headerName: 'ID', 
+    field: 'trackingId', 
+    headerName: 'Tracking ID', 
+    width: 140, 
     renderCell: (row) => (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-start' }}>
-        <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827' }}>{row.businessId || 'N/A'}</Typography>
+        <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827' }}>{row.trackingId || row.businessId || 'N/A'}</Typography>
         <TypeBadge type={row.submissionType} />
       </Box>
     ) 
@@ -72,6 +73,7 @@ const Dashboard = () => {
 
   const recent = submissions.slice(0, 5).map(s => ({
     id: s._id,
+    trackingId: s.trackingId || s.businessId,
     businessId: s.businessId,
     submissionType: s.submissionType || s.answers?.submissionType || 'Idea',
     assignedTo: s.answers?.name || 'Unknown',

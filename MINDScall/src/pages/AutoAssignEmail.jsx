@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, InputAdornment,
-  Avatar, Chip, Button, Divider, Radio, RadioGroup, FormControlLabel,
-  Snackbar, Alert, CircularProgress
+  Avatar, Chip, Button, Divider, Snackbar, Alert, CircularProgress,
+  Checkbox, Fade, Tabs, Tab,
+  Tooltip, IconButton
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -10,55 +11,193 @@ import {
   HourglassEmpty as PendingIcon,
   PersonOff as UnassignedIcon,
   Send as SendIcon,
-  Description as DescriptionIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  Group as GroupIcon,
+  Person as PersonIcon,
+  AssignmentTurnedIn as EvalIcon,
+  AccountBalance as FinanceIcon,
+  Refresh as RefreshIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { TypeBadge } from '../components/DataTable';
 import api from '../utils/api';
 import { parseSubmissionFields } from '../utils/submissionParser';
+import Timeline from '../components/Timeline';
+import ReviewBadge from '../components/ReviewBadge';
 
-const statusConfig = {
-  Assigned: { color: '#2E7D32', bg: '#E8F5E9', icon: <AssignedIcon sx={{ fontSize: 16 }} /> },
-  Pending: { color: '#F57C00', bg: '#FFF3E0', icon: <PendingIcon sx={{ fontSize: 16 }} /> },
-  Unassigned: { color: '#546E7A', bg: '#ECEFF1', icon: <UnassignedIcon sx={{ fontSize: 16 }} /> },
+// ─── Shared helpers ────────────────────────────────────────────────
+const rmStatusConfig = {
+  Unassigned:    { color: '#546E7A', bg: '#ECEFF1' },
+  'RM Assigned': { color: '#1565C0', bg: '#E3F2FD' },
+  Completed:     { color: '#2E7D32', bg: '#E8F5E9' },
 };
 
-const proposalStatusConfig = {
-  NEW: { color: '#546E7A', bg: '#ECEFF1', label: 'New' },
-  REVIEWING: { color: '#F57C00', bg: '#FFF3E0', label: 'Reviewing' },
-  AWAITING_RM_REVIEW: { color: '#1976D2', bg: '#E3F2FD', label: 'Awaiting RM Review' },
-  RM_REVIEW: { color: '#1976D2', bg: '#E3F2FD', label: 'RM Review' },
-  HOD_REVIEW: { color: '#9C27B0', bg: '#F3E5F5', label: 'HOD Review' },
-  APPROVED: { color: '#2E7D32', bg: '#E8F5E9', label: 'Approved' },
-  REJECTED: { color: '#D32F2F', bg: '#FFEBEE', label: 'Rejected' },
+const STATUS_LABEL = {
+  NEW: 'New', REVIEWING: 'Reviewing', AWAITING_RM_REVIEW: 'Sent to RM',
+  RM_REVIEW: 'RM Reviewing', HOD_REVIEW: 'HOD Review',
+  EVALUATION: 'In Evaluation', FINANCE_APPROVED: 'Eval Approved → Finance',
+  APPROVAL_COMMITTEE: 'Finance Approved', APPROVED: 'Approved', REJECTED: 'Rejected',
 };
 
+function TabPanel({ value, index, children }) {
+  return value === index ? <Box sx={{ pt: 2 }}>{children}</Box> : null;
+}
+
+// ─── Reusable proposal list row ────────────────────────────────────
+const ProposalRow = ({ sub, isSelected, onToggle, accentColor = '#1565C0', showCommittee = false, showRMApproval = false }) => (
+  <Box
+    onClick={() => onToggle(sub._id)}
+    sx={{
+      display: 'flex', alignItems: 'flex-start', gap: 1.5, p: 1.5,
+      borderRadius: 2, mb: 1, cursor: 'pointer',
+      border: `1.5px solid ${isSelected ? accentColor : '#F0F0F0'}`,
+      bgcolor: isSelected ? `${accentColor}10` : '#FAFAFA',
+      transition: 'all 0.2s', '&:hover': { borderColor: accentColor + '60' },
+    }}
+  >
+    <Checkbox
+      size="small" checked={isSelected}
+      onChange={() => onToggle(sub._id)} onClick={e => e.stopPropagation()}
+      sx={{ color: accentColor, '&.Mui-checked': { color: accentColor }, mt: -0.3 }}
+    />
+    <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.3, flexWrap: 'wrap' }}>
+        <Typography variant="caption" sx={{ fontWeight: 800, color: accentColor, fontFamily: 'monospace' }}>
+          {sub.businessId}
+        </Typography>
+        <TypeBadge type={sub.submissionType} />
+        {showCommittee && sub.workflow?.evaluationReview?.committeeName && (
+          <Chip label={`Eval: ${sub.workflow.evaluationReview.committeeName}`} size="small"
+            sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700 }} />
+        )}
+        {showRMApproval && (
+          <Chip label="RM ✓ Approved" size="small"
+            sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700 }} />
+        )}
+      </Box>
+      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }} noWrap>{sub.title}</Typography>
+      <Typography variant="caption" sx={{ color: '#78909C' }} noWrap>
+        {sub.employeeName} • {sub.dept}
+      </Typography>
+    </Box>
+  </Box>
+);
+
+// ─── Main Component ─────────────────────────────────────────────────
 const AutoAssignEmail = () => {
-  const [submissions, setSubmissions] = useState([]);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [loading, setLoading]   = useState(true);
+  const [snack, setSnack]       = useState({ open: false, msg: '', type: 'success' });
+
+  // ── All submissions (shared pool) ──
+  const [allSubs, setAllSubs]   = useState([]);
+
+  // ── Tab 1: RM Assignment ──
   const [managers, setManagers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('All');
-  
-  const [selectedManager, setSelectedManager] = useState(null);
-  const [selectedProposal, setSelectedProposal] = useState(null);
-  
-  const [snack, setSnack] = useState({ open: false, msg: '', type: 'success' });
-
-  // Review states
-  const [rmRemarks, setRmRemarks] = useState('');
-  const [rmDecision, setRmDecision] = useState('PENDING');
+  const [rmSearch, setRmSearch] = useState('');
+  const [rmFilter, setRmFilter] = useState('All');
+  const [selMgr, setSelMgr]     = useState(null);
+  const [selProp, setSelProp]   = useState(null);
+  const [selPropIds, setSelPropIds] = useState([]);
   const [managerEmail, setManagerEmail] = useState('');
+  const [emailBody, setEmailBody]       = useState('');
+  const propListRef = useRef(null);
+  const detailsRef  = useRef(null);
 
-  const [emailBody, setEmailBody] = useState('');
+  // ── Tab 2: Evaluation Committee (email-based) ──
+  const [evalSubs, setEvalSubs]           = useState([]);
+  const [evalSearch, setEvalSearch]       = useState('');
+  const [evalFilter, setEvalFilter]       = useState('All');
+  const [selEvalIds, setSelEvalIds]       = useState([]);
+  const [evalBatchName, setEvalBatchName] = useState('');
+  const [selEvalProp, setSelEvalProp]     = useState(null);
+  const [evalReviewerEmails, setEvalReviewerEmails] = useState(['']);
 
+  // ── Tab 3: Finance Assignment ──
+  const [financeSubs, setFinanceSubs] = useState([]);
+  const [finSearch, setFinSearch]     = useState('');
+  const [finFilter, setFinFilter]     = useState('All');
+  const [selFinIds, setSelFinIds]     = useState([]);
+  const [finReviewerEmails, setFinReviewerEmails] = useState(['']);
+  const [finBatchName, setFinBatchName] = useState('');
+  const [selFinProp, setSelFinProp]   = useState(null);
+
+  // ─── Fetch All Data ──────────────────────────────────────────────
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [subRes] = await Promise.all([
+        api.get('/admin/submissions'),
+      ]);
+
+      const raw = subRes.data.data.submissions || [];
+      const parsed = raw.map(sub => {
+        const p = parseSubmissionFields(sub);
+        return {
+          ...sub,
+          businessId:     sub.businessId || `SUB-${sub._id.toString().substring(18).toUpperCase()}`,
+          submissionType: sub.submissionType || p.submissionType || 'Idea',
+          rmEmail: p.rmEmail, rmName: p.rmName, rmValue: p.rmValue,
+          hodEmail: p.hodEmail, hodName: p.hodName,
+          title: p.title, abstract: p.abstract, dept: p.dept,
+          employeeName: p.employeeName, employeeCode: p.employeeCode,
+          benefits: p.benefits,
+        };
+      });
+      setAllSubs(parsed);
+
+      // ── Build RM manager list ──
+      const rmMap = {};
+      parsed.forEach(sub => {
+        const key = sub.rmEmail || sub.rmValue || 'unknown';
+        if (!rmMap[key]) rmMap[key] = [];
+        rmMap[key].push(sub);
+      });
+      const mngrs = Object.keys(rmMap).map(email => {
+        const props = rmMap[email];
+        const rmAssigned = props.some(p => ['AWAITING_RM_REVIEW', 'RM_REVIEW', 'HOD_REVIEW'].includes(p.status));
+        const hasNew     = props.some(p => ['NEW', 'REVIEWING'].includes(p.status));
+        let status = 'Completed';
+        if (hasNew) status = 'Unassigned';
+        if (rmAssigned) status = 'RM Assigned';
+        const first = props[0];
+        const name  = first.rmName || (first.rmValue || email).split(' (')[0] || 'Unknown RM';
+        return {
+          name, email: first.rmEmail || email,
+          proposals: props, count: props.length, status,
+          avatarInitials: (first.rmEmail || email).split('@')[0].substring(0, 2).toUpperCase(),
+        };
+      });
+      setManagers(mngrs);
+
+      // ── Eval pool: proposals where RM approved (status = EVALUATION) ──
+      setEvalSubs(parsed.filter(s =>
+        s.status === 'EVALUATION' ||
+        (s.workflow?.rmReview?.decision === 'APPROVED' &&
+          !['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'REJECTED'].includes(s.status))
+      ));
+
+      // ── Finance pool: FINANCE_APPROVED (both eval-approved and eval-rejected route here) ──
+      setFinanceSubs(parsed.filter(s => s.status === 'FINANCE_APPROVED'));
+
+      // No committees fetch needed anymore
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+      setSnack({ open: true, msg: 'Failed to load data', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  // ── Auto-build RM email body ──
   useEffect(() => {
-    if (selectedProposal && selectedManager) {
-      const p = selectedProposal;
-      const recipientName = selectedManager.name || selectedManager.email.split('@')[0];
-
-      const b = `Dear ${recipientName},
+    if (selProp && selMgr) {
+      const p = selProp;
+      const name = selMgr.name || selMgr.email.split('@')[0];
+      setEmailBody(`Dear ${name},
 
 A new proposal has been assigned to you for review. Please review the details below:
 
@@ -79,444 +218,728 @@ ${p.benefits}
 Please log in to the portal to review this proposal and provide your feedback.
 
 Best regards,
-CubeTech Innovation Team`;
-      setEmailBody(b);
+CubeTech Innovation Team`);
     } else {
       setEmailBody('');
     }
-  }, [selectedManager, selectedProposal]);
+  }, [selMgr, selProp]);
 
-  const fetchSubmissions = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/admin/submissions');
-      const subs = res.data.data.submissions || [];
-      
-      const parsedSubs = subs.map(sub => {
-        const parsed = parseSubmissionFields(sub);
-        const employeeInfo = sub.submitterEmail || parsed.employeeName || 'Unknown Employee';
-
-        return { 
-          ...sub, 
-          businessId: sub.businessId || `SUB-${sub._id.toString().substring(18).toUpperCase()}`,
-          submissionType: sub.submissionType || parsed.submissionType || parsed.SubmissionType || 'Idea',
-          rmValue: parsed.rmValue, 
-          rmEmail: parsed.rmEmail,
-          hodEmail: parsed.hodEmail,
-          rmName: parsed.rmName,
-          hodName: parsed.hodName,
-          title: parsed.title, 
-          abstract: parsed.abstract, 
-          dept: parsed.dept, 
-          employeeName: parsed.employeeName, 
-          employeeCode: parsed.employeeCode, 
-          benefits: parsed.benefits, 
-          employeeInfo 
-        };
-      });
-      
-      setSubmissions(parsedSubs);
-
-      // Group by RM
-      const rmMap = {};
-      parsedSubs.forEach(sub => {
-        const key = sub.rmEmail || sub.rmValue || 'unknown';
-        if (!rmMap[key]) rmMap[key] = [];
-        rmMap[key].push(sub);
-      });
-
-      const mngrs = Object.keys(rmMap).map(email => {
-        const props = rmMap[email];
-        // Compute manager status
-        const hasPending = props.some(p => ['NEW', 'REVIEWING', 'AWAITING_RM_REVIEW', 'RM_REVIEW'].includes(p.status));
-        const allApproved = props.every(p => ['EVALUATION', 'FINANCE_APPROVED', 'APPROVED'].includes(p.status));
-        let status = 'Unassigned';
-        if (hasPending) status = 'Pending';
-        else if (allApproved && props.length > 0) status = 'Assigned';
-
-        const firstProp = props[0];
-        const name = firstProp.rmName || firstProp.rmValue.split(' (')[0] || 'Unknown RM';
-        const displayEmail = firstProp.rmEmail || email;
-
-        return {
-          name,
-          email: displayEmail,
-          proposals: props,
-          count: props.length,
-          status,
-          avatarInitials: displayEmail.split('@')[0].substring(0, 2).toUpperCase()
-        };
-      });
-      setManagers(mngrs);
-    } catch (err) {
-      console.error('Failed to fetch submissions', err);
-      setSnack({ open: true, msg: 'Failed to load submissions', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSubmissions();
-  }, []);
-
+  // ─── Tab 1: RM handlers ─────────────────────────────────────────
   const filteredManagers = managers.filter(m => {
-    const q = search.toLowerCase();
-    const matchesSearch = m.email.toLowerCase().includes(q) || m.name.toLowerCase().includes(q);
-    const matchesFilter = filter === 'All' || m.status === filter;
-    return matchesSearch && matchesFilter;
+    const q = rmSearch.toLowerCase();
+    const matchSearch = m.email.toLowerCase().includes(q) || m.name.toLowerCase().includes(q);
+    return matchSearch && (rmFilter === 'All' || m.status === rmFilter);
   });
 
-  const handleSelectManager = (mgr) => {
-    // toggle off if already selected
-    if (selectedManager?.email === mgr.email) {
-      setSelectedManager(null);
-      setSelectedProposal(null);
-    } else {
-      setSelectedManager(mgr);
-      setSelectedProposal(null);
+  const handleSelectMgr = mgr => {
+    if (selMgr?.email === mgr.email) { setSelMgr(null); setSelProp(null); setSelPropIds([]); }
+    else {
+      setSelMgr(mgr); setSelProp(null);
+      setSelPropIds(mgr.proposals.map(p => p._id));
+      setTimeout(() => propListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
   };
 
-  const handleSelectProposalById = (propId) => {
-    const prop = selectedManager.proposals.find(p => p._id === propId);
+  const handleSelectPropById = id => {
+    const prop = selMgr.proposals.find(p => p._id === id);
     if (!prop) return;
-    setSelectedProposal(prop);
-    setRmRemarks(prop.workflow?.rmReview?.remarks || '');
-    setRmDecision(prop.workflow?.rmReview?.decision || 'PENDING');
-    setManagerEmail(prop.workflow?.rmReview?.reviewerEmail || prop.rmEmail || selectedManager.email || '');
+    setSelProp(prop);
+    setManagerEmail(prop.workflow?.rmReview?.reviewerEmail || prop.rmEmail || selMgr.email || '');
+    setTimeout(() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   };
 
-  const handleReviewSubmit = async (stage) => {
-    try {
-      const payload = {
-        stage: 'RM',
-        decision: rmDecision,
-        remarks: rmRemarks,
-        reviewerEmail: selectedManager.email
-      };
-
-      await api.patch(`/admin/submissions/${selectedProposal._id}/review`, payload);
-      setSnack({ open: true, msg: `${stage} Review submitted successfully`, type: 'success' });
-      
-      // Refresh
-      await fetchSubmissions();
-      setSelectedProposal(null);
-      setSelectedManager(null);
-    } catch (err) {
-      console.error(err);
-      setSnack({ open: true, msg: 'Failed to submit review', type: 'error' });
-    }
+  const handleTogglePropId = (id, e) => {
+    e.stopPropagation();
+    setSelPropIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    handleSelectPropById(id);
   };
 
   const handleOpenGmail = async () => {
+    if (!managerEmail) { setSnack({ open: true, msg: 'Please provide a Manager Email', type: 'error' }); return; }
     try {
-      const to = managerEmail;
-
-      if (!to) {
-        setSnack({ open: true, msg: 'Please provide a Manager Email', type: 'error' });
-        return;
-      }
-
-      // API call to log assignment and update status
-      const res = await api.patch(`/admin/submissions/${selectedProposal._id}/assign-email`, { stage: 'RM', email: to });
+      const res = await api.patch(`/admin/submissions/${selProp._id}/assign-email`, { stage: 'RM', email: managerEmail });
       const { token } = res.data.data;
-      
       const reviewLink = `http://localhost:5173/review/${token}`;
       const finalBody = `${emailBody}\n\nSecure Review Link:\n${reviewLink}`;
-
-      setSnack({ open: true, msg: 'Email assignment logged successfully', type: 'success' });
-      
-      // Open Gmail
       const subject = encodeURIComponent('Proposal Review Request (RM)');
       const body = encodeURIComponent(finalBody);
-      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`, '_blank');
-      
-      // Refresh
-      await fetchSubmissions();
-      setSelectedProposal(null);
-      setSelectedManager(null);
+      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${managerEmail}&su=${subject}&body=${body}`, '_blank');
+      setSnack({ open: true, msg: 'Email assignment logged successfully', type: 'success' });
+      await fetchData(); setSelProp(null); setSelMgr(null);
     } catch (err) {
-      console.error(err);
       setSnack({ open: true, msg: 'Failed to assign email', type: 'error' });
     }
   };
 
-  const counts = {
-    Assigned: managers.filter((e) => e.status === 'Assigned').length,
-    Pending: managers.filter((e) => e.status === 'Pending').length,
-    Unassigned: managers.filter((e) => e.status === 'Unassigned').length,
+  const handleAutoAssignRM = async () => {
+    if (!selMgr || selPropIds.length === 0) return;
+    try {
+      await api.post('/admin/submissions/auto-assign-rm', {
+        email: selMgr.email, managerName: selMgr.name, proposalIds: selPropIds,
+      });
+      setSnack({ open: true, msg: `Auto-assigned ${selPropIds.length} proposals to ${selMgr.name} and email sent!`, type: 'success' });
+      await fetchData(); setSelProp(null); setSelPropIds([]); setSelMgr(null);
+    } catch (err) {
+      setSnack({ open: true, msg: 'Failed to auto-assign proposals', type: 'error' });
+    }
   };
 
-  if (loading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
-  }
+  const rmCounts = {
+    All: managers.length,
+    Unassigned: managers.filter(m => m.status === 'Unassigned').length,
+    'RM Assigned': managers.filter(m => m.status === 'RM Assigned').length,
+    Completed: managers.filter(m => m.status === 'Completed').length,
+  };
 
+  // ─── Tab 2: Eval handlers ────────────────────────────────────────────────────
+  const filteredEvalSubs = evalSubs.filter(s => {
+    const q = evalSearch.toLowerCase();
+    const matchSearch = (s.title || '').toLowerCase().includes(q) ||
+      (s.businessId || '').toLowerCase().includes(q) || (s.employeeName || '').toLowerCase().includes(q);
+    if (evalFilter === 'Assigned') return matchSearch && s.workflow?.evaluationReview?.committeeName;
+    if (evalFilter === 'Unassigned') return matchSearch && !s.workflow?.evaluationReview?.committeeName;
+    return matchSearch;
+  });
+
+  const handleAddEvalEmail    = () => setEvalReviewerEmails(prev => [...prev, '']);
+  const handleRemoveEvalEmail = idx => setEvalReviewerEmails(prev => prev.filter((_, i) => i !== idx));
+  const handleEvalEmailChange = (idx, val) => setEvalReviewerEmails(prev => prev.map((e, i) => i === idx ? val : e));
+
+  const handleAutoAssignEvalByEmail = async () => {
+    const validEmails = evalReviewerEmails.filter(e => e.trim());
+    if (validEmails.length === 0 || selEvalIds.length === 0) {
+      setSnack({ open: true, msg: 'Add at least one evaluator email and select proposals', type: 'error' }); return;
+    }
+    try {
+      await api.post('/admin/evaluations/auto-assign-eval-by-email', {
+        evaluatorEmails: validEmails, submissionIds: selEvalIds, batchName: evalBatchName || undefined,
+      });
+      setSnack({ open: true, msg: `${selEvalIds.length} proposal(s) sent to evaluators — email dispatched!`, type: 'success' });
+      setSelEvalIds([]); setEvalReviewerEmails(['']); setEvalBatchName(''); setSelEvalProp(null);
+      await fetchData();
+    } catch (err) {
+      setSnack({ open: true, msg: err.response?.data?.message || 'Failed to assign to evaluators', type: 'error' });
+    }
+  };
+
+  const evalCounts = {
+    All: evalSubs.length,
+    Unassigned: evalSubs.filter(s => !s.workflow?.evaluationReview?.committeeName).length,
+    Assigned: evalSubs.filter(s => !!s.workflow?.evaluationReview?.committeeName).length,
+  };
+
+  // ─── Tab 3: Finance Assignment handlers ─────────────────────────
+  const filteredFinSubs = financeSubs.filter(s => {
+    const q = finSearch.toLowerCase();
+    const matchSearch = (s.title || '').toLowerCase().includes(q) ||
+      (s.businessId || '').toLowerCase().includes(q) || (s.employeeName || '').toLowerCase().includes(q);
+    if (finFilter === 'Assigned') return matchSearch && s.workflow?.financeReview?.reviewerName;
+    if (finFilter === 'Unassigned') return matchSearch && !s.workflow?.financeReview?.reviewerName;
+    return matchSearch;
+  });
+
+  const handleAddReviewerEmail = () => setFinReviewerEmails(prev => [...prev, '']);
+  const handleRemoveReviewerEmail = idx => setFinReviewerEmails(prev => prev.filter((_, i) => i !== idx));
+  const handleReviewerEmailChange = (idx, val) => setFinReviewerEmails(prev => prev.map((e, i) => i === idx ? val : e));
+
+  const handleAutoAssignFinance = async () => {
+    const validEmails = finReviewerEmails.filter(e => e.trim());
+    if (validEmails.length === 0 || selFinIds.length === 0) {
+      setSnack({ open: true, msg: 'Add at least one reviewer email and select proposals', type: 'error' }); return;
+    }
+    try {
+      await api.post('/admin/evaluations/auto-assign-finance', {
+        reviewerEmails: validEmails, submissionIds: selFinIds, batchName: finBatchName || undefined,
+      });
+      setSnack({ open: true, msg: `${selFinIds.length} proposal(s) assigned to finance reviewers — email sent!`, type: 'success' });
+      setSelFinIds([]); setFinReviewerEmails(['']); setFinBatchName(''); setSelFinProp(null);
+      await fetchData();
+    } catch (err) {
+      setSnack({ open: true, msg: err.response?.data?.message || 'Failed to assign to finance reviewers', type: 'error' });
+    }
+  };
+
+  const finCounts = {
+    All: financeSubs.length,
+    Unassigned: financeSubs.filter(s => !s.workflow?.financeReview?.reviewerName).length,
+    Assigned: financeSubs.filter(s => !!s.workflow?.financeReview?.reviewerName).length,
+  };
+
+  if (loading) return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
+  );
+
+  // ─── RENDER ─────────────────────────────────────────────────────
   return (
     <Box>
-      {/* Status Cards */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {Object.entries(counts).map(([status, count]) => {
-          const cfg = statusConfig[status];
-          return (
-            <Grid item xs={12} sm={4} key={status}>
-              <Card
-                onClick={() => setFilter(filter === status ? 'All' : status)}
-                sx={{
-                  borderRadius: 3,
-                  cursor: 'pointer',
-                  border: filter === status ? `2px solid ${cfg.color}` : '2px solid transparent',
-                  transition: 'all 0.2s ease',
-                  '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 },
-                }}
-              >
-                <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar sx={{ bgcolor: cfg.bg, color: cfg.color, width: 48, height: 48, borderRadius: 2 }}>
-                    {React.cloneElement(cfg.icon, { sx: { fontSize: 22 } })}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: cfg.color }}>{count}</Typography>
-                    <Typography variant="body2" sx={{ color: '#78909C', fontWeight: 600 }}>{status}</Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
-
-      <Grid container spacing={3}>
-        {/* Manager List */}
-        <Grid item xs={12} lg={5}>
-          <Card sx={{ borderRadius: 3, height: '100%' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Reporting Managers</Typography>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search by RM email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: '#9E9E9E', fontSize: 20 }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 1.5 }}
-              />
-
-              <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                {['All', 'Assigned', 'Pending', 'Unassigned'].map((f) => (
-                  <Chip
-                    key={f}
-                    label={f}
-                    size="small"
-                    onClick={() => setFilter(f)}
-                    sx={{
-                      fontWeight: 600,
-                      fontSize: '0.72rem',
-                      bgcolor: filter === f ? '#2E7D32' : '#F5F5F5',
-                      color: filter === f ? '#fff' : '#546E7A',
-                      cursor: 'pointer',
-                    }}
-                  />
-                ))}
+      {/* Tabs */}
+      <Box sx={{ borderBottom: '1px solid #E0E0E0', mb: 3 }}>
+        <Tabs
+          value={tabIndex}
+          onChange={(_, v) => setTabIndex(v)}
+          sx={{
+            '& .MuiTab-root': { fontWeight: 700, textTransform: 'none', fontSize: '0.875rem', minHeight: 48 },
+            '& .Mui-selected': { color: '#1565C0' },
+            '& .MuiTabs-indicator': { backgroundColor: '#1565C0', height: 3 },
+          }}
+        >
+          <Tab
+            icon={<PersonIcon sx={{ fontSize: 18 }} />} iconPosition="start"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                RM Assignment
+                <Chip label={rmCounts.Unassigned} size="small"
+                  sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#FFF3E0', color: '#E65100', fontWeight: 700 }} />
               </Box>
+            }
+          />
+          <Tab
+            icon={<GroupIcon sx={{ fontSize: 18 }} />} iconPosition="start"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Evaluation Committee
+                <Chip label={evalCounts.Unassigned} size="small"
+                  sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700 }} />
+              </Box>
+            }
+          />
+          <Tab
+            icon={<FinanceIcon sx={{ fontSize: 18 }} />} iconPosition="start"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Finance Assignment
+                <Chip label={finCounts.Unassigned} size="small"
+                  sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#E3F2FD', color: '#1565C0', fontWeight: 700 }} />
+              </Box>
+            }
+          />
+        </Tabs>
+      </Box>
 
-              <Box sx={{ maxHeight: 440, overflowY: 'auto', pr: 0.5 }}>
-                {filteredManagers.map((mgr) => {
-                  const cfg = statusConfig[mgr.status];
-                  const isSelected = selectedManager?.email === mgr.email;
-                  return (
-                    <Box
-                      key={mgr.email}
-                      onClick={() => handleSelectManager(mgr)}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        p: 1.5,
-                        borderRadius: 2,
-                        mb: 1,
-                        cursor: 'pointer',
-                        border: `1px solid ${isSelected ? '#2E7D32' : '#F0F0F0'}`,
-                        bgcolor: isSelected ? '#F1F8E9' : '#FAFAFA',
-                        transition: 'all 0.2s ease',
-                        '&:hover': { bgcolor: isSelected ? '#E8F5E9' : '#F5F5F5', borderColor: '#B0BEC5' },
-                      }}
-                    >
-                      <Avatar sx={{ background: 'linear-gradient(135deg, #2E7D32, #66BB6A)', width: 38, height: 38, fontSize: '0.75rem', fontWeight: 700 }}>
-                        {mgr.avatarInitials}
-                      </Avatar>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121' }} noWrap>{mgr.name}</Typography>
-                        <Typography variant="caption" sx={{ color: '#78909C' }} noWrap>{mgr.email} • {mgr.count} Proposals</Typography>
+      {/* ══════════════════════════════════════════════════════════════
+          TAB 1 — RM Assignment
+      ══════════════════════════════════════════════════════════════ */}
+      <TabPanel value={tabIndex} index={0}>
+        <Grid container spacing={3}>
+          {/* Manager List */}
+          <Grid item xs={12} lg={5}>
+            <Card sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Reporting Managers</Typography>
+                  <Tooltip title="Refresh"><IconButton size="small" onClick={fetchData}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
+                </Box>
+                <TextField fullWidth size="small" placeholder="Search RM name or email..."
+                  value={rmSearch} onChange={e => setRmSearch(e.target.value)}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9E9E9E', fontSize: 20 }} /></InputAdornment> }}
+                  sx={{ mb: 1.5 }} />
+                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                  {['All', 'Unassigned', 'RM Assigned', 'Completed'].map(f => (
+                    <Chip key={f} label={`${f} (${rmCounts[f] ?? 0})`} size="small" onClick={() => setRmFilter(f)}
+                      sx={{ fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer',
+                        bgcolor: rmFilter === f ? '#1565C0' : '#F5F5F5',
+                        color: rmFilter === f ? '#fff' : '#546E7A' }} />
+                  ))}
+                </Box>
+                <Box sx={{ maxHeight: 480, overflowY: 'auto', pr: 0.5 }}>
+                  {filteredManagers.map(mgr => {
+                    const cfg = rmStatusConfig[mgr.status] || rmStatusConfig.Completed;
+                    const isSel = selMgr?.email === mgr.email;
+                    return (
+                      <Box key={mgr.email} onClick={() => handleSelectMgr(mgr)}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1.5, borderRadius: 2, mb: 1,
+                          cursor: 'pointer', border: `1px solid ${isSel ? '#1565C0' : '#F0F0F0'}`,
+                          bgcolor: isSel ? '#EEF2FF' : '#FAFAFA', transition: 'all 0.2s',
+                          '&:hover': { bgcolor: isSel ? '#E3EAF7' : '#F5F5F5' } }}>
+                        <Avatar sx={{ background: 'linear-gradient(135deg, #1565C0, #42A5F5)', width: 38, height: 38, fontSize: '0.75rem', fontWeight: 700 }}>
+                          {mgr.avatarInitials}
+                        </Avatar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121' }} noWrap>{mgr.name}</Typography>
+                          <Typography variant="caption" sx={{ color: '#78909C' }} noWrap>{mgr.email} • {mgr.count} Proposals</Typography>
+                        </Box>
+                        <Chip label={mgr.status} size="small"
+                          sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 600, fontSize: '0.68rem', height: 22 }} />
                       </Box>
-                      <Chip
-                        label={mgr.status}
-                        size="small"
-                        sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 600, fontSize: '0.68rem', height: 22 }}
-                      />
-                    </Box>
-                  );
-                })}
-                {filteredManagers.length === 0 && (
-                  <Typography variant="body2" sx={{ color: '#9E9E9E', textAlign: 'center', py: 4 }}>
-                    No managers found
-                  </Typography>
-                )}
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Review Action */}
-        <Grid item xs={12} lg={7}>
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Review Assignment</Typography>
-              <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>
-                Select a manager from the list, choose a proposal, and submit a review.
-              </Typography>
-
-              {/* Selected Manager Box */}
-              {selectedManager ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: '#F1F8E9', borderRadius: 2, mb: 2.5, border: '1px solid #C8E6C9' }}>
-                  <Avatar sx={{ background: 'linear-gradient(135deg, #2E7D32, #66BB6A)', width: 44, height: 44, fontSize: '0.8rem', fontWeight: 700 }}>
-                    {selectedManager.avatarInitials}
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{selectedManager.name}</Typography>
-                    <Typography variant="caption" sx={{ color: '#546E7A' }}>{selectedManager.email} • {selectedManager.count} Assigned Proposals</Typography>
-                  </Box>
-                  <Chip label="Selected" size="small" sx={{ bgcolor: '#2E7D32', color: '#fff', fontWeight: 700 }} />
+                    );
+                  })}
+                  {filteredManagers.length === 0 && (
+                    <Typography variant="body2" sx={{ color: '#9E9E9E', textAlign: 'center', py: 4 }}>No managers found</Typography>
+                  )}
                 </Box>
-              ) : (
-                <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2, mb: 2.5, border: '1px dashed #CFD8DC', textAlign: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#9E9E9E' }}>← Select a manager to begin review</Typography>
-                </Box>
-              )}
+              </CardContent>
+            </Card>
+          </Grid>
 
-              {/* Proposal Select */}
-              {selectedManager && (
-                <>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Select Proposal</Typography>
-                  <RadioGroup value={selectedProposal?._id || ''} onChange={(e) => handleSelectProposalById(e.target.value)}>
-                    <Grid container spacing={1.5} sx={{ mb: 2 }}>
-                      {selectedManager.proposals.map((t) => (
-                        <Grid item xs={12} sm={6} md={4} key={t._id}>
-                          <Box
-                            onClick={() => handleSelectProposalById(t._id)}
-                            sx={{
-                              p: 1.5,
-                              borderRadius: 2,
-                              border: `1.5px solid ${selectedProposal?._id === t._id ? '#2E7D32' : '#E0E0E0'}`,
-                              bgcolor: selectedProposal?._id === t._id ? '#F1F8E9' : '#FAFAFA',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              '&:hover': { borderColor: '#4CAF50' },
-                            }}
-                          >
-                            <FormControlLabel
-                              value={t._id}
-                              control={<Radio size="small" sx={{ color: '#2E7D32', '&.Mui-checked': { color: '#2E7D32' } }} />}
-                              label={
-                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#1565C0', fontFamily: 'monospace' }}>{t.businessId}</Typography>
-                                  <Typography variant="caption" sx={{ fontWeight: 600 }} noWrap>{t.title}</Typography>
-                                </Box>
-                              }
-                              sx={{ m: 0, width: '100%' }}
-                            />
-                            <Typography variant="caption" sx={{ display: 'block', ml: 3.5, color: '#78909C' }} noWrap>
-                               {proposalStatusConfig[t.status]?.label || 'Unknown'}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </RadioGroup>
-                </>
-              )}
+          {/* Review Panel */}
+          <Grid item xs={12} lg={7}>
+            <Card sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Review Assignment</Typography>
+                <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>
+                  Select a manager from the list, choose proposals, and send the review email.
+                </Typography>
 
-              {/* Review Details Box */}
-              {selectedProposal && (
-                <>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Proposal Details & Review</Typography>
-                  <Box sx={{ bgcolor: '#F9FAFB', borderRadius: 2, p: 2, border: '1px solid #E8EAED', mb: 1 }}>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
-                      <Typography variant="caption" sx={{ color: '#9E9E9E', width: 60 }}>ID:</Typography>
-                      <Typography variant="caption" sx={{ color: '#1565C0', fontWeight: 800, fontFamily: 'monospace' }}>
-                        {selectedProposal.businessId}
-                      </Typography>
-                      <TypeBadge type={selectedProposal.submissionType} />
+                {selMgr ? (
+                  <Box sx={{ p: 2, bgcolor: '#EEF2FF', borderRadius: 2, mb: 2.5, border: '1px solid #BBDEFB' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+                      <Avatar sx={{ background: 'linear-gradient(135deg, #1565C0, #42A5F5)', width: 40, height: 40, fontSize: '0.8rem', fontWeight: 700 }}>
+                        {selMgr.avatarInitials}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{selMgr.name}</Typography>
+                        <Typography variant="caption" sx={{ color: '#546E7A' }}>{selMgr.email} • {selMgr.count} Proposals</Typography>
+                      </Box>
+                      <Chip label="Selected" size="small" sx={{ bgcolor: '#1565C0', color: '#fff', fontWeight: 700 }} />
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                      <Typography variant="caption" sx={{ color: '#9E9E9E', width: 60 }}>Title:</Typography>
-                      <Typography variant="caption" sx={{ color: '#212121', fontWeight: 600 }}>
-                        {selectedProposal.title}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
-                      <Typography variant="caption" sx={{ color: '#9E9E9E', width: 60 }}>Abstract:</Typography>
-                      <Typography variant="caption" sx={{ color: '#546E7A', whiteSpace: 'pre-line' }}>
-                        {selectedProposal.abstract}
-                      </Typography>
-                    </Box>
-                    <Divider sx={{ mb: 1.5 }} />
-
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Manager Email</Typography>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="Enter Manager Email..."
-                        value={managerEmail}
-                        onChange={(e) => setManagerEmail(e.target.value)}
-                      />
-                    </Box>
-
-                    {/* Email Preview editable */}
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, mt: 2 }}>Generated Email Content</Typography>
-                    <Box sx={{ bgcolor: '#F9FAFB', borderRadius: 2, p: 2, border: '1px solid #E8EAED', mb: 3 }}>
-                      <TextField 
-                        fullWidth 
-                        multiline 
-                        minRows={8} 
-                        variant="outlined" 
-                        size="small" 
-                        value={emailBody} 
-                        onChange={(e) => setEmailBody(e.target.value)} 
-                        sx={{ bgcolor: '#fff' }}
-                      />
-                    </Box>
-
-                    <Divider sx={{ mb: 2 }} />
-
-                    <Button 
-                      variant="contained" 
-                      color="primary" 
-                      fullWidth 
-                      size="large"
-                      onClick={handleOpenGmail}
-                      startIcon={<EmailIcon />}
-                      sx={{ py: 1.5, fontWeight: 700 }}
-                    >
-                      Open Gmail & Assign RM
+                    <Button variant="contained" fullWidth disabled={selPropIds.length === 0}
+                      onClick={handleAutoAssignRM} startIcon={<SendIcon />} sx={{ fontWeight: 700, bgcolor: '#1565C0' }}>
+                      Auto Assign Selected ({selPropIds.length}) → Send RM Email
                     </Button>
-
                   </Box>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+                ) : (
+                  <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2, mb: 2.5, border: '1px dashed #CFD8DC', textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ color: '#9E9E9E' }}>← Select a manager to begin</Typography>
+                  </Box>
+                )}
 
-      <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert severity={snack.type} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ borderRadius: 2 }}>
+                {selMgr && (
+                  <Fade in timeout={400}>
+                    <Box ref={propListRef}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Select Proposal(s)</Typography>
+                        <Box>
+                          <Button size="small" sx={{ textTransform: 'none', fontWeight: 600, minWidth: 'auto', p: 0, mr: 2 }}
+                            onClick={() => setSelPropIds(selMgr.proposals.map(p => p._id))}>Select All</Button>
+                          <Button size="small" color="inherit" sx={{ textTransform: 'none', fontWeight: 600, minWidth: 'auto', p: 0, color: '#78909C' }}
+                            onClick={() => setSelPropIds([])}>Deselect All</Button>
+                        </Box>
+                      </Box>
+                      <Grid container spacing={1.5} sx={{ mb: 2 }}>
+                        {selMgr.proposals.map(t => (
+                          <Grid item xs={12} sm={6} md={4} key={t._id}>
+                            <Box
+                              onClick={() => handleSelectPropById(t._id)}
+                              sx={{ p: 1.5, borderRadius: 2, cursor: 'pointer',
+                                border: `1.5px solid ${selProp?._id === t._id ? '#1565C0' : '#E0E0E0'}`,
+                                bgcolor: selProp?._id === t._id ? '#EEF2FF' : '#FAFAFA',
+                                transition: 'all 0.2s', '&:hover': { borderColor: '#90CAF9' } }}>
+                              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                <Checkbox size="small" checked={selPropIds.includes(t._id)}
+                                  onChange={e => handleTogglePropId(t._id, e)}
+                                  onClick={e => e.stopPropagation()}
+                                  sx={{ color: '#1565C0', '&.Mui-checked': { color: '#1565C0' }, mt: -0.5 }} />
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#1565C0', fontFamily: 'monospace', display: 'block' }}>{t.businessId}</Typography>
+                                  <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }} noWrap>{t.title}</Typography>
+                                  <Typography variant="caption" sx={{ color: '#78909C', display: 'block' }}>{STATUS_LABEL[t.status] || 'Unknown'}</Typography>
+                                </Box>
+                              </Box>
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  </Fade>
+                )}
+
+                {selProp && (
+                  <Fade in timeout={400}>
+                    <Box ref={detailsRef}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Proposal Details</Typography>
+                      <Box sx={{ bgcolor: '#F9FAFB', borderRadius: 2, p: 2, border: '1px solid #E8EAED', mb: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                          <Typography variant="caption" sx={{ color: '#9E9E9E', width: 60 }}>ID:</Typography>
+                          <Typography variant="caption" sx={{ color: '#1565C0', fontWeight: 800, fontFamily: 'monospace' }}>{selProp.businessId}</Typography>
+                          <TypeBadge type={selProp.submissionType} />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                          <Typography variant="caption" sx={{ color: '#9E9E9E', width: 60 }}>Abstract:</Typography>
+                          <Typography variant="caption" sx={{ color: '#546E7A', whiteSpace: 'pre-line' }}>{selProp.abstract}</Typography>
+                        </Box>
+                        <Divider sx={{ mb: 2 }} />
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Manager Email</Typography>
+                          <TextField fullWidth size="small" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} />
+                        </Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Generated Email</Typography>
+                        <TextField fullWidth multiline minRows={8} variant="outlined" size="small"
+                          value={emailBody} onChange={e => setEmailBody(e.target.value)} sx={{ bgcolor: '#fff', mb: 2 }} />
+                        <Button variant="contained" fullWidth size="large" onClick={handleOpenGmail}
+                          startIcon={<EmailIcon />} sx={{ py: 1.5, fontWeight: 700, bgcolor: '#1565C0' }}>
+                          Open Gmail & Assign RM
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Fade>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB 2 — Evaluation Committee
+      ══════════════════════════════════════════════════════════════ */}
+      <TabPanel value={tabIndex} index={1}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} lg={7}>
+            <Card sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>RM-Accepted Proposals</Typography>
+                    <Typography variant="caption" sx={{ color: '#78909C' }}>
+                      Proposals approved by their Reporting Manager — ready for Evaluation Committee review.
+                    </Typography>
+                  </Box>
+                  <Tooltip title="Refresh"><IconButton size="small" onClick={fetchData}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
+                </Box>
+
+                <TextField fullWidth size="small" placeholder="Search by ID, title, or employee..."
+                  value={evalSearch} onChange={e => setEvalSearch(e.target.value)}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9E9E9E', fontSize: 20 }} /></InputAdornment> }}
+                  sx={{ mb: 1.5 }} />
+
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  {['All', 'Unassigned', 'Assigned'].map(f => (
+                    <Chip key={f} label={`${f} (${evalCounts[f] ?? 0})`} size="small" onClick={() => setEvalFilter(f)}
+                      sx={{ fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer',
+                        bgcolor: evalFilter === f ? '#2E7D32' : '#F5F5F5',
+                        color: evalFilter === f ? '#fff' : '#546E7A' }} />
+                  ))}
+                </Box>
+
+                <Box sx={{ maxHeight: 500, overflowY: 'auto', pr: 0.5 }}>
+                  {filteredEvalSubs.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <EvalIcon sx={{ fontSize: 48, color: '#E0E0E0', mb: 1 }} />
+                      <Typography variant="body2" sx={{ color: '#9E9E9E' }}>
+                        {evalSubs.length === 0 ? 'No RM-accepted proposals yet.' : 'No proposals match the current filter.'}
+                      </Typography>
+                    </Box>
+                  ) : filteredEvalSubs.map(sub => (
+                    <ProposalRow
+                      key={sub._id} sub={sub}
+                      isSelected={selEvalIds.includes(sub._id)}
+                      onToggle={() => { setSelEvalIds(prev => prev.includes(sub._id) ? prev.filter(x => x !== sub._id) : [...prev, sub._id]); setSelEvalProp(sub); }}
+                      accentColor="#2E7D32" showCommittee showRMApproval
+                    />
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} lg={5}>
+            <Card sx={{ borderRadius: 3, position: 'sticky', top: 16 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                  <EvalIcon sx={{ color: '#2E7D32', fontSize: 26 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Send to Evaluators</Typography>
+                </Box>
+                <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>
+                  Select proposals → enter evaluator emails → send secure review links.
+                  Evaluators submit their decision (approve or reject) via the link.
+                </Typography>
+
+                {/* Selected count */}
+                <Box sx={{ p: 1.5, bgcolor: selEvalIds.length > 0 ? '#E8F5E9' : '#FAFAFA', borderRadius: 2, mb: 2,
+                  border: `1px solid ${selEvalIds.length > 0 ? '#A5D6A7' : '#E0E0E0'}` }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: selEvalIds.length > 0 ? '#2E7D32' : '#9E9E9E' }}>
+                    {selEvalIds.length > 0 ? `${selEvalIds.length} proposal(s) selected` : '← Select proposals from the list'}
+                  </Typography>
+                </Box>
+
+                {/* Evaluator Emails */}
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Evaluator Email(s)</Typography>
+                    <Button size="small" startIcon={<AddIcon />} onClick={handleAddEvalEmail}
+                      sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', color: '#2E7D32' }}>
+                      Add Email
+                    </Button>
+                  </Box>
+                  {evalReviewerEmails.map((email, idx) => (
+                    <Box key={idx} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                      <TextField
+                        fullWidth size="small"
+                        type="email"
+                        placeholder={`Evaluator email ${idx + 1}`}
+                        value={email}
+                        onChange={e => handleEvalEmailChange(idx, e.target.value)}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start"><EmailIcon sx={{ fontSize: 18, color: '#9E9E9E' }} /></InputAdornment>
+                        }}
+                      />
+                      {evalReviewerEmails.length > 1 && (
+                        <IconButton size="small" onClick={() => handleRemoveEvalEmail(idx)} sx={{ color: '#EF5350' }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                  <Typography variant="caption" sx={{ color: '#78909C' }}>
+                    Each evaluator receives a secure link to review all selected proposals.
+                  </Typography>
+                </Box>
+
+                {/* Optional batch name */}
+                <TextField fullWidth size="small" label="Batch Name (optional)"
+                  placeholder={`Eval-Batch-${new Date().toLocaleDateString('en-IN')}`}
+                  value={evalBatchName} onChange={e => setEvalBatchName(e.target.value)} sx={{ mb: 2 }} />
+
+                {/* Info box */}
+                <Box sx={{ p: 1.5, bgcolor: '#F3E5F5', borderRadius: 2, mb: 2, border: '1px solid #CE93D8' }}>
+                  <Typography variant="caption" sx={{ color: '#6A1B9A', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                    📋 What happens next?
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#4A148C' }}>
+                    Evaluators receive a secure link. When they submit their review, <b>both approved AND rejected</b> proposals move to the <b>Finance Assignment</b> tab — rejected ones show a rejection tag.
+                  </Typography>
+                </Box>
+
+                <Button variant="contained" fullWidth size="large"
+                  disabled={selEvalIds.length === 0 || !evalReviewerEmails.some(e => e.trim())}
+                  onClick={handleAutoAssignEvalByEmail} startIcon={<SendIcon />}
+                  sx={{ fontWeight: 700, py: 1.5, bgcolor: '#2E7D32', '&:hover': { bgcolor: '#1B5E20' } }}>
+                  Send Evaluation Email ({selEvalIds.length})
+                </Button>
+
+                {selEvalProp && (
+                  <Fade in timeout={400}>
+                    <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #E0E0E0' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Last Selected Proposal</Typography>
+                      <Box sx={{ bgcolor: '#F9FAFB', p: 1.5, borderRadius: 2, border: '1px solid #E8EAED' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#2E7D32', fontFamily: 'monospace' }}>{selEvalProp.businessId}</Typography>
+                          <TypeBadge type={selEvalProp.submissionType} />
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>{selEvalProp.title}</Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="caption" sx={{ color: '#546E7A' }}>RM Decision</Typography>
+                          <ReviewBadge decision={selEvalProp.workflow?.rmReview?.decision} />
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Fade>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB 3 — Finance Assignment
+      ══════════════════════════════════════════════════════════════ */}
+      <TabPanel value={tabIndex} index={2}>
+        <Grid container spacing={3}>
+          {/* Proposals pool */}
+          <Grid item xs={12} lg={7}>
+            <Card sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>Post-Evaluation Proposals</Typography>
+                    <Typography variant="caption" sx={{ color: '#78909C' }}>
+                      All proposals that completed evaluation — both approved and rejected — require Finance Assignment.
+                    </Typography>
+                  </Box>
+                  <Tooltip title="Refresh"><IconButton size="small" onClick={fetchData}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
+                </Box>
+
+                <TextField fullWidth size="small" placeholder="Search by ID, title, or employee..."
+                  value={finSearch} onChange={e => setFinSearch(e.target.value)}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9E9E9E', fontSize: 20 }} /></InputAdornment> }}
+                  sx={{ mb: 1.5 }} />
+
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  {['All', 'Unassigned', 'Assigned'].map(f => (
+                    <Chip key={f} label={`${f} (${finCounts[f] ?? 0})`} size="small" onClick={() => setFinFilter(f)}
+                      sx={{ fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer',
+                        bgcolor: finFilter === f ? '#1565C0' : '#F5F5F5',
+                        color: finFilter === f ? '#fff' : '#546E7A' }} />
+                  ))}
+                </Box>
+
+                <Box sx={{ maxHeight: 500, overflowY: 'auto', pr: 0.5 }}>
+                  {filteredFinSubs.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <FinanceIcon sx={{ fontSize: 48, color: '#E0E0E0', mb: 1 }} />
+                      <Typography variant="body2" sx={{ color: '#9E9E9E' }}>
+                        {financeSubs.length === 0
+                          ? 'No post-evaluation proposals yet. Once evaluators submit their decisions, proposals will appear here.'
+                          : 'No proposals match the current filter.'}
+                      </Typography>
+                    </Box>
+                  ) : filteredFinSubs.map(sub => {
+                    const isSel = selFinIds.includes(sub._id);
+                    const assignedTo = sub.workflow?.financeReview?.reviewerName;
+                    const evalDecision = sub.workflow?.evaluationReview?.decision;
+                    const isEvalRejected = evalDecision === 'REJECTED';
+                    return (
+                      <Box key={sub._id}
+                        onClick={() => { setSelFinIds(prev => prev.includes(sub._id) ? prev.filter(x => x !== sub._id) : [...prev, sub._id]); setSelFinProp(sub); }}
+                        sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, p: 1.5, borderRadius: 2, mb: 1, cursor: 'pointer',
+                          border: `1.5px solid ${isSel ? (isEvalRejected ? '#C62828' : '#1565C0') : isEvalRejected ? '#FFCDD2' : '#F0F0F0'}`,
+                          bgcolor: isSel ? (isEvalRejected ? '#FFF3F3' : '#EEF2FF') : isEvalRejected ? '#FFF8F8' : '#FAFAFA',
+                          transition: 'all 0.2s',
+                          '&:hover': { borderColor: isEvalRejected ? '#EF9A9A' : '#90CAF9' } }}>
+                        <Checkbox size="small" checked={isSel}
+                          onChange={() => { setSelFinIds(prev => prev.includes(sub._id) ? prev.filter(x => x !== sub._id) : [...prev, sub._id]); }}
+                          onClick={e => e.stopPropagation()}
+                          sx={{ color: isEvalRejected ? '#C62828' : '#1565C0', '&.Mui-checked': { color: isEvalRejected ? '#C62828' : '#1565C0' }, mt: -0.3 }} />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.3, flexWrap: 'wrap' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: isEvalRejected ? '#C62828' : '#1565C0', fontFamily: 'monospace' }}>{sub.businessId}</Typography>
+                            <TypeBadge type={sub.submissionType} />
+                            {isEvalRejected ? (
+                              <Chip label="Eval ✗ Rejected" size="small"
+                                sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#FFEBEE', color: '#C62828', fontWeight: 700 }} />
+                            ) : (
+                              <Chip label="Eval ✓ Approved" size="small"
+                                sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700 }} />
+                            )}
+                            {assignedTo && (
+                              <Chip label={`Finance: ${assignedTo}`} size="small"
+                                sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#E3F2FD', color: '#1565C0', fontWeight: 700 }} />
+                            )}
+                          </Box>
+                          <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }} noWrap>{sub.title}</Typography>
+                          <Typography variant="caption" sx={{ color: '#78909C' }} noWrap>
+                            {sub.employeeName} • {sub.dept} •{' '}
+                            <span style={{ color: isEvalRejected ? '#C62828' : '#2E7D32', fontWeight: 600 }}>
+                              Eval: {sub.workflow?.evaluationReview?.committeeName || 'Committee'} {isEvalRejected ? '✗' : '✓'}
+                            </span>
+                          </Typography>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Finance Assignment Panel */}
+          <Grid item xs={12} lg={5}>
+            <Card sx={{ borderRadius: 3, position: 'sticky', top: 16 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                  <FinanceIcon sx={{ color: '#1565C0', fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Assign to Finance Reviewers</Typography>
+                </Box>
+                <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>
+                  Select proposals → add finance reviewer emails → send a secure review link via email.
+                  Finance reviewers click the link and submit their budget decision.
+                </Typography>
+
+                {/* Selected count */}
+                <Box sx={{ p: 1.5, bgcolor: selFinIds.length > 0 ? '#E3F2FD' : '#FAFAFA', borderRadius: 2, mb: 2,
+                  border: `1px solid ${selFinIds.length > 0 ? '#90CAF9' : '#E0E0E0'}` }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: selFinIds.length > 0 ? '#1565C0' : '#9E9E9E' }}>
+                    {selFinIds.length > 0 ? `${selFinIds.length} proposal(s) selected for finance review` : '← Select proposals from the list'}
+                  </Typography>
+                </Box>
+
+                {/* Finance Reviewer Emails */}
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Finance Reviewer Emails</Typography>
+                    <Button size="small" startIcon={<AddIcon />} onClick={handleAddReviewerEmail}
+                      sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.75rem' }}>
+                      Add Reviewer
+                    </Button>
+                  </Box>
+                  {finReviewerEmails.map((email, idx) => (
+                    <Box key={idx} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                      <TextField
+                        fullWidth size="small"
+                        type="email"
+                        placeholder={`Finance reviewer email ${idx + 1}`}
+                        value={email}
+                        onChange={e => handleReviewerEmailChange(idx, e.target.value)}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start"><EmailIcon sx={{ fontSize: 18, color: '#9E9E9E' }} /></InputAdornment>
+                        }}
+                      />
+                      {finReviewerEmails.length > 1 && (
+                        <IconButton size="small" onClick={() => handleRemoveReviewerEmail(idx)} sx={{ color: '#EF5350' }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                  <Typography variant="caption" sx={{ color: '#78909C' }}>
+                    Each reviewer will receive a single email with a secure link to review all selected proposals.
+                  </Typography>
+                </Box>
+
+                {/* Optional batch name */}
+                <TextField fullWidth size="small" label="Batch Name (optional)"
+                  placeholder={`Finance-Batch-${new Date().toLocaleDateString('en-IN')}`}
+                  value={finBatchName} onChange={e => setFinBatchName(e.target.value)} sx={{ mb: 2 }} />
+
+                {/* Info box about what happens next */}
+                <Box sx={{ p: 1.5, bgcolor: '#FFF8E1', borderRadius: 2, mb: 2, border: '1px solid #FFE082' }}>
+                  <Typography variant="caption" sx={{ color: '#F57F17', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                    📋 What happens next?
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#795548' }}>
+                    Finance reviewers receive an email with a secure link. When they approve a proposal's budget, 
+                    it automatically moves to the <b>Finance Approval</b> tab for final committee action.
+                  </Typography>
+                </Box>
+
+                <Button variant="contained" fullWidth size="large"
+                  disabled={selFinIds.length === 0 || !finReviewerEmails.some(e => e.trim())}
+                  onClick={handleAutoAssignFinance} startIcon={<SendIcon />}
+                  sx={{ fontWeight: 700, py: 1.5, bgcolor: '#1565C0', '&:hover': { bgcolor: '#0D47A1' } }}>
+                  Send Finance Review Email ({selFinIds.length})
+                </Button>
+
+                {/* Selected proposal preview */}
+                {selFinProp && (
+                  <Fade in timeout={400}>
+                    <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #E0E0E0' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Last Selected Proposal</Typography>
+                      <Box sx={{ bgcolor: '#F9FAFB', p: 1.5, borderRadius: 2, border: '1px solid #E8EAED' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#1565C0', fontFamily: 'monospace' }}>{selFinProp.businessId}</Typography>
+                          <TypeBadge type={selFinProp.submissionType} />
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>{selFinProp.title}</Typography>
+                        <Divider sx={{ my: 1 }} />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700 }}>RM Decision</Typography>
+                          <ReviewBadge decision={selFinProp.workflow?.rmReview?.decision} />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700 }}>Eval Decision</Typography>
+                          <ReviewBadge decision={selFinProp.workflow?.evaluationReview?.decision} />
+                        </Box>
+                        {selFinProp.workflow?.evaluationReview?.remarks && (
+                          <Typography variant="caption" sx={{ color: '#546E7A', display: 'block', mt: 0.5, fontStyle: 'italic' }}>
+                            "{selFinProp.workflow.evaluationReview.remarks}"
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  </Fade>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      <Snackbar open={snack.open} autoHideDuration={4000}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+        <Alert severity={snack.type} variant="filled"
+          onClose={() => setSnack(s => ({ ...s, open: false }))} sx={{ borderRadius: 2 }}>
           {snack.msg}
         </Alert>
       </Snackbar>

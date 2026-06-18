@@ -1,79 +1,164 @@
+/**
+ * ─────────────────────────────────────────────────────────────────
+ *  Unified Submission Parser — Single Source of Truth
+ *
+ *  EVERY module page MUST use this parser instead of doing its own
+ *  ad-hoc field extraction. This ensures all views show the same data.
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+// ── Keyword Lists ───────────────────────────────────────────────
+const TITLE_KW       = ['title', 'proposaltitle', 'ideatitle', 'projecttitle', 'projectname'];
+const ABSTRACT_KW    = ['abstract', 'introduction', 'description', 'details', 'ideadetails', 'summary', 'overview'];
+const BENEFITS_KW    = ['benefit', 'benefits', 'expectedbenefit', 'expectedimpact', 'impact'];
+const DEPT_KW        = ['department', 'dept', 'division', 'unit', 'section'];
+const NAME_KW        = ['name', 'fullname', 'employeename', 'submittername', 'applicantname'];
+const CODE_KW        = ['employeecode', 'empcode', 'code', 'employeeid', 'empid', 'staffid'];
+const RM_NAME_KW     = ['managername', 'reportingmanagername', 'rmname', 'supervisorname', 'linemanagername', 'reportingmanager'];
+const RM_EMAIL_KW    = ['manageremail', 'reportingmanageremail', 'rmemail', 'supervisoremail', 'linemanageremail'];
+const HOD_NAME_KW    = ['hodname', 'headofdepartment', 'hodmanagername', 'departmentheadname'];
+const HOD_EMAIL_KW   = ['hodemail', 'headofdepartmentemail', 'departmentheademail'];
+const BUDGET_KW      = ['budget', 'amount', 'cost', 'estimatedbudget', 'budgetrequired', 'capex', 'opex', 'estimatedcost', 'totalcost'];
+const CATEGORY_KW    = ['category', 'type', 'area'];
+const SUBTYPE_KW     = ['submissiontype'];
+
+// ── Helpers ─────────────────────────────────────────────────────
+
+/**
+ * Search `answers` object keys by keyword substring matching.
+ * Returns the first matching value or null.
+ */
+const findInAnswers = (ans, keywords) => {
+  if (!ans || typeof ans !== 'object') return null;
+  for (const key of Object.keys(ans)) {
+    const kLower = key.toLowerCase().replace(/[_\-\s]/g, '');
+    if (keywords.some(kw => kLower.includes(kw))) {
+      return ans[key];
+    }
+  }
+  return null;
+};
+
+/**
+ * Search `formData` (labeled) object by label keyword matching.
+ * Returns the first matching value or null.
+ */
+const findInFormData = (fd, keywords) => {
+  if (!fd || typeof fd !== 'object') return null;
+  for (const [label, meta] of Object.entries(fd)) {
+    const lLower = label.toLowerCase().replace(/[_\-\s]/g, '');
+    if (keywords.some(kw => lLower.includes(kw))) {
+      return meta?.value ?? meta;
+    }
+  }
+  return null;
+};
+
+/**
+ * Dual-source lookup: formData (labeled) first, then answers (ID-keyed).
+ */
+const find = (fd, ans, keywords) => {
+  return findInFormData(fd, keywords) ?? findInAnswers(ans, keywords);
+};
+
+// ── Main Parser ─────────────────────────────────────────────────
+
 export const parseSubmissionFields = (sub) => {
   if (!sub) return {};
   const ans = sub.answers || {};
+  const fd  = sub.formData || {};
 
-  // Direct mappings
-  let title = ans.title || ans.ideaTitle || ans.proposalTitle;
-  let abstract = ans.abstract || ans.introduction || ans.description || ans.details || ans.ideaDetails;
-  let dept = ans.department || ans.dept;
-  let employeeName = ans.name || ans.employeeName || ans.fullName || ans.submitterName;
-  let employeeCode = ans.employeeCode || ans.empCode || ans.code;
-  let benefits = ans.benefits || ans.benefit;
-  let rmValue = ans.managerName || ans.reportingManagerName || ans.rmName;
-  let rmEmail = ans.managerEmail || ans.reportingManagerEmail || ans.rmEmail;
-  let hodEmail = ans.hodEmail;
-  let rmName = ans.managerName || ans.reportingManagerName || ans.rmName;
-  let hodName = ans.hodName;
-  let hodValue = ans.hodName || ans.hodEmail || '';
+  // ── Core Fields ──
+  let title        = find(fd, ans, TITLE_KW) || 'Untitled Submission';
+  let abstract     = find(fd, ans, ABSTRACT_KW) || 'No abstract provided';
+  let benefits     = find(fd, ans, BENEFITS_KW) || 'No benefits provided';
+  let dept         = find(fd, ans, DEPT_KW) || 'Unknown';
+  let employeeName = find(fd, ans, NAME_KW) || 'Unknown';
+  let employeeCode = find(fd, ans, CODE_KW) || 'Unknown';
 
-  // Enhance RM and HOD display
-  if (ans.managerEmail || ans.reportingManagerEmail) {
-    const email = ans.managerEmail || ans.reportingManagerEmail;
-    const name = ans.managerName || ans.reportingManagerName;
-    rmValue = name ? `${name} (${email})` : email;
-  }
-  if (ans.hodEmail) {
-    const email = ans.hodEmail;
-    const name = ans.hodName;
-    hodValue = name ? `${name} (${email})` : email;
-  }
+  // ── Management Chain ──
+  let rmName   = find(fd, ans, RM_NAME_KW) || '';
+  let rmEmail  = find(fd, ans, RM_EMAIL_KW) || '';
+  let hodName  = find(fd, ans, HOD_NAME_KW) || '';
+  let hodEmail = find(fd, ans, HOD_EMAIL_KW) || '';
 
-  // Key-search fallbacks if properties are named differently
-  const findVal = (keywords) => {
-    for (const key of Object.keys(ans)) {
-      const kLower = key.toLowerCase();
-      if (keywords.some(kw => kLower.includes(kw))) {
-        return ans[key];
-      }
-    }
-    return null;
-  };
+  // ── Budget ──
+  let budget   = find(fd, ans, BUDGET_KW) || '';
+  let category = find(fd, ans, CATEGORY_KW) || '';
+  let submissionType = find(fd, ans, SUBTYPE_KW) || sub.submissionType || 'Idea';
 
-  if (!title) title = findVal(['title']) || 'Untitled Submission';
-  if (!abstract) abstract = findVal(['abstract', 'introduction', 'description', 'details']) || 'No abstract provided';
-  if (!dept) dept = findVal(['department', 'dept']) || 'Unknown';
-  if (!employeeName) employeeName = findVal(['name', 'fullname']) || 'Unknown';
-  if (!employeeCode) employeeCode = findVal(['code', 'empcode']) || 'Unknown';
-  if (!benefits) benefits = findVal(['benefit']) || 'No benefits provided';
-  if (!rmEmail) rmEmail = findVal(['manageremail', 'rmemail']);
-  if (!hodEmail) hodEmail = findVal(['hodemail']);
-  if (!rmName) rmName = findVal(['managername', 'rmname']);
-  if (!hodName) hodName = findVal(['hodname']);
+  // ── Compose Display Values ──
+  let rmValue = '';
+  if (rmName && rmEmail) rmValue = `${rmName} (${rmEmail})`;
+  else rmValue = rmName || rmEmail || 'Unknown RM';
 
-  if (!rmValue) {
-    if (rmName && rmEmail) rmValue = `${rmName} (${rmEmail})`;
-    else rmValue = rmName || rmEmail || 'Unknown RM';
-  }
-  if (!hodValue) {
-    if (hodName && hodEmail) hodValue = `${hodName} (${hodEmail})`;
-    else hodValue = hodName || hodEmail || 'Unknown HOD';
-  }
+  let hodValue = '';
+  if (hodName && hodEmail) hodValue = `${hodName} (${hodEmail})`;
+  else hodValue = hodName || hodEmail || 'Unknown HOD';
+
+  // ── Workflow Data (from submission.workflow) ──
+  const workflow = sub.workflow || {};
+  const rmReview = workflow.rmReview || {};
+  const hodReview = workflow.hodReview || {};
+  const evaluationReview = workflow.evaluationReview || {};
+  const financeReview = workflow.financeReview || {};
+
+  // ── Approved Budget ──
+  const approvedBudget = financeReview.approvedBudget ?? null;
+  const userBudget = budget;
 
   return {
+    // Core proposal fields
     title,
     abstract,
+    benefits,
     dept,
     employeeName,
     employeeCode,
-    benefits,
+
+    // Management chain
     rmValue,
     hodValue,
-    rmEmail: rmEmail || '',
-    hodEmail: hodEmail || '',
-    rmName: rmName || '',
-    hodName: hodName || '',
+    rmEmail,
+    rmName,
+    hodEmail,
+    hodName,
+
+    // Financial
+    budget,
+    approvedBudget,
+    userBudget,
+    category,
+    submissionType,
+
+    // Workflow review data
+    rmReview,
+    hodReview,
+    evaluationReview,
+    financeReview,
+
+    // Project Details
+    projectDetails: sub.projectDetails || {
+      owner: null,
+      implementationStatus: 'Approved',
+      progressPercentage: 0,
+      updates: [],
+      expectedBenefits: '',
+      actualBenefits: ''
+    },
+
+    // Metadata
+    businessId: sub.businessId || `SUB-${(sub._id || '').toString().substring(18).toUpperCase()}`,
+    status: sub.status || 'NEW',
+    submitterEmail: sub.submitterEmail || '',
+    attachments: sub.attachments || [],
+    timeline: sub.timeline || [],
+    formData: fd,
+    answers: ans,
   };
 };
+
+// ── Key Formatter ───────────────────────────────────────────────
 
 export const formatKey = (key) => {
   if (!key) return '';

@@ -14,7 +14,11 @@ import Settings from '../pages/Settings';
 import PublicForm from '../pages/PublicForm';
 import PublicReview from '../pages/PublicReview';
 import PublicBatchReview from '../pages/PublicBatchReview';
+import RMBatchReview from '../pages/RMBatchReview';
+import PublicFinanceReview from '../pages/PublicFinanceReview';
+import PublicTracking from '../pages/PublicTracking';
 import Login from '../pages/Login';
+import RDOngoingProjects from '../pages/RDOngoingProjects';
 import { authStore } from '../store/authStore';
 
 const ProtectedRoute = ({ children }) => {
@@ -42,8 +46,11 @@ const AppRoutes = () => {
 
       {/* Public form route — no layout, no sidebar, no login */}
       <Route path="/form/:slug" element={<PublicForm />} />
+      <Route path="/track" element={<PublicTracking />} />
       <Route path="/review/:token" element={<PublicReview />} />
       <Route path="/batch-review/:token" element={<PublicBatchReview />} />
+      <Route path="/rm-batch-review/:token" element={<RMBatchReview />} />
+      <Route path="/finance-review/:token" element={<PublicFinanceReview />} />
 
       {/* Admin routes — wrapped in MainLayout AND ProtectedRoute */}
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
@@ -55,6 +62,7 @@ const AppRoutes = () => {
         <Route path="evaluation" element={<Evaluation />} />
         <Route path="meeting" element={<Meeting />} />
         <Route path="approval" element={<Approval />} />
+        <Route path="rd-ongoing-projects" element={<RDOngoingProjects />} />
         <Route path="finance-approval" element={<FinanceApproval />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />

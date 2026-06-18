@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Card, CardContent, Typography, Grid, Button, Drawer, IconButton,
   Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Select, MenuItem, InputLabel, FormControl, Chip, Checkbox, Snackbar, Alert
+  Select, MenuItem, InputLabel, FormControl, Chip, Checkbox, Snackbar, Alert, Fade
 } from '@mui/material';
 import { Close as CloseIcon, Email as EmailIcon, Group as GroupIcon, ViewList as ViewListIcon, Add as AddIcon } from '@mui/icons-material';
 import DataTable, { StatusChip, TypeBadge } from '../components/DataTable';
 import api from '../utils/api';
-import { parseSubmissionFields } from '../utils/submissionParser';
+import { parseSubmissionFields, formatKey } from '../utils/submissionParser';
 import Timeline from '../components/Timeline';
+import ReviewBadge from '../components/ReviewBadge';
 
 function a11yProps(index) {
   return { id: `eval-tab-${index}`, 'aria-controls': `eval-tabpanel-${index}` };
@@ -16,9 +17,11 @@ function a11yProps(index) {
 
 const Evaluation = () => {
   const [tabIndex, setTabIndex] = useState(0);
+  const drawerContentRef = React.useRef(null);
 
   // Data states
   const [proposals, setProposals] = useState([]);
+  const [completedProposals, setCompletedProposals] = useState([]);
   const [committees, setCommittees] = useState([]);
   const [batches, setBatches] = useState([]);
   
@@ -51,27 +54,36 @@ const Evaluation = () => {
       const comRes = await api.get('/admin/evaluations/committees');
       const batRes = await api.get('/admin/evaluations/batches');
 
-      const formattedSubs = subRes.data.data.submissions
-        .filter(sub => sub.status === 'EVALUATION')
-        .map(sub => {
+      const allSubs = subRes.data.data.submissions || [];
+      const formattedSubs = allSubs.map(sub => {
           const parsed = parseSubmissionFields(sub);
           return {
             id: sub._id,
-            submissionId: sub.businessId || `SUB-${sub._id.toString().substring(18).toUpperCase()}`,
-            submissionType: sub.submissionType || parsed.submissionType || parsed.SubmissionType || 'Idea',
+            submissionId: parsed.trackingId || parsed.businessId || 'N/A',
+            businessId: parsed.businessId,
+            submissionType: parsed.submissionType,
             title: parsed.title,
             submitter: parsed.employeeName,
+            employeeCode: parsed.employeeCode,
             dept: parsed.dept,
-            status: sub.status,
             abstract: parsed.abstract,
             benefits: parsed.benefits,
-            rmReview: sub.workflow?.rmReview || {},
-            timeline: sub.timeline || [],
-            attachments: sub.attachments || []
+            rmValue: parsed.rmValue,
+            hodValue: parsed.hodValue,
+            rmReview: parsed.rmReview,
+            status: sub.status,
+            timeline: parsed.timeline,
+            attachments: parsed.attachments,
+            answers: parsed.answers,
+            formData: parsed.formData,
+            budget: parsed.budget,
+            committeeBudget: parsed.committeeBudget,
           };
         });
 
-      setProposals(formattedSubs);
+      // Active = EVALUATION status, History = past evaluation stages
+      setProposals(formattedSubs.filter(s => s.status === 'EVALUATION'));
+      setCompletedProposals(formattedSubs.filter(s => ['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED'].includes(s.status)));
       setCommittees(comRes.data.data.committees);
       setBatches(batRes.data.data.batches);
     } catch (err) {
@@ -128,6 +140,12 @@ const Evaluation = () => {
     );
   };
 
+  const handleOpenDetails = (row) => {
+    setSelectedProposalData(row);
+    setDrawerOpen(true);
+    setTimeout(() => drawerContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  };
+
   const proposalColumns = [
     { 
       field: 'select', 
@@ -150,11 +168,11 @@ const Evaluation = () => {
       )
     },
     { field: 'title', headerName: 'Title' },
-    { field: 'submitter', headerName: 'Submitter' },
-    { field: 'dept', headerName: 'Department' },
-    { field: 'status', headerName: 'Status', renderCell: (row) => <StatusChip status={row.status} /> },
+    { field: 'rmStatus', headerName: 'RM Status', renderCell: (row) => <ReviewBadge decision={row.workflow?.rmReview?.decision} /> },
+    { field: 'hodStatus', headerName: 'HOD Status', renderCell: (row) => <ReviewBadge decision={row.workflow?.hodReview?.decision} /> },
+    { field: 'status', headerName: 'Evaluation Status', renderCell: (row) => <StatusChip status={row.status} /> },
     { field: 'actions', headerName: 'Actions', renderCell: (row) => (
-      <Button size="small" variant="outlined" onClick={() => { setSelectedProposalData(row); setDrawerOpen(true); }}>View</Button>
+      <Button size="small" variant="outlined" onClick={() => handleOpenDetails(row)}>View</Button>
     )}
   ];
 
@@ -206,37 +224,55 @@ const Evaluation = () => {
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabIndex} onChange={(e, val) => setTabIndex(val)}>
-          <Tab label="Pending Proposals" {...a11yProps(0)} />
+          <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Pending <Chip label={proposals.length} size="small" sx={{ bgcolor: '#FFF3E0', color: '#F57C00', height: 20, fontWeight: 700 }} /></Box>} {...a11yProps(0)} />
           <Tab label="Evaluation Batches" {...a11yProps(1)} />
           <Tab label="Committees" {...a11yProps(2)} />
+          <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Completed <Chip label={completedProposals.length} size="small" sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', height: 20, fontWeight: 700 }} /></Box>} {...a11yProps(3)} />
         </Tabs>
       </Box>
 
       {tabIndex === 0 && (
+        <Fade in={true} timeout={300}>
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Proposals Awaiting Batch Assignment</Typography>
             <DataTable columns={proposalColumns} rows={proposals} />
           </CardContent>
         </Card>
+        </Fade>
       )}
 
       {tabIndex === 1 && (
+        <Fade in={true} timeout={300}>
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Evaluation Batches</Typography>
             <DataTable columns={batchColumns} rows={batches} getRowId={(r) => r._id} />
           </CardContent>
         </Card>
+        </Fade>
       )}
 
       {tabIndex === 2 && (
+        <Fade in={true} timeout={300}>
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Committees</Typography>
             <DataTable columns={committeeColumns} rows={committees} getRowId={(r) => r._id} />
           </CardContent>
         </Card>
+        </Fade>
+      )}
+
+      {tabIndex === 3 && (
+        <Fade in={true} timeout={300}>
+        <Card sx={{ borderRadius: 3 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Completed Evaluations</Typography>
+            <DataTable columns={proposalColumns.filter(c => c.field !== 'select')} rows={completedProposals} />
+          </CardContent>
+        </Card>
+        </Fade>
       )}
 
       {/* Dialogs */}
@@ -322,7 +358,62 @@ const Evaluation = () => {
             </Box>
 
             {/* Scrollable Content */}
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Box ref={drawerContentRef} sx={{ flex: 1, overflowY: 'auto', p: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+
+              {/* Employee & Management Info */}
+              <Box sx={{ bgcolor: '#ffffff', p: 3, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 2, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Employee & Management</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E', fontWeight: 600 }}>Employee Name</Typography><Typography variant="body2">{selectedProposalData.submitter}</Typography></Grid>
+                  <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E', fontWeight: 600 }}>Employee Code</Typography><Typography variant="body2">{selectedProposalData.employeeCode}</Typography></Grid>
+                  <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E', fontWeight: 600 }}>Department</Typography><Typography variant="body2">{selectedProposalData.dept}</Typography></Grid>
+                  <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E', fontWeight: 600 }}>Reporting Manager</Typography><Typography variant="body2">{selectedProposalData.rmValue}</Typography></Grid>
+                  <Grid item xs={6}><Typography variant="caption" sx={{ color: '#9E9E9E', fontWeight: 600 }}>Head of Department</Typography><Typography variant="body2">{selectedProposalData.hodValue}</Typography></Grid>
+                </Grid>
+              </Box>
+
+              {/* Management Decisions Info */}
+              <Box sx={{ bgcolor: '#ffffff', p: 3, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 2, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Management Decisions</Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px solid #EEEEEE' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700, textTransform: 'uppercase' }}>Reporting Manager</Typography>
+                        <ReviewBadge decision={selectedProposalData.workflow?.rmReview?.decision} />
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121', mb: 0.5 }}>{selectedProposalData.workflow?.rmReview?.reviewerName || selectedProposalData.workflow?.rmReview?.reviewerEmail || selectedProposalData.rmValue || 'Not Assigned'}</Typography>
+                      {selectedProposalData.workflow?.rmReview?.timestamp && (
+                        <Typography variant="caption" sx={{ color: '#9E9E9E', display: 'block', mb: 1 }}>Reviewed on: {new Date(selectedProposalData.workflow.rmReview.timestamp).toLocaleString()}</Typography>
+                      )}
+                      {selectedProposalData.workflow?.rmReview?.remarks && (
+                        <Box sx={{ mt: 1, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+                          <Typography variant="caption" sx={{ color: '#616161', fontStyle: 'italic', display: 'block', mb: 0.5 }}>Remarks:</Typography>
+                          <Typography variant="body2" sx={{ color: '#424242' }}>"{selectedProposalData.workflow.rmReview.remarks}"</Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px solid #EEEEEE' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700, textTransform: 'uppercase' }}>Head of Department</Typography>
+                        <ReviewBadge decision={selectedProposalData.workflow?.hodReview?.decision} />
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121', mb: 0.5 }}>{selectedProposalData.workflow?.hodReview?.reviewerName || selectedProposalData.workflow?.hodReview?.reviewerEmail || selectedProposalData.hodValue || 'Not Assigned'}</Typography>
+                      {selectedProposalData.workflow?.hodReview?.timestamp && (
+                        <Typography variant="caption" sx={{ color: '#9E9E9E', display: 'block', mb: 1 }}>Reviewed on: {new Date(selectedProposalData.workflow.hodReview.timestamp).toLocaleString()}</Typography>
+                      )}
+                      {selectedProposalData.workflow?.hodReview?.remarks && (
+                        <Box sx={{ mt: 1, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+                          <Typography variant="caption" sx={{ color: '#616161', fontStyle: 'italic', display: 'block', mb: 0.5 }}>Remarks:</Typography>
+                          <Typography variant="body2" sx={{ color: '#424242' }}>"{selectedProposalData.workflow.hodReview.remarks}"</Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
               
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Executive Summary</Typography>
@@ -333,6 +424,40 @@ const Evaluation = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Expected Benefits</Typography>
                 <Typography variant="body1" sx={{ color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{selectedProposalData.benefits}</Typography>
               </Box>
+
+              {/* Attachments */}
+              {selectedProposalData.attachments?.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Attachments</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {selectedProposalData.attachments.map((att, i) => (
+                      <Chip key={i} label={att.filename || 'Document'} variant="outlined" component="a" href={att.url?.startsWith('http') ? att.url : `${api.defaults.baseURL?.replace('/api/v1', '')}${att.url}`} target="_blank" clickable />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Complete Form Answers */}
+              {selectedProposalData.answers && Object.keys(selectedProposalData.answers).length > 0 && (
+                <Box sx={{ bgcolor: '#ffffff', p: 3, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 2, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Complete Form Details</Typography>
+                  <Grid container spacing={2}>
+                    {Object.entries(selectedProposalData.answers).map(([key, val], idx) => {
+                      if (!val || key === 'attachments') return null;
+                      return (
+                        <Grid item xs={12} sm={6} key={idx}>
+                          <Typography variant="caption" sx={{ color: '#9E9E9E', fontWeight: 600 }}>{formatKey(key)}</Typography>
+                          <Box sx={{ bgcolor: '#F5F7FA', p: 1.5, borderRadius: 2, mt: 0.5 }}>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-line', color: '#37474F', lineHeight: 1.5 }}>
+                              {Array.isArray(val) ? val.join(', ') : val.toString()}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
+              )}
 
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 2, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Timeline & History</Typography>

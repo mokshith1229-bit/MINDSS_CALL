@@ -20,8 +20,8 @@ const routeTitles = {
   '/form-upload': 'Form Upload',
   '/auto-assign-email': 'Auto Assign Email',
   '/evaluation': 'Evaluation',
-  '/meeting': 'Meeting',
   '/approval': 'Approval',
+  '/finance-approval': 'Finance Approval',
 };
 
 const getBreadcrumbs = (path) => {

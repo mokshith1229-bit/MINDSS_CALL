@@ -25,6 +25,7 @@ import {
   Star as StarIcon, Lock as LockIcon, LockOpen as UnlockIcon,
   AccessTime as ExpiryIcon, Group as GroupIcon, Restore as RestoreIcon,
   CloudUpload,
+  KeyboardArrowUp as UpIcon, KeyboardArrowDown as DownIcon,
 } from '@mui/icons-material';
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -778,38 +779,85 @@ const FBSecCard = ({ title, icon, accentColor = '#2E7D32', children }) => (
 );
 
 // ── The Main Dialog ───────────────────────────────────────────────────────────
+const DEFAULT_SECTIONS = [
+  { id: 'sec-0', title: 'Submission Type', fields: [{ id: 'submissionType', label: 'Submission Type', type: 'radio', options: ['Idea', 'Proposal'], required: true, enabled: true }] },
+  { id: 'sec-1', title: 'Basic Information', fields: [{ id: 'name', label: 'Full Name', type: 'text', required: true, enabled: true }, { id: 'dob', label: 'Date of Birth', type: 'date', required: true, enabled: true }, { id: 'employeeCode', label: 'Employee Code', type: 'text', required: true, enabled: true }] },
+  { id: 'sec-2', title: 'Organization Details', fields: [{ id: 'department', label: 'Department', type: 'dropdown', required: true, enabled: true }, { id: 'subDepartment', label: 'Sub Department', type: 'dropdown', required: true, enabled: true }, { id: 'subSubDepartment', label: 'Sub Sub Department', type: 'dropdown', required: false, enabled: true }] },
+  { id: 'sec-3', title: 'Classification', fields: [{ id: 'processProduct', label: 'Process / Product Development', type: 'dropdown', required: true, enabled: true }] },
+  { id: 'sec-4', title: 'Management Information', fields: [{ id: 'reportingManagerName', label: 'Reporting Manager Name', type: 'text', required: true, enabled: true }, { id: 'reportingManagerEmail', label: 'Reporting Manager Email', type: 'email', required: true, enabled: true }, { id: 'hodName', label: 'HOD Name', type: 'text', required: true, enabled: true }, { id: 'hodEmail', label: 'HOD Email', type: 'email', required: true, enabled: true }] },
+  { id: 'sec-5', title: 'Submission Details', fields: [{ id: 'title', label: 'Submission Title', type: 'text', required: true, enabled: true }, { id: 'introduction', label: 'Introduction', type: 'textarea', required: true, enabled: true }, { id: 'methodology', label: 'Methodology', type: 'textarea', required: true, enabled: true }, { id: 'benefits', label: 'Benefits', type: 'textarea', required: true, enabled: true }] },
+  { id: 'sec-6', title: 'Attachments', fields: [{ id: 'attachments', label: 'Attachments', type: 'file', required: false, enabled: true }] }
+];
+
 const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => {
   const [formData, setFormData] = React.useState({
     name: '',
     category: '',
     description: '',
-    sections: ['Submission Type', 'Basic Information', 'Organization Details', 'Classification', 'Management Information', 'Submission Details', 'Attachments']
+    sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS))
   });
+
+  const [expandedSec, setExpandedSec] = React.useState('sec-0');
 
   React.useEffect(() => {
     if (open) {
       if (formToEdit) {
+        let parsedSections = formToEdit.sections && formToEdit.sections.length > 0 && formToEdit.sections[0].fields 
+          ? JSON.parse(JSON.stringify(formToEdit.sections))
+          : JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+
+        if (formToEdit.sections && formToEdit.sections.length > 0 && !formToEdit.sections[0].fields) {
+           const activeTitles = formToEdit.sections.map(s => s.title);
+           parsedSections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS)).map(sec => ({
+             ...sec,
+             fields: sec.fields.map(f => ({ ...f, enabled: activeTitles.includes(sec.title) }))
+           }));
+        }
+
         setFormData({
           name: formToEdit.name || '',
           category: formToEdit.category || '',
           description: formToEdit.description || '',
-          sections: formToEdit.sections?.map(s => s.title) || ['Submission Type', 'Basic Information', 'Organization Details', 'Classification', 'Management Information', 'Submission Details', 'Attachments']
+          sections: parsedSections
         });
       } else {
-        setFormData({ name: '', category: '', description: '', sections: ['Submission Type', 'Basic Information', 'Organization Details', 'Classification', 'Management Information', 'Submission Details', 'Attachments'] });
+        setFormData({ name: '', category: '', description: '', sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)) });
       }
+      setExpandedSec('sec-0');
     }
   }, [open, formToEdit]);
 
-  const toggleSection = (sec) => {
+  const handleFieldChange = (secId, fieldId, key, value) => {
     setFormData(prev => ({
       ...prev,
-      sections: prev.sections.includes(sec) ? prev.sections.filter(s => s !== sec) : [...prev.sections, sec]
+      sections: prev.sections.map(sec => {
+        if (sec.id !== secId) return sec;
+        return {
+          ...sec,
+          fields: sec.fields.map(f => f.id === fieldId ? { ...f, [key]: value } : f)
+        };
+      })
+    }));
+  };
+
+  const moveField = (secId, fieldIdx, direction) => {
+    setFormData(prev => ({
+      ...prev,
+      sections: prev.sections.map(sec => {
+        if (sec.id !== secId) return sec;
+        const newFields = [...sec.fields];
+        if (direction === -1 && fieldIdx > 0) {
+          [newFields[fieldIdx - 1], newFields[fieldIdx]] = [newFields[fieldIdx], newFields[fieldIdx - 1]];
+        } else if (direction === 1 && fieldIdx < newFields.length - 1) {
+          [newFields[fieldIdx + 1], newFields[fieldIdx]] = [newFields[fieldIdx], newFields[fieldIdx + 1]];
+        }
+        return { ...sec, fields: newFields };
+      })
     }));
   };
 
   const handleSave = () => {
-    if (!formData.name) return; // Simple validation
+    if (!formData.name) return;
     
     const newForm = {
       id: formToEdit ? formToEdit.id : `form-${Date.now()}`,
@@ -820,7 +868,7 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
       slug: formToEdit ? formToEdit.slug : slugify(formData.name),
       createdAt: formToEdit ? formToEdit.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      sections: formData.sections.map((s, i) => ({ id: `sec-${i}`, title: s })),
+      sections: formData.sections,
       linkSettings: formToEdit ? formToEdit.linkSettings : { active: true, expiryDate: '', maxResponses: 500, onePerUser: false },
       responses: formToEdit ? formToEdit.responses : 0,
       currentVersion: formToEdit ? formToEdit.currentVersion : 1
@@ -837,50 +885,159 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth PaperProps={{ sx: { borderRadius: 3, height: '90vh' } }}>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #E5E7EB', bgcolor: '#fff' }}>
         <BuildIcon sx={{ color: '#0277BD' }} />
         <Typography variant="h6" sx={{ fontWeight: 800, flex: 1 }}>{formToEdit ? 'Edit Form Settings' : 'Create New Form'}</Typography>
         <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
       </DialogTitle>
-      
-      <DialogContent sx={{ p: 3, bgcolor: '#F9FAFB' }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#374151' }}>Form Name <span style={{color: '#EF4444'}}>*</span></Typography>
-        <TextField fullWidth size="small" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Innovation Ideas 2026" sx={{ mb: 3, bgcolor: '#fff', '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+      <DialogContent sx={{ p: 0, bgcolor: '#F9FAFB', display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+        {/* LEFT COLUMN - BUILDER */}
+        <Box sx={{ width: { xs: '100%', md: '50%' }, p: 3, borderRight: { md: '1px solid #E5E7EB' }, overflowY: 'auto' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#374151' }}>Form Name <span style={{color: '#EF4444'}}>*</span></Typography>
+          <TextField fullWidth size="small" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Innovation Ideas 2026" sx={{ mb: 3, bgcolor: '#fff', '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
 
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#374151' }}>Category <span style={{color: '#EF4444'}}>*</span></Typography>
-        <FormControl fullWidth size="small" sx={{ mb: 3, bgcolor: '#fff', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
-          <Select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} displayEmpty>
-            <MenuItem value="" disabled>Select Category</MenuItem>
-            {categories.map(c => <MenuItem key={c.id} value={c.name}>{c.name}</MenuItem>)}
-          </Select>
-        </FormControl>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={6}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#374151' }}>Category <span style={{color: '#EF4444'}}>*</span></Typography>
+              <FormControl fullWidth size="small" sx={{ bgcolor: '#fff', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
+                <Select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} displayEmpty>
+                  <MenuItem value="" disabled>Select Category</MenuItem>
+                  {categories?.map(c => <MenuItem key={c.id || c.name} value={c.name}>{c.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#374151' }}>Description</Typography>
+              <TextField fullWidth size="small" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Short description..." sx={{ bgcolor: '#fff', '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+            </Grid>
+          </Grid>
 
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#374151' }}>Description</Typography>
-        <TextField fullWidth multiline rows={3} size="small" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Short description of this form..." sx={{ mb: 3, bgcolor: '#fff', '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Form Sections & Fields
+            <Chip label="Transparent Builder" size="small" sx={{ bgcolor: '#E0F2FE', color: '#0284C7', fontWeight: 700, fontSize: '0.7rem' }} />
+          </Typography>
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {formData.sections.map(sec => {
+              const activeCount = sec.fields.filter(f => f.enabled).length;
+              return (
+                <Accordion 
+                  key={sec.id} 
+                  expanded={expandedSec === sec.id} 
+                  onChange={(e, expanded) => setExpandedSec(expanded ? sec.id : false)}
+                  sx={{ 
+                    borderRadius: '8px !important', 
+                    border: '1px solid #E5E7EB', 
+                    boxShadow: 'none',
+                    '&:before': { display: 'none' },
+                    overflow: 'hidden'
+                  }}
+                >
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: expandedSec === sec.id ? '#F8FAFC' : '#fff', borderBottom: expandedSec === sec.id ? '1px solid #E5E7EB' : 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 1 }}>
+                      <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>{sec.title}</Typography>
+                      <Chip label={`${activeCount} field${activeCount !== 1 ? 's' : ''}`} size="small" sx={{ bgcolor: activeCount > 0 ? '#DBEAFE' : '#F1F5F9', color: activeCount > 0 ? '#2563EB' : '#64748B', fontWeight: 600, fontSize: '0.7rem' }} />
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ bgcolor: '#fff', p: 0 }}>
+                    <List disablePadding>
+                      {sec.fields.map((f, i) => (
+                        <ListItem key={f.id} sx={{ borderBottom: '1px solid #F1F5F9', py: 1.5, px: 2, display: 'flex', gap: 2, alignItems: 'center', opacity: f.enabled ? 1 : 0.5 }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <IconButton size="small" onClick={() => moveField(sec.id, i, -1)} disabled={i === 0} sx={{ p: 0 }}><UpIcon fontSize="small" /></IconButton>
+                            <IconButton size="small" onClick={() => moveField(sec.id, i, 1)} disabled={i === sec.fields.length - 1} sx={{ p: 0 }}><DownIcon fontSize="small" /></IconButton>
+                          </Box>
+                          
+                          <Box sx={{ flex: 1 }}>
+                            <TextField 
+                              size="small" 
+                              variant="standard"
+                              value={f.label} 
+                              onChange={(e) => handleFieldChange(sec.id, f.id, 'label', e.target.value)}
+                              InputProps={{ disableUnderline: true, sx: { fontWeight: 600, fontSize: '0.9rem', color: '#334155' } }}
+                              fullWidth
+                            />
+                            <Typography variant="caption" sx={{ color: '#94A3B8', fontFamily: 'monospace', display: 'block', mb: 1 }}>{f.type}</Typography>
+                            {['dropdown', 'radio', 'checkbox'].includes(f.type) && (
+                              <TextField
+                                size="small"
+                                fullWidth
+                                placeholder="Comma-separated options..."
+                                value={(f.options || []).join(', ')}
+                                onChange={(e) => handleFieldChange(sec.id, f.id, 'options', e.target.value.split(',').map(s => s.trim()))}
+                                sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.75rem', bgcolor: '#F8FAFC' } }}
+                                InputProps={{ sx: { height: 30 } }}
+                              />
+                            )}
+                          </Box>
 
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#374151' }}>Form Sections (Sub Headings)</Typography>
-        <Card variant="outlined" sx={{ borderRadius: 2, bgcolor: '#fff' }}>
-          <List dense disablePadding>
-            {['Submission Type', 'Basic Information', 'Organization Details', 'Classification', 'Management Information', 'Submission Details', 'Attachments'].map((sec, i) => (
-              <React.Fragment key={sec}>
-                <ListItem sx={{ py: 1 }}>
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Checkbox checked={formData.sections.includes(sec)} onChange={() => toggleSection(sec)} size="small" sx={{ color: '#0277BD', '&.Mui-checked': { color: '#0277BD' } }} />
-                  </ListItemIcon>
-                  <ListItemText primary={<Typography sx={{ fontWeight: 600, color: '#1F2937' }}>{sec}</Typography>} />
-                </ListItem>
-                {i < 6 && <Divider />}
-              </React.Fragment>
-            ))}
-          </List>
-        </Card>
-        <Typography variant="caption" sx={{ color: '#6B7280', display: 'block', mt: 1.5 }}>
-          The sections selected above will form the structure of the wizard when users access the public link.
-        </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <FormControlLabel 
+                              control={<Checkbox size="small" checked={f.required} onChange={(e) => handleFieldChange(sec.id, f.id, 'required', e.target.checked)} disabled={!f.enabled} />} 
+                              label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Required</Typography>} 
+                              sx={{ m: 0 }}
+                            />
+                            <FormControlLabel 
+                              control={<Switch size="small" checked={f.enabled} onChange={(e) => handleFieldChange(sec.id, f.id, 'enabled', e.target.checked)} color="success" />} 
+                              label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Show</Typography>}
+                              sx={{ m: 0 }}
+                            />
+                          </Box>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </AccordionDetails>
+                </Accordion>
+              );
+            })}
+          </Box>
+        </Box>
+
+        {/* RIGHT COLUMN - LIVE PREVIEW */}
+        <Box sx={{ width: { xs: '100%', md: '50%' }, bgcolor: '#F0F2F5', p: 3, overflowY: 'auto' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <PreviewIcon sx={{ color: '#059669' }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, flex: 1 }}>Live Form Preview</Typography>
+            <Chip label="Updates in real-time" size="small" sx={{ bgcolor: '#D1FAE5', color: '#059669', fontWeight: 800, fontSize: '0.7rem' }} />
+          </Box>
+
+          <Card sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+            <Box sx={{ background: 'linear-gradient(135deg,#1A2332 0%,#2E3D52 100%)', px: 3, py: 2.5 }}>
+              <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800 }}>{formData.name || 'Untitled Form'}</Typography>
+              {formData.description && <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>{formData.description}</Typography>}
+            </Box>
+            <CardContent sx={{ p: 3 }}>
+              {formData.sections.filter(sec => sec.fields.some(f => f.enabled)).map((sec, si) => (
+                <Box key={sec.id} sx={{ mb: 3 }}>
+                  <Box sx={{ mb: 2, pb: 1, borderBottom: '2px solid #F1F5F9' }}>
+                    <Chip label={`Section ${si + 1}`} size="small" sx={{ bgcolor: '#1A2332', color: '#fff', fontWeight: 700, fontSize: '0.65rem', height: 18, mr: 1 }} />
+                    <Typography component="span" variant="subtitle2" sx={{ fontWeight: 800, color: '#1A2332' }}>{sec.title}</Typography>
+                  </Box>
+                  <Grid container spacing={2}>
+                    {sec.fields.filter(f => f.enabled).map(field => (
+                      <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
+                        {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={2} InputLabelProps={{ shrink: true }} disabled size="small" />
+                          : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
+                            : field.type === 'dropdown' ? <FormControl fullWidth disabled size="small"><InputLabel>{field.label}{field.required ? ' *' : ''}</InputLabel><Select label={`${field.label}${field.required ? ' *' : ''}`} value="">{field.options?.length > 0 ? field.options.map((opt, idx) => <MenuItem key={idx} value={opt}>{opt}</MenuItem>) : <MenuItem value="">No options</MenuItem>}</Select></FormControl>
+                              : field.type === 'radio' ? <FormControl disabled size="small"><Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600 }}>{field.label}{field.required ? ' *' : ''}</Typography><Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>{field.options?.length > 0 ? field.options.map((opt, idx) => <FormControlLabel key={idx} control={<Checkbox disabled size="small" />} label={opt} />) : <Typography variant="caption" color="error">No options added</Typography>}</Box></FormControl>
+                                : <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth type={field.type === 'date' ? 'date' : 'text'} InputLabelProps={{ shrink: true }} disabled size="small" />}
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              ))}
+              {formData.sections.filter(sec => sec.fields.some(f => f.enabled)).length === 0 && (
+                <Box sx={{ textAlign: 'center', py: 4, color: '#94A3B8' }}>
+                  <Typography variant="body2">No fields are enabled. Enable fields in the builder to see the preview.</Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, borderTop: '1px solid #E5E7EB', bgcolor: '#fff' }}>
+      <DialogActions sx={{ p: 2.5, borderTop: '1px solid #E5E7EB', bgcolor: '#fff' }}>
         <Button onClick={onClose} sx={{ color: '#4B5563', fontWeight: 600 }}>Cancel</Button>
         <Button variant="contained" disabled={!formData.name || !formData.category} onClick={handleSave} sx={{ bgcolor: '#0277BD', fontWeight: 700, px: 3, borderRadius: 2, '&:hover': { bgcolor: '#01579B' } }}>{formToEdit ? 'Save Changes' : 'Create & Generate Link'}</Button>
       </DialogActions>
@@ -908,7 +1065,7 @@ const FormPreviewDialog = ({ open, onClose, form, categories }) => {
             {form.description && <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 0.5 }}>{form.description}</Typography>}
           </Box>
           <CardContent sx={{ p: 3.5 }}>
-            {(form.sections || []).map((sec, si) => (
+            {(form.sections || []).filter(sec => (sec.fields || []).some(f => f.enabled !== false)).map((sec, si) => (
               <Box key={sec.id} sx={{ mb: 3 }}>
                 <Box sx={{ mb: 2, pb: 1, borderBottom: '2px solid #F1F5F9' }}>
                   <Chip label={`Section ${si + 1}`} size="small" sx={{ bgcolor: '#1A2332', color: '#fff', fontWeight: 700, fontSize: '0.65rem', height: 18, mr: 1 }} />
@@ -916,7 +1073,7 @@ const FormPreviewDialog = ({ open, onClose, form, categories }) => {
                   {sec.description && <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.25 }}>{sec.description}</Typography>}
                 </Box>
                 <Grid container spacing={2}>
-                  {(sec.fields || []).map(field => (
+                  {(sec.fields || []).filter(f => f.enabled !== false).map(field => (
                     <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
                       {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={3} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled />
                         : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2.5, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
