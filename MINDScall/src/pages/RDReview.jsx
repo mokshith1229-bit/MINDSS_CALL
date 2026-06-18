@@ -311,8 +311,8 @@ const RDReview = () => {
                   </Card>
                 </Grid>
 
-                <Grid item xs={12}>
-                  <Card sx={{ p: 3, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none' }}>
+                <Grid item xs={12} md={8}>
+                  <Card sx={{ p: 3, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none', height: '100%' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>Management Chain</Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
@@ -324,6 +324,16 @@ const RDReview = () => {
                         <Typography variant="body2">{selectedSub.hodValue}</Typography>
                       </Grid>
                     </Grid>
+                  </Card>
+                </Grid>
+                
+                <Grid item xs={12} md={4}>
+                  <Card sx={{ p: 3, borderRadius: 2, border: '1px solid #BAE6FD', boxShadow: '0 4px 12px rgba(2, 136, 209, 0.05)', height: '100%', bgcolor: '#F0F9FF' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <SearchIcon sx={{ color: '#0288D1', fontSize: 20 }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0288D1' }}>Tracking ID</Typography>
+                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: '#0369A1', mt: 1, letterSpacing: 0.5 }}>{selectedSub.trackingId || 'N/A'}</Typography>
                   </Card>
                 </Grid>
 

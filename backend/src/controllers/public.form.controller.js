@@ -80,10 +80,34 @@ exports.submitForm = async (req, res, next) => {
     );
     const businessId = `${counterId}-${String(counter.seq).padStart(3, '0')}`;
 
-    // Generate random tracking ID
-    const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 chars
-    const trackingPrefix = submissionType === 'Proposal' ? 'MCP' : 'MCI';
-    const trackingId = `${trackingPrefix}-${randomHex}`;
+    // Generate dynamic tracking ID prefix from organization details
+    const getAnswerValue = (answers, possibleKeys) => {
+      if (!answers) return null;
+      for (const key of possibleKeys) {
+        if (answers[key]) return answers[key];
+        const foundKey = Object.keys(answers).find(k => k.toLowerCase() === key.toLowerCase() || k.replace(/\s+/g, '').toLowerCase() === key.toLowerCase());
+        if (foundKey && answers[foundKey]) return answers[foundKey];
+      }
+      return null;
+    };
+
+    const getFirstLetter = (str) => {
+      if (typeof str !== 'string' || !str.trim()) return 'X';
+      return str.trim().charAt(0).toUpperCase();
+    };
+
+    const deptVal = getAnswerValue(parsedAnswers, ['department', 'Department']);
+    const subDeptVal = getAnswerValue(parsedAnswers, ['subDepartment', 'Sub Department']);
+    const subSubDeptVal = getAnswerValue(parsedAnswers, ['subSubDepartment', 'Sub Sub Department']);
+
+    let trackingPrefix = `${getFirstLetter(deptVal)}${getFirstLetter(subDeptVal)}${getFirstLetter(subSubDeptVal)}`;
+    
+    // Fallback if none are found
+    if (trackingPrefix === 'XXX') {
+      trackingPrefix = submissionType === 'Proposal' ? 'MCP' : 'MCI';
+    }
+
+    const trackingId = `${trackingPrefix}-${String(counter.seq).padStart(3, '0')}`;
 
     // Build formData with labels from schema for downstream modules
     const formData = {};
@@ -138,7 +162,7 @@ exports.submitForm = async (req, res, next) => {
           <p>Your tracking ID is: <b>${trackingId}</b></p>
           <p>You can track the progress of your submission at any time using the Public Tracking Portal.</p>
           <div style="margin: 25px 0;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/track" style="padding: 12px 24px; background-color: #2E7D32; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Track Submission</a>
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/track?id=${trackingId}" style="padding: 12px 24px; background-color: #2E7D32; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Track Submission</a>
           </div>
           <hr style="border: 0; border-top: 1px solid #eee;" />
           <p style="color: #888;"><small>Best regards,<br>CubeTech Innovation Team</small></p>
