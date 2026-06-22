@@ -25,11 +25,11 @@ exports.getReviewByToken = async (req, res, next) => {
     // Extract public safe details
     const ans = submission.answers || {};
 
-    let title = ans.title || ans.ideaTitle || ans.proposalTitle;
-    let abstract = ans.abstract || ans.introduction || ans.description || ans.details || ans.ideaDetails;
+    let title = ans.title || ans.projectTitle || ans.proposalTitle || ans.ideaTitle;
+    let abstract = ans.abstract || ans.executiveSummary || ans.introduction || ans.description || ans.details || ans.ideaDetails;
     let benefits = ans.benefits || ans.benefit;
-    let employeeName = ans.name || ans.employeeName || ans.fullName || ans.submitterName;
-    let employeeCode = ans.employeeCode || ans.empCode || ans.code;
+    let employeeName = ans.employeeName || ans.name || ans.fullName || ans.submitterName;
+    let employeeCode = ans.employeeId || ans.employeeCode || ans.empCode || ans.code;
     let dept = ans.department || ans.dept;
 
     // Key-search fallbacks if properties are named differently
@@ -98,8 +98,8 @@ exports.submitReview = async (req, res, next) => {
     let reviewerName = '';
     let reviewerEmail = '';
     if (submission.answers) {
-      reviewerName = submission.answers.managerName || submission.answers.reportingManagerName || submission.answers.rmName || '';
-      reviewerEmail = submission.answers.managerEmail || submission.answers.reportingManagerEmail || submission.answers.rmEmail || '';
+      reviewerName = submission.answers.rmName || submission.answers.managerName || submission.answers.reportingManagerName || '';
+      reviewerEmail = submission.answers.rmEmail || submission.answers.managerEmail || submission.answers.reportingManagerEmail || '';
     }
 
     submission.workflow.rmReview.decision = decision;
@@ -215,8 +215,8 @@ exports.submitRmBatch = async (req, res, next) => {
       let reviewerName = 'Manager';
       let reviewerEmail = 'RM';
       if (submission.answers) {
-        reviewerName = submission.answers.managerName || submission.answers.reportingManagerName || submission.answers.rmName || '';
-        reviewerEmail = submission.answers.managerEmail || submission.answers.reportingManagerEmail || submission.answers.rmEmail || '';
+        reviewerName = submission.answers.rmName || submission.answers.managerName || submission.answers.reportingManagerName || '';
+        reviewerEmail = submission.answers.rmEmail || submission.answers.managerEmail || submission.answers.reportingManagerEmail || '';
       }
 
       submission.workflow.rmReview.decision = decision;

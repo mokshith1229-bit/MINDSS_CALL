@@ -5,7 +5,7 @@ const errorHandler = (err, req, res, next) => {
   error.message = err.message;
 
   // Log to console for dev
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.nNODE_ENV === 'development') {
     console.error(err);
   }
 

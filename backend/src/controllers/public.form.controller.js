@@ -73,6 +73,9 @@ exports.submitForm = async (req, res, next) => {
     const submissionType = subTypeRaw.toLowerCase().includes('prop') ? 'Proposal' : 'Idea';
     const counterId = submissionType === 'Proposal' ? 'PROP' : 'IDEA';
 
+    // Resolve submitter email from new field names
+    const resolvedSubmitterEmail = submitterEmail || parsedAnswers.officialEmail || parsedAnswers.managerEmail || '';
+
     const counter = await Counter.findByIdAndUpdate(
       { _id: counterId },
       { $inc: { seq: 1 } },
@@ -97,8 +100,8 @@ exports.submitForm = async (req, res, next) => {
     };
 
     const deptVal = getAnswerValue(parsedAnswers, ['department', 'Department']);
-    const subDeptVal = getAnswerValue(parsedAnswers, ['subDepartment', 'Sub Department']);
-    const subSubDeptVal = getAnswerValue(parsedAnswers, ['subSubDepartment', 'Sub Sub Department']);
+    const subDeptVal = getAnswerValue(parsedAnswers, ['subDepartment', 'Sub Department', 'subCategory']);
+    const subSubDeptVal = getAnswerValue(parsedAnswers, ['subSubDepartment', 'Sub Sub Department', 'category']);
 
     let trackingPrefix = `${getFirstLetter(deptVal)}${getFirstLetter(subDeptVal)}${getFirstLetter(subSubDeptVal)}`;
     
@@ -132,6 +135,9 @@ exports.submitForm = async (req, res, next) => {
       }
     }
 
+    // Resolve employee name from new or legacy field keys
+    const employeeName = parsedAnswers.employeeName || parsedAnswers.name || parsedAnswers.fullName || 'Employee';
+
     const submission = await Submission.create({
       form: form._id,
       formVersion: activeVersion._id,
@@ -140,26 +146,27 @@ exports.submitForm = async (req, res, next) => {
       submissionType,
       answers: parsedAnswers,
       formData,
-      submitterEmail: submitterEmail || '',
+      submitterEmail: resolvedSubmitterEmail,
       attachments: files,
       timeline: [
         {
           stage: 'Submission Created',
-          actionBy: submitterEmail || parsedAnswers.name || parsedAnswers.fullName || 'Employee',
+          actionBy: employeeName,
           role: 'Submitter',
-          remarks: 'Proposal submitted successfully.'
+          remarks: `${submissionType} submitted successfully.`
         }
       ]
     });
 
-    // Send confirmation email if submitterEmail is provided
-    if (submitterEmail) {
+    // Send confirmation email if submitter email is available
+    if (resolvedSubmitterEmail) {
       const emailHtml = `
         <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
           <h3 style="color: #1976D2;">MINDScall Submission Received</h3>
-          <p>Dear ${parsedAnswers.name || parsedAnswers.fullName || 'Submitter'},</p>
+          <p>Dear ${employeeName},</p>
           <p>Thank you for your ${submissionType.toLowerCase()} submission.</p>
           <p>Your tracking ID is: <b>${trackingId}</b></p>
+          <p>Your WBS Code is: <b>${businessId}</b></p>
           <p>You can track the progress of your submission at any time using the Public Tracking Portal.</p>
           <div style="margin: 25px 0;">
             <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/track?id=${trackingId}" style="padding: 12px 24px; background-color: #2E7D32; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Track Submission</a>
@@ -169,13 +176,13 @@ exports.submitForm = async (req, res, next) => {
         </div>
       `;
       await sendEmail({
-        email: submitterEmail,
+        email: resolvedSubmitterEmail,
         subject: `Submission Received: ${trackingId}`,
         html: emailHtml
       }).catch(err => console.error('Failed to send submission confirmation email:', err));
     }
 
-    res.status(201).json(new ApiResponse(201, { submissionId: submission._id, trackingId }, 'Submission successful'));
+    res.status(201).json(new ApiResponse(201, { submissionId: submission._id, trackingId, businessId }, 'Submission successful'));
   } catch (err) {
     next(err);
   }
@@ -197,7 +204,7 @@ exports.trackSubmission = async (req, res, next) => {
     // Expose only necessary fields, hide ObjectIDs and sensitive info
     const safeData = {
       trackingId: submission.trackingId,
-      title: submission.answers?.title || submission.answers?.proposaltitle || submission.answers?.IdeaTitle || 'Untitled',
+      title: submission.answers?.title || submission.answers?.projectTitle || submission.answers?.proposalTitle || submission.answers?.proposaltitle || submission.answers?.IdeaTitle || 'Untitled',
       submissionType: submission.submissionType,
       status: submission.status,
       createdAt: submission.createdAt,

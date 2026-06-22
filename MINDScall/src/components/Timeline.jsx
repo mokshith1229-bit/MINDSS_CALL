@@ -22,7 +22,7 @@ const EVENT_CONFIG = {
   'RM Rejected': { color: '#C62828', bg: '#FFEBEE', icon: <RejectedIcon /> },
   'HOD Approved': { color: '#2E7D32', bg: '#E8F5E9', icon: <ApprovedIcon /> },
   'HOD Rejected': { color: '#C62828', bg: '#FFEBEE', icon: <RejectedIcon /> },
-  'RM Clarification Requested': { color: '#EF6C00', bg: '#FFF3E0', icon: <PendingIcon /> },
+  'RM Clarification Requested': { color: '#0030efff', bg: '#FFF3E0', icon: <PendingIcon /> },
   'HOD Clarification Requested': { color: '#EF6C00', bg: '#FFF3E0', icon: <PendingIcon /> },
   'Evaluation Started': { color: '#00796B', bg: '#E0F2F1', icon: <StartedIcon /> },
   'Evaluation Assigned': { color: '#00796B', bg: '#E0F2F1', icon: <AssignedIcon /> },
