@@ -232,7 +232,27 @@ const PublicForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [trackingId, setTrackingId] = useState('');
   const [wbsCode, setWbsCode] = useState('');
+  const [wbsPreview, setWbsPreview] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (formData.category && formData.subCategory && formData.innovationType) {
+      const fetchWbs = async () => {
+        try {
+          const res = await fetch(`http://localhost:5000/api/v1/public/forms/wbs/preview?category=${encodeURIComponent(formData.category)}&subCategory=${encodeURIComponent(formData.subCategory)}&innovationType=${encodeURIComponent(formData.innovationType)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.data?.wbsCode) setWbsPreview(data.data.wbsCode);
+          }
+        } catch (err) {
+          console.error('Failed to fetch WBS preview', err);
+        }
+      };
+      fetchWbs();
+    } else {
+      setWbsPreview('');
+    }
+  }, [formData.category, formData.subCategory, formData.innovationType]);
 
   // Compute visible steps based on submission type
   const visibleSteps = useMemo(() => {
@@ -607,9 +627,9 @@ const PublicForm = () => {
           <MsTextField
             fullWidth
             disabled
-            value="Auto-generated upon submission"
+            value={wbsPreview || "Auto-generated upon completion of classification"}
             InputProps={{
-              sx: { bgcolor: '#F3F2F1', color: '#A19F9D' }
+              sx: { bgcolor: '#F3F2F1', color: wbsPreview ? '#323130' : '#A19F9D', fontWeight: wbsPreview ? 700 : 400 }
             }}
           />
           <Typography variant="caption" sx={{ color: '#605E5C', mt: 0.5, display: 'block' }}>

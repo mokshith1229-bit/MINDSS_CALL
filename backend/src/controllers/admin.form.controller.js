@@ -1,8 +1,12 @@
 const Form = require('../models/Form.model');
 const FormVersion = require('../models/FormVersion.model');
 const Submission = require('../models/Submission.model');
+const Batch = require('../models/Batch.model');
+const FinanceBatch = require('../models/FinanceBatch.model');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
+const fs = require('fs');
+const path = require('path');
 
 // @desc    Create a new form with an initial version
 // @route   POST /api/v1/admin/forms
@@ -162,6 +166,40 @@ exports.deleteForm = async (req, res, next) => {
     if (!form) {
       return next(new ApiError(404, 'Form not found'));
     }
+
+    // Find all submissions for this form to delete related data
+    const submissions = await Submission.find({ form: form._id });
+    const submissionIds = submissions.map(sub => sub._id);
+
+    // Delete associated files
+    submissions.forEach(sub => {
+      if (sub.attachments && sub.attachments.length > 0) {
+        sub.attachments.forEach(file => {
+          if (file.url) {
+            // file.url typically starts with '/uploads/'
+            const filePath = path.join(__dirname, '../../', file.url);
+            fs.unlink(filePath, (err) => {
+              if (err && err.code !== 'ENOENT') {
+                console.error(`Failed to delete file ${filePath}:`, err);
+              }
+            });
+          }
+        });
+      }
+    });
+
+    // Remove these submissions from any Batches or FinanceBatches
+    if (submissionIds.length > 0) {
+      await Batch.updateMany(
+        { submissions: { $in: submissionIds } },
+        { $pullAll: { submissions: submissionIds } }
+      );
+      await FinanceBatch.updateMany(
+        { submissions: { $in: submissionIds } },
+        { $pullAll: { submissions: submissionIds } }
+      );
+    }
+
     // Delete associated versions and submissions (Cascade Delete)
     await FormVersion.deleteMany({ form: form._id });
     await Submission.deleteMany({ form: form._id });

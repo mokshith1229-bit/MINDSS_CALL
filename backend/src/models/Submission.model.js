@@ -22,6 +22,11 @@ const submissionSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    wbsCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     submissionType: {
       type: String,
       enum: ['Idea', 'Proposal'],

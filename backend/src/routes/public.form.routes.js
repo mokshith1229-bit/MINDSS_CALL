@@ -1,5 +1,5 @@
 const express = require('express');
-const { getPublicForm, submitForm, trackSubmission } = require('../controllers/public.form.controller');
+const { getPublicForm, submitForm, trackSubmission, previewWbsCode } = require('../controllers/public.form.controller');
 const upload = require('../middlewares/upload.middleware');
 
 const router = express.Router();
@@ -8,6 +8,9 @@ const router = express.Router();
 
 router.route('/track/:trackingId')
   .get(trackSubmission);
+
+router.route('/wbs/preview')
+  .get(previewWbsCode);
 
 router.route('/:slug')
   .get(getPublicForm);

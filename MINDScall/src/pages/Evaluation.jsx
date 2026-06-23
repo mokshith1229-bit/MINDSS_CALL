@@ -60,6 +60,7 @@ const Evaluation = () => {
           return {
             id: sub._id,
             submissionId: parsed.trackingId || parsed.businessId || 'N/A',
+            wbsCode: sub.wbsCode,
             businessId: parsed.businessId,
             submissionType: parsed.submissionType,
             title: parsed.title,
@@ -163,6 +164,7 @@ const Evaluation = () => {
       renderCell: (row) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-start' }}>
           <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827' }}>{row.submissionId}</Typography>
+          {row.wbsCode && <Typography variant="caption" sx={{ color: '#6B7280', fontFamily: 'monospace', fontSize: '0.65rem' }}>{row.wbsCode}</Typography>}
           <TypeBadge type={row.submissionType} />
         </Box>
       )
@@ -348,7 +350,8 @@ const Evaluation = () => {
                 <CloseIcon />
               </IconButton>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: '#4B5563' }}>Proposal ID: {selectedProposalData.submissionId || 'N/A'}</Typography>
+                <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: '#4B5563' }}>Tracking ID: {selectedProposalData.submissionId || 'N/A'}</Typography>
+                {selectedProposalData.wbsCode && <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: '#9CA3AF' }}>• WBS: {selectedProposalData.wbsCode}</Typography>}
                 <StatusChip status={selectedProposalData.status} />
               </Box>
               <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#111827', lineHeight: 1.3 }}>{selectedProposalData.title}</Typography>

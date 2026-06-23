@@ -127,7 +127,7 @@ const PublicTracking = () => {
               <TextField
                 fullWidth
                 variant="outlined"
-                placeholder="e.g. MCI-015 or MCP-002"
+                placeholder="e.g. MCI-A8F4K92 or MCP-P4H8Q92"
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
                 sx={{
@@ -196,7 +196,7 @@ const PublicTracking = () => {
               </Typography>
               <Divider sx={{ mb: 3, borderColor: '#F1F5F9' }} />
               <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
-                Please double-check your email to ensure the ID is typed correctly. It typically follows a format like <strong>MCI-001</strong> or <strong>ESF-001</strong>.
+                Please double-check your email to ensure the ID is typed correctly. It typically follows a format like <strong>MCI-A8F4K92</strong>.
               </Typography>
             </Card>
           </Fade>

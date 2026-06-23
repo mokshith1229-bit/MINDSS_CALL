@@ -84,7 +84,12 @@ const RDOngoingProjects = () => {
   };
 
   const columns = [
-    { field: 'trackingId', headerName: 'Tracking ID', width: 140, renderCell: (params) => <Typography variant="body2" sx={{ fontWeight: 600, color: '#0078D4' }}>{params.value || params.row.businessId || 'N/A'}</Typography> },
+    { field: 'trackingId', headerName: 'Tracking ID', width: 140, renderCell: (params) => (
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: '#0078D4' }}>{params.value || params.row.businessId || 'N/A'}</Typography>
+        {params.row.wbsCode && <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600 }}>{params.row.wbsCode}</Typography>}
+      </Box>
+    )},
     { field: 'submissionType', headerName: 'Type', width: 120, renderCell: (params) => (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {params.value === 'Proposal' ? <Receipt fontSize="small" sx={{ color: '#4338CA' }} /> : <Star fontSize="small" sx={{ color: '#D97706' }} />}
@@ -288,7 +293,8 @@ const RDOngoingProjects = () => {
             <Box sx={{ p: 3, bgcolor: '#fff', borderBottom: '1px solid #EDEBE9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 600, color: '#323130' }}>{selectedSub.businessId || 'N/A'}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 600, color: '#323130' }}>{selectedSub.trackingId || selectedSub.businessId || 'N/A'}</Typography>
+                  {selectedSub.wbsCode && <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600, mt: 0.5 }}>WBS: {selectedSub.wbsCode}</Typography>}
                   <Chip label={selectedSub.submissionType || 'Idea'} size="small" sx={{ bgcolor: selectedSub.submissionType?.toLowerCase() === 'proposal' ? '#E0E7FF' : '#FEF3C7', color: selectedSub.submissionType?.toLowerCase() === 'proposal' ? '#4338CA' : '#D97706', fontWeight: 600, borderRadius: 1 }} />
                   {getStatusIcon(selectedSub.projectDetails?.implementationStatus)}
                 </Box>

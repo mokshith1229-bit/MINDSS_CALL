@@ -57,6 +57,7 @@ const RDReview = () => {
         return { 
           ...sub, 
           parsedTitle: parsed.title, 
+          wbsCode: sub.wbsCode,
           abstract: parsed.abstract, 
           dept: parsed.dept, 
           employeeName: parsed.employeeName, 
@@ -129,7 +130,12 @@ const RDReview = () => {
   });
 
   const columns = [
-    { field: 'submissionId', headerName: 'Sub ID', renderCell: (row) => <Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600 }}>{row.submissionId}</Typography> },
+    { field: 'submissionId', headerName: 'Sub ID', renderCell: (row) => (
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600, fontFamily: 'monospace' }}>{row.submissionId}</Typography>
+        {row.wbsCode && <Typography variant="caption" sx={{ color: '#90A4AE', fontFamily: 'monospace', fontSize: '0.65rem' }}>{row.wbsCode}</Typography>}
+      </Box>
+    ) },
     { field: 'parsedTitle', headerName: 'Title' },
     { field: 'employeeName', headerName: 'Employee', renderCell: (row) => `${row.employeeName} (${row.dept})` },
     { field: 'type', headerName: 'Type', renderCell: (row) => (
@@ -331,9 +337,10 @@ const RDReview = () => {
                   <Card sx={{ p: 3, borderRadius: 2, border: '1px solid #BAE6FD', boxShadow: '0 4px 12px rgba(2, 136, 209, 0.05)', height: '100%', bgcolor: '#F0F9FF' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <SearchIcon sx={{ color: '#0288D1', fontSize: 20 }} />
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0288D1' }}>Tracking ID</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0288D1' }}>Identifiers</Typography>
                     </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 800, color: '#0369A1', mt: 1, letterSpacing: 0.5 }}>{selectedSub.trackingId || 'N/A'}</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: '#0369A1', mt: 1, letterSpacing: 0.5, fontFamily: 'monospace' }}>{selectedSub.trackingId || selectedSub.submissionId}</Typography>
+                    {selectedSub.wbsCode && <Typography variant="body2" sx={{ fontWeight: 700, color: '#0288D1', mt: 0.5, letterSpacing: 0.5, fontFamily: 'monospace' }}>WBS: {selectedSub.wbsCode}</Typography>}
                   </Card>
                 </Grid>
 

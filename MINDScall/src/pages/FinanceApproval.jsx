@@ -72,6 +72,7 @@ const FinanceApproval = () => {
         return {
           id: sub._id,
           trackingId: sub.trackingId || sub.businessId,
+          wbsCode: sub.wbsCode,
           businessId: parsed.businessId,
           submissionType: parsed.submissionType,
           title: parsed.title,
@@ -227,6 +228,7 @@ const FinanceApproval = () => {
               <Box key={row.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.8fr 0.9fr 0.7fr 0.6fr 0.8fr', gap: 1, px: 1.5, py: 1.5, borderBottom: i < tableRows.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', '&:hover': { bgcolor: '#F8FAFC', borderRadius: 1.5 }, transition: 'all 0.15s' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
                   <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#1565C0' }}>{row.trackingId || row.businessId}</Typography>
+                  {row.wbsCode && <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#546E7A', fontSize: '0.65rem' }}>{row.wbsCode}</Typography>}
                   <TypeBadge type={row.submissionType} />
                 </Box>
                 <Box>
@@ -258,7 +260,10 @@ const FinanceApproval = () => {
             <Box sx={{ p: 3, bgcolor: '#1A2332', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#FFFFFF' }}>{selected.parsedTitle}</Typography>
-                <Typography variant="caption" sx={{ color: '#90CAF9', fontFamily: 'monospace' }}>{selected.trackingId || selected.businessId}</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Typography variant="caption" sx={{ color: '#90CAF9', fontFamily: 'monospace' }}>{selected.trackingId || selected.businessId}</Typography>
+                  {selected.wbsCode && <Typography variant="caption" sx={{ color: '#B0BEC5', fontFamily: 'monospace' }}>• WBS: {selected.wbsCode}</Typography>}
+                </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Button size="small" onClick={() => infoRef.current?.scrollIntoView({behavior: 'smooth'})} sx={{color: '#90CAF9', textTransform: 'none', mr: 1}}>Info</Button>
@@ -290,6 +295,7 @@ const FinanceApproval = () => {
                   <Typography variant="caption" sx={{ fontWeight: 800, color: '#1565C0', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>Request Details</Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   <InfoRow label="Tracking ID"   value={selected.trackingId || selected.businessId} bold />
+                  {selected.wbsCode && <InfoRow label="WBS Code" value={selected.wbsCode} bold />}
                   <InfoRow label="Type"         value={selected.submissionType} />
                   <InfoRow label="Department"   value={selected.department} />
                   <InfoRow label="Requester"    value={selected.requester} />

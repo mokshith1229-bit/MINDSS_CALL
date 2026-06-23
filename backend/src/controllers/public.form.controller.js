@@ -83,7 +83,10 @@ exports.submitForm = async (req, res, next) => {
     );
     const businessId = `${counterId}-${String(counter.seq).padStart(3, '0')}`;
 
-    // Generate dynamic tracking ID prefix from organization details
+    // Generate Tracking ID (Random 8 chars with MCI/MCP prefix)
+    const trackingId = `${submissionType === 'Proposal' ? 'MCP' : 'MCI'}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+
+    // Helper functions for WBS
     const getAnswerValue = (answers, possibleKeys) => {
       if (!answers) return null;
       for (const key of possibleKeys) {
@@ -94,23 +97,34 @@ exports.submitForm = async (req, res, next) => {
       return null;
     };
 
-    const getFirstLetter = (str) => {
+    const getInitial = (str) => {
       if (typeof str !== 'string' || !str.trim()) return 'X';
       return str.trim().charAt(0).toUpperCase();
     };
 
-    const deptVal = getAnswerValue(parsedAnswers, ['department', 'Department']);
-    const subDeptVal = getAnswerValue(parsedAnswers, ['subDepartment', 'Sub Department', 'subCategory']);
-    const subSubDeptVal = getAnswerValue(parsedAnswers, ['subSubDepartment', 'Sub Sub Department', 'category']);
+    // Generate WBS Code
+    const category = getAnswerValue(parsedAnswers, ['category', 'Category', 'subSubDepartment', 'Sub Sub Department']);
+    const subCategory = getAnswerValue(parsedAnswers, ['subCategory', 'Sub Category', 'SubCategory', 'subDepartment', 'Sub Department']);
+    const innovationType = getAnswerValue(parsedAnswers, ['innovationType', 'Innovation Type', 'InnovationType']);
 
-    let trackingPrefix = `${getFirstLetter(deptVal)}${getFirstLetter(subDeptVal)}${getFirstLetter(subSubDeptVal)}`;
-    
-    // Fallback if none are found
-    if (trackingPrefix === 'XXX') {
-      trackingPrefix = submissionType === 'Proposal' ? 'MCP' : 'MCI';
+    let typeInitial = 'X';
+    if (innovationType) {
+      const tLow = innovationType.toLowerCase();
+      if (tLow.includes('process')) typeInitial = 'C';
+      else if (tLow.includes('product')) typeInitial = 'D';
+      else typeInitial = getInitial(innovationType);
     }
 
-    const trackingId = `${trackingPrefix}-${String(counter.seq).padStart(3, '0')}`;
+    let wbsPrefix = `${getInitial(category)}${getInitial(subCategory)}${typeInitial}`;
+    // Fallback if none provided
+    if (wbsPrefix === 'XXX') wbsPrefix = submissionType === 'Proposal' ? 'MCP' : 'MCI';
+
+    const wbsCounter = await Counter.findByIdAndUpdate(
+      { _id: `WBS-${wbsPrefix}` },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+    const wbsCode = `${wbsPrefix}-${String(wbsCounter.seq).padStart(3, '0')}`;
 
     // Build formData with labels from schema for downstream modules
     const formData = {};
@@ -143,6 +157,7 @@ exports.submitForm = async (req, res, next) => {
       formVersion: activeVersion._id,
       businessId,
       trackingId,
+      wbsCode,
       submissionType,
       answers: parsedAnswers,
       formData,
@@ -182,7 +197,7 @@ exports.submitForm = async (req, res, next) => {
       }).catch(err => console.error('Failed to send submission confirmation email:', err));
     }
 
-    res.status(201).json(new ApiResponse(201, { submissionId: submission._id, trackingId, businessId }, 'Submission successful'));
+    res.status(201).json(new ApiResponse(201, { submissionId: submission._id, trackingId, businessId, wbsCode }, 'Submission successful'));
   } catch (err) {
     next(err);
   }
@@ -251,6 +266,39 @@ exports.trackSubmission = async (req, res, next) => {
     }
 
     res.status(200).json(new ApiResponse(200, { tracking: safeData }, 'Tracking info retrieved successfully'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Preview next WBS sequence
+// @route   GET /api/v1/public/forms/wbs/preview
+// @access  Public
+exports.previewWbsCode = async (req, res, next) => {
+  try {
+    const { category, subCategory, innovationType } = req.query;
+
+    const getInitial = (str) => {
+      if (typeof str !== 'string' || !str.trim()) return 'X';
+      return str.trim().charAt(0).toUpperCase();
+    };
+
+    let typeInitial = 'X';
+    if (innovationType) {
+      const tLow = innovationType.toLowerCase();
+      if (tLow.includes('process')) typeInitial = 'C';
+      else if (tLow.includes('product')) typeInitial = 'D';
+      else typeInitial = getInitial(innovationType);
+    }
+
+    const wbsPrefix = `${getInitial(category)}${getInitial(subCategory)}${typeInitial}`;
+    
+    // Peek at the counter without incrementing
+    const counter = await Counter.findOne({ _id: `WBS-${wbsPrefix}` });
+    const nextSeq = counter ? counter.seq + 1 : 1;
+    const previewCode = `${wbsPrefix}-${String(nextSeq).padStart(3, '0')}`;
+
+    res.status(200).json(new ApiResponse(200, { wbsCode: previewCode }, 'Preview generated successfully'));
   } catch (err) {
     next(err);
   }

@@ -23,6 +23,7 @@ const recentColumns = [
     renderCell: (row) => (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-start' }}>
         <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827' }}>{row.trackingId || row.businessId || 'N/A'}</Typography>
+        {row.wbsCode && <Typography variant="caption" sx={{ color: '#6B7280' }}>WBS: {row.wbsCode}</Typography>}
         <TypeBadge type={row.submissionType} />
       </Box>
     ) 
@@ -74,6 +75,7 @@ const Dashboard = () => {
   const recent = submissions.slice(0, 5).map(s => ({
     id: s._id,
     trackingId: s.trackingId || s.businessId,
+    wbsCode: s.wbsCode,
     businessId: s.businessId,
     submissionType: s.submissionType || s.answers?.submissionType || 'Idea',
     assignedTo: s.answers?.name || 'Unknown',

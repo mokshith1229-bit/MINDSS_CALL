@@ -45,6 +45,7 @@ const Approval = () => {
         return {
           id: sub._id,
           trackingId: sub.trackingId || sub.businessId,
+          wbsCode: sub.wbsCode,
           businessId: parsed.businessId,
           submissionType: parsed.submissionType,
           title: parsed.title,
@@ -120,8 +121,9 @@ const Approval = () => {
       headerName: 'Tracking ID', 
       width: 140, 
       renderCell: (row) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
           <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827', fontFamily: 'monospace' }}>{row.trackingId}</Typography>
+          {row.wbsCode && <Typography variant="caption" sx={{ color: '#6B7280', fontFamily: 'monospace', fontSize: '0.65rem' }}>{row.wbsCode}</Typography>}
         </Box>
       ) 
     },
@@ -189,7 +191,10 @@ const Approval = () => {
             <Box sx={{ p: 3, bgcolor: '#FFFFFF', borderBottom: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827' }}>{selectedApp.parsedTitle || 'Untitled'}</Typography>
-                <Typography variant="caption" sx={{ color: '#546E7A', fontFamily: 'monospace' }}>{selectedApp.trackingId || selectedApp.businessId}</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Typography variant="caption" sx={{ color: '#546E7A', fontFamily: 'monospace' }}>{selectedApp.trackingId || selectedApp.businessId}</Typography>
+                  {selectedApp.wbsCode && <Typography variant="caption" sx={{ color: '#90A4AE', fontFamily: 'monospace' }}>• WBS: {selectedApp.wbsCode}</Typography>}
+                </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Button size="small" onClick={() => summaryRef.current?.scrollIntoView({behavior: 'smooth'})} sx={{color: '#546E7A', textTransform: 'none', mr: 1}}>Summary</Button>

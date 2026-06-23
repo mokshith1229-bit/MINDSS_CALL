@@ -1,11 +1,15 @@
 const Submission = require('../models/Submission.model');
 const Form = require('../models/Form.model');
+const Batch = require('../models/Batch.model');
+const FinanceBatch = require('../models/FinanceBatch.model');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const { Parser } = require('json2csv');
 const AuditLog = require('../models/AuditLog.model');
 const crypto = require('crypto');
 const sendEmail = require('../utils/emailSender');
+const fs = require('fs');
+const path = require('path');
 
 // @desc    Get all submissions (with filtering)
 // @route   GET /api/v1/admin/submissions
@@ -255,6 +259,31 @@ exports.deleteSubmission = async (req, res, next) => {
     if (!submission) {
       return next(new ApiError(404, 'Submission not found'));
     }
+
+    // Delete associated files
+    if (submission.attachments && submission.attachments.length > 0) {
+      submission.attachments.forEach(file => {
+        if (file.url) {
+          const filePath = path.join(__dirname, '../../', file.url);
+          fs.unlink(filePath, (err) => {
+            if (err && err.code !== 'ENOENT') {
+              console.error(`Failed to delete file ${filePath}:`, err);
+            }
+          });
+        }
+      });
+    }
+
+    // Remove this submission from any Batches or FinanceBatches
+    await Batch.updateMany(
+      { submissions: submission._id },
+      { $pull: { submissions: submission._id } }
+    );
+    await FinanceBatch.updateMany(
+      { submissions: submission._id },
+      { $pull: { submissions: submission._id } }
+    );
+
     res.status(200).json(new ApiResponse(200, null, 'Submission deleted successfully'));
   } catch (err) {
     next(err);
