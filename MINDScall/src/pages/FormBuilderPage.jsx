@@ -141,12 +141,8 @@ const SUB_SUB_DEPARTMENTS = {
 };
 
 const PROCESS_PRODUCT_OPTIONS = [
-  { value: 'process_improvement', label: 'Process Improvement' },
+  { value: 'process_development', label: 'Process Development' },
   { value: 'product_development', label: 'Product Development' },
-  { value: 'innovation', label: 'Innovation' },
-  { value: 'automation', label: 'Automation' },
-  { value: 'cost_saving', label: 'Cost Saving' },
-  { value: 'quality_improvement', label: 'Quality Improvement' },
 ];
 
 const ACCEPTED_TYPES = {
@@ -892,12 +888,8 @@ const FormBuilderPage = () => {
                       <Box sx={{
                         width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
                         bgcolor: {
-                          process_improvement: '#2E7D32',
+                          process_development: '#2E7D32',
                           product_development: '#1565C0',
-                          innovation: '#6A1B9A',
-                          automation: '#E65100',
-                          cost_saving: '#F57C00',
-                          quality_improvement: '#00838F',
                         }[opt.value] || '#90A4AE',
                       }} />
                       {opt.label}

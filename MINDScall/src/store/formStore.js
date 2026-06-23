@@ -9,12 +9,8 @@ export const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace
 
 // ── Categories ────────────────────────────────────────────────
 const DEFAULT_CATEGORIES = [
-  { id:'cat-1', name:'Innovation',          color:'#7C3AED', icon:'💡', enabled:true },
-  { id:'cat-2', name:'Process Improvement', color:'#2563EB', icon:'⚙️', enabled:true },
-  { id:'cat-3', name:'Cost Saving',         color:'#059669', icon:'💰', enabled:true },
-  { id:'cat-4', name:'Automation',          color:'#D97706', icon:'🤖', enabled:true },
-  { id:'cat-5', name:'Safety',              color:'#DC2626', icon:'🛡️', enabled:true },
-  { id:'cat-6', name:'Quality Improvement', color:'#0891B2', icon:'✅', enabled:true },
+  { id:'cat-1', name:'Process Development', color:'#7C3AED', icon:'⚙️', enabled:true },
+  { id:'cat-2', name:'Product Development', color:'#2563EB', icon:'📦', enabled:true },
 ];
 
 // ── Field Type Registry ───────────────────────────────────────
@@ -71,11 +67,11 @@ const makeDefaultSections = () => ([
 // ── Templates ─────────────────────────────────────────────────
 const TEMPLATES = [
   {
-    id:'tpl-1', name:'Idea Submission',        category:'Innovation',          icon:'💡', description:'Standard idea submission form with category, title, and details',
+    id:'tpl-1', name:'Idea Submission',        category:'Process Development',          icon:'💡', description:'Standard idea submission form with category, title, and details',
     sections: makeDefaultSections(),
   },
   {
-    id:'tpl-2', name:'Employee Feedback',      category:'Quality Improvement', icon:'📋', description:'Collect structured employee feedback',
+    id:'tpl-2', name:'Employee Feedback',      category:'Product Development', icon:'📋', description:'Collect structured employee feedback',
     sections:[
       { id:'sec-a', title:'Employee Info', description:'', fields:[
         { id:uid(), label:'Name', type:'text', required:true, placeholder:'Your name', helpText:'', defaultValue:'', validationRule:'', isDefault:false },
@@ -89,7 +85,7 @@ const TEMPLATES = [
     ],
   },
   {
-    id:'tpl-3', name:'Process Improvement',    category:'Process Improvement', icon:'⚙️', description:'Submit process improvement proposals',
+    id:'tpl-3', name:'Process Development',    category:'Process Development', icon:'⚙️', description:'Submit process development proposals',
     sections:[
       { id:'sec-c', title:'Submitter', description:'', fields:[
         { id:uid(), label:'Name', type:'text', required:true, placeholder:'', helpText:'', defaultValue:'', validationRule:'', isDefault:false },
@@ -104,11 +100,11 @@ const TEMPLATES = [
     ],
   },
   {
-    id:'tpl-4', name:'Innovation Proposal',    category:'Innovation',          icon:'🚀', description:'Detailed innovation proposal with impact metrics',
+    id:'tpl-4', name:'Innovation Proposal',    category:'Product Development',          icon:'🚀', description:'Detailed innovation proposal with impact metrics',
     sections: makeDefaultSections(),
   },
   {
-    id:'tpl-5', name:'Safety Incident Report', category:'Safety',              icon:'🛡️', description:'Report safety incidents or near-miss events',
+    id:'tpl-5', name:'Safety Incident Report', category:'Process Development',              icon:'🛡️', description:'Report safety incidents or near-miss events',
     sections:[
       { id:'sec-e', title:'Reporter', description:'', fields:[
         { id:uid(), label:'Reporter Name', type:'text', required:true, placeholder:'', helpText:'', defaultValue:'', validationRule:'', isDefault:false },

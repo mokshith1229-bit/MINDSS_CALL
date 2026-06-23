@@ -632,12 +632,17 @@ const LinkSettingsDialog = ({ open, onClose, form, onSave }) => {
         <FormControlLabel control={<Switch checked={!!settings.active} onChange={e => setSettings(p => ({ ...p, active: e.target.checked }))} color="success" />}
           label={<Box><Typography variant="body2" sx={{ fontWeight: 700 }}>Link Active</Typography><Typography variant="caption" sx={{ color: '#94A3B8' }}>External users can access this form</Typography></Box>} />
         <Divider />
-        <TextField label="Expiry Date" type="date" size="small" fullWidth value={settings.expiryDate || ''} onChange={set('expiryDate')}
-          InputLabelProps={{ shrink: true }}
-          InputProps={{ startAdornment: <InputAdornment position="start"><ExpiryIcon fontSize="small" sx={{ color: '#94A3B8' }} /></InputAdornment> }} />
-        <TextField label="Maximum Responses" type="number" size="small" fullWidth value={settings.maxResponses || ''} onChange={set('maxResponses')}
-          placeholder="Leave blank for unlimited"
-          InputProps={{ startAdornment: <InputAdornment position="start"><GroupIcon fontSize="small" sx={{ color: '#94A3B8' }} /></InputAdornment> }} />
+        <Box>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', display: 'block', mb: 0.5 }}>Expiry Date</Typography>
+          <TextField type="date" size="small" fullWidth value={settings.expiryDate || ''} onChange={set('expiryDate')}
+            InputProps={{ startAdornment: <InputAdornment position="start"><ExpiryIcon fontSize="small" sx={{ color: '#94A3B8' }} /></InputAdornment> }} />
+        </Box>
+        <Box>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', display: 'block', mb: 0.5 }}>Maximum Responses</Typography>
+          <TextField type="number" size="small" fullWidth value={settings.maxResponses || ''} onChange={set('maxResponses')}
+            placeholder="Leave blank for unlimited"
+            InputProps={{ startAdornment: <InputAdornment position="start"><GroupIcon fontSize="small" sx={{ color: '#94A3B8' }} /></InputAdornment> }} />
+        </Box>
         <FormControlLabel control={<Switch checked={!!settings.onePerUser} onChange={e => setSettings(p => ({ ...p, onePerUser: e.target.checked }))} />}
           label={<Box><Typography variant="body2" sx={{ fontWeight: 700 }}>One Response Per User</Typography><Typography variant="caption" sx={{ color: '#94A3B8' }}>Prevents duplicate submissions</Typography></Box>} />
         <Divider />
@@ -733,12 +738,8 @@ const FB_SUB_SUB_DEPARTMENTS = {
   innovation_lab: [{ id: 'ideation', label: 'Ideation Hub' }, { id: 'poc', label: 'Proof of Concept' }, { id: 'incubation', label: 'Incubation' }],
 };
 const FB_PROCESS_OPTIONS = [
-  { value: 'process_improvement', label: 'Process Improvement' },
+  { value: 'process_development', label: 'Process Development' },
   { value: 'product_development', label: 'Product Development' },
-  { value: 'innovation', label: 'Innovation' },
-  { value: 'automation', label: 'Automation' },
-  { value: 'cost_saving', label: 'Cost Saving' },
-  { value: 'quality_improvement', label: 'Quality Improvement' },
 ];
 const FB_ACCEPTED = {
   'application/pdf': ['.pdf'],
