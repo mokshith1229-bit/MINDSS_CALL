@@ -603,3 +603,76 @@ exports.updateProjectDetails = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Add a project update with attachments
+// @route   POST /api/v1/admin/submissions/:id/project-updates
+// @access  Private (SUPER_ADMIN, ADMIN)
+exports.addProjectUpdate = async (req, res, next) => {
+  try {
+    const { title, description, progressPercentage } = req.body;
+    const progressNum = Number(progressPercentage) || 0;
+
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) {
+      return next(new ApiError(404, 'Submission not found'));
+    }
+
+    let files = [];
+    if (req.files && req.files.length > 0) {
+      files = req.files.map((file) => ({
+        filename: file.originalname,
+        url: `/uploads/${file.filename}`,
+        mimetype: file.mimetype,
+        size: file.size,
+      }));
+    }
+
+    if (!submission.projectDetails) {
+      submission.projectDetails = {};
+    }
+    if (!submission.projectDetails.updates) {
+      submission.projectDetails.updates = [];
+    }
+
+    const updatedBy = req.user?.name || req.user?.email || 'Admin';
+
+    const newUpdate = {
+      title: title || 'Project Update',
+      description,
+      progressPercentage: progressNum,
+      updatedBy,
+      timestamp: new Date(),
+      attachments: files,
+    };
+
+    // Add to beginning of updates array so it's intrinsically reverse chronological or let frontend handle it
+    // Usually backend pushes and frontend reverses. We will just push.
+    submission.projectDetails.updates.push(newUpdate);
+    submission.projectDetails.progressPercentage = progressNum;
+
+    // Calculate implementation status based on progress
+    let newStatus = 'Approved';
+    if (progressNum === 0) newStatus = 'Approved';
+    else if (progressNum > 0 && progressNum <= 25) newStatus = 'Planning';
+    else if (progressNum > 25 && progressNum <= 75) newStatus = 'In Progress';
+    else if (progressNum > 75 && progressNum < 100) newStatus = 'Near Completion';
+    else if (progressNum === 100) newStatus = 'Completed';
+
+    submission.projectDetails.implementationStatus = newStatus;
+
+    // Add timeline event
+    submission.timeline.push({
+      stage: 'Project Update',
+      actionBy: updatedBy,
+      role: 'Project Owner / Admin',
+      remarks: `Progress updated to ${progressNum}%. Status is now ${newStatus}. ${title ? `(${title})` : ''}`,
+      timestamp: new Date()
+    });
+
+    await submission.save();
+
+    res.status(201).json(new ApiResponse(201, { submission }, 'Project update added successfully'));
+  } catch (err) {
+    next(err);
+  }
+};

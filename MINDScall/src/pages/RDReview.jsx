@@ -124,17 +124,18 @@ const RDReview = () => {
       const q = search.toLowerCase();
       return s.parsedTitle.toLowerCase().includes(q) || 
              s.employeeName.toLowerCase().includes(q) ||
-             s.submissionId.toLowerCase().includes(q);
+             s.submissionId.toLowerCase().includes(q) ||
+             (s.wbsCode && s.wbsCode.toLowerCase().includes(q));
     }
     return true;
-  });
+  }).map((s, index) => ({ ...s, tableIndex: index + 1 }));
 
   const columns = [
-    { field: 'submissionId', headerName: 'Sub ID', renderCell: (row) => (
-      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600, fontFamily: 'monospace' }}>{row.submissionId}</Typography>
-        {row.wbsCode && <Typography variant="caption" sx={{ color: '#90A4AE', fontFamily: 'monospace', fontSize: '0.65rem' }}>{row.wbsCode}</Typography>}
-      </Box>
+    { field: 'tableIndex', headerName: 'Sl. No.', renderCell: (row) => (
+      <Typography variant="body2" sx={{ fontWeight: 600, color: '#37474F' }}>{row.tableIndex}</Typography>
+    )},
+    { field: 'wbsCode', headerName: 'WBS Code', renderCell: (row) => (
+      <Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.wbsCode || 'N/A'}</Typography>
     ) },
     { field: 'parsedTitle', headerName: 'Title' },
     { field: 'employeeName', headerName: 'Employee', renderCell: (row) => `${row.employeeName} (${row.dept})` },

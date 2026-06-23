@@ -103,14 +103,24 @@ const submissionSchema = new mongoose.Schema(
       owner: { type: String, default: null },
       implementationStatus: { 
         type: String, 
-        enum: ['Approved', 'Not Started', 'In Progress', 'Pilot Testing', 'Completed', 'On Hold'],
+        enum: ['Approved', 'Not Started', 'Planning', 'In Progress', 'Pilot Testing', 'Near Completion', 'Completed', 'On Hold'],
         default: 'Approved' 
       },
       progressPercentage: { type: Number, default: 0, min: 0, max: 100 },
       updates: [{
-        text: String,
-        user: String,
-        timestamp: { type: Date, default: Date.now }
+        title: String,
+        description: String,
+        text: String, // Kept for backwards compatibility
+        updatedBy: String,
+        user: String, // Kept for backwards compatibility
+        progressPercentage: Number,
+        timestamp: { type: Date, default: Date.now },
+        attachments: [{
+          filename: String,
+          url: String,
+          mimetype: String,
+          size: Number,
+        }]
       }],
       expectedBenefits: { type: String, default: '' },
       actualBenefits: { type: String, default: '' }

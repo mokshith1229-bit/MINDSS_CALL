@@ -507,6 +507,27 @@ export const formStore = {
     }
   },
 
+  async addProjectUpdate(id, formData){
+    try {
+      const res = await api.post(`/admin/submissions/${id}/project-updates`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      if (res.data && res.data.success) {
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          projectDetails: res.data.data.submission.projectDetails,
+          timeline: res.data.data.submission.timeline
+        } : s);
+        notify();
+      }
+    } catch (err) {
+      console.error('Failed to add project update:', err);
+      throw err;
+    }
+  },
+
   async deleteSubmission(id){
     try {
       const res = await api.delete(`/admin/submissions/${id}`);

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, TextField, InputAdornment, Button, Chip, Drawer, Grid, Divider, ToggleButtonGroup, ToggleButton,
-  FormControl, InputLabel, Select, MenuItem, LinearProgress, IconButton, Tabs, Tab, Avatar, Paper
+  FormControl, InputLabel, Select, MenuItem, LinearProgress, IconButton, Tabs, Tab, Avatar, Paper, Slider, Badge, Link
 } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import {
   Search as SearchIcon, Visibility as ViewIcon, BusinessCenter as ProjectIcon, AttachFile as AttachFileIcon, Close as CloseIcon, Send as SendIcon,
-  CheckCircle, PlayArrow, Error, Star, Receipt, Timeline, Description, Chat
+  CheckCircle, PlayArrow, Error, Star, Receipt, Timeline, Description, Chat, CloudUpload, Flag
 } from '@mui/icons-material';
 import { formStore } from '../store/formStore';
 
@@ -36,7 +36,11 @@ const RDOngoingProjects = () => {
   const [editProgress, setEditProgress] = useState(0);
   const [editExpBenefits, setEditExpBenefits] = useState('');
   const [editActBenefits, setEditActBenefits] = useState('');
-  const [newUpdateText, setNewUpdateText] = useState('');
+  const [newUpdateTitle, setNewUpdateTitle] = useState('');
+  const [newUpdateDesc, setNewUpdateDesc] = useState('');
+  const [newUpdateProgress, setNewUpdateProgress] = useState(0);
+  const [newUpdateFiles, setNewUpdateFiles] = useState([]);
+  const [postingUpdate, setPostingUpdate] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
 
   useEffect(() => {
@@ -71,14 +75,18 @@ const RDOngoingProjects = () => {
 
   const getStatusIcon = (status) => {
     if(status === 'Completed') return <CheckCircle fontSize="small" sx={{ color: '#10B981' }} />;
+    if(status === 'Near Completion') return <CheckCircle fontSize="small" sx={{ color: '#059669' }} />;
     if(status === 'In Progress' || status === 'Pilot Testing') return <PlayArrow fontSize="small" sx={{ color: '#3B82F6' }} />;
+    if(status === 'Planning') return <Flag fontSize="small" sx={{ color: '#F59E0B' }} />;
     if(status === 'On Hold') return <Error fontSize="small" sx={{ color: '#EF4444' }} />;
     return <CheckCircle fontSize="small" sx={{ color: '#6B7280' }} />;
   };
 
   const getStatusColor = (status) => {
     if(status === 'Completed') return '#10B981';
+    if(status === 'Near Completion') return '#059669';
     if(status === 'In Progress' || status === 'Pilot Testing') return '#3B82F6';
+    if(status === 'Planning') return '#F59E0B';
     if(status === 'On Hold') return '#EF4444';
     return '#6B7280';
   };
@@ -131,6 +139,28 @@ const RDOngoingProjects = () => {
           </Box>
         );
     }},
+    { field: 'updates', headerName: 'Updates', width: 90, renderCell: (params) => {
+        const count = params.row.projectDetails?.updates?.length || 0;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', pl: 1 }}>
+            <Badge badgeContent={count} color="primary" sx={{ '& .MuiBadge-badge': { right: -3, top: 13, border: `2px solid #fff`, padding: '0 4px' } }}>
+              <Chat sx={{ color: count > 0 ? '#0078D4' : '#C8C6C4', fontSize: 20 }} />
+            </Badge>
+          </Box>
+        );
+    }},
+    { field: 'latestUpdate', headerName: 'Latest Update', flex: 1, minWidth: 200, renderCell: (params) => {
+        const updates = params.row.projectDetails?.updates;
+        if (!updates || updates.length === 0) return <Typography variant="caption" sx={{ color: '#A19F9D' }}>No updates yet</Typography>;
+        const latest = updates[updates.length - 1];
+        const title = latest.title || 'Update';
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', pt: 0.5 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#323130', noWrap: true, textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</Typography>
+            <Typography variant="caption" sx={{ color: '#605E5C' }}>{new Date(latest.timestamp).toLocaleDateString()}</Typography>
+          </Box>
+        );
+    }},
     {
       field: 'actions',
       type: 'actions',
@@ -149,12 +179,15 @@ const RDOngoingProjects = () => {
     setEditProgress(sub.projectDetails?.progressPercentage || 0);
     setEditExpBenefits(sub.projectDetails?.expectedBenefits || sub.benefits || '');
     setEditActBenefits(sub.projectDetails?.actualBenefits || '');
-    setNewUpdateText('');
+    setNewUpdateTitle('');
+    setNewUpdateDesc('');
+    setNewUpdateProgress(sub.projectDetails?.progressPercentage || 0);
+    setNewUpdateFiles([]);
     setDrawerTab(0);
     setDrawerOpen(true);
   };
 
-  const handleSaveProjectDetails = async (updateText = null) => {
+  const handleSaveProjectDetails = async () => {
     if (!selectedSub) return;
     setSavingDetails(true);
     try {
@@ -163,17 +196,40 @@ const RDOngoingProjects = () => {
         implementationStatus: editStatus,
         progressPercentage: editProgress,
         expectedBenefits: editExpBenefits,
-        actualBenefits: editActBenefits,
-        updateText: updateText
+        actualBenefits: editActBenefits
       };
       await formStore.updateProjectDetails(selectedSub.id, details);
       const updatedSub = formStore.getAllSubmissions().find(s => s.id === selectedSub.id);
       setSelectedSub(updatedSub);
-      if (updateText) setNewUpdateText('');
     } catch (err) {
       console.error(err);
     } finally {
       setSavingDetails(false);
+    }
+  };
+
+  const handleSaveProjectUpdate = async () => {
+    if (!selectedSub || !newUpdateTitle.trim() || !newUpdateDesc.trim()) return;
+    setPostingUpdate(true);
+    try {
+      const formData = new FormData();
+      formData.append('title', newUpdateTitle);
+      formData.append('description', newUpdateDesc);
+      formData.append('progressPercentage', newUpdateProgress);
+      newUpdateFiles.forEach(file => {
+        formData.append('attachments', file);
+      });
+      await formStore.addProjectUpdate(selectedSub.id, formData);
+      const updatedSub = formStore.getAllSubmissions().find(s => s.id === selectedSub.id);
+      setSelectedSub(updatedSub);
+      setNewUpdateTitle('');
+      setNewUpdateDesc('');
+      setNewUpdateProgress(updatedSub?.projectDetails?.progressPercentage || 0);
+      setNewUpdateFiles([]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPostingUpdate(false);
     }
   };
 
@@ -325,13 +381,14 @@ const RDOngoingProjects = () => {
                       <TextField label="Project Owner" size="small" fullWidth value={editOwner} onChange={e => setEditOwner(e.target.value)} placeholder="Assign owner..." />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <FormControl size="small" fullWidth>
-                        <InputLabel>Status</InputLabel>
-                        <Select value={editStatus} label="Status" onChange={e => setEditStatus(e.target.value)}>
+                      <FormControl size="small" fullWidth disabled>
+                        <InputLabel>Status (Auto-calculated)</InputLabel>
+                        <Select value={editStatus} label="Status (Auto-calculated)" onChange={e => setEditStatus(e.target.value)}>
                           <MenuItem value="Approved">Approved</MenuItem>
-                          <MenuItem value="Not Started">Not Started</MenuItem>
+                          <MenuItem value="Planning">Planning</MenuItem>
                           <MenuItem value="In Progress">In Progress</MenuItem>
                           <MenuItem value="Pilot Testing">Pilot Testing</MenuItem>
+                          <MenuItem value="Near Completion">Near Completion</MenuItem>
                           <MenuItem value="Completed">Completed</MenuItem>
                           <MenuItem value="On Hold">On Hold</MenuItem>
                         </Select>
@@ -341,7 +398,7 @@ const RDOngoingProjects = () => {
                       <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600, mb: 1, display: 'block' }}>Implementation Progress ({editProgress}%)</Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <LinearProgress variant="determinate" value={editProgress} sx={{ flex: 1, height: 8, borderRadius: 4, bgcolor: '#EDEBE9', '& .MuiLinearProgress-bar': { bgcolor: '#0078D4' } }} />
-                        <TextField type="number" size="small" sx={{ width: 80 }} inputProps={{ min: 0, max: 100 }} value={editProgress} onChange={e => setEditProgress(Number(e.target.value))} />
+                        <Typography variant="body2" sx={{ width: 80, color: '#605E5C' }}>Auto-synced</Typography>
                       </Box>
                     </Grid>
                     <Grid item xs={12}>
@@ -370,28 +427,61 @@ const RDOngoingProjects = () => {
 
               {/* Updates Tab */}
               <TabPanel value={drawerTab} index={1}>
-                <Paper sx={{ p: 3, mb: 3, border: '1px solid #EDEBE9', boxShadow: 'none', borderRadius: 1, bgcolor: '#F3F2F1' }}>
-                  <Typography variant="subtitle2" sx={{ color: '#323130', fontWeight: 600, mb: 2 }}>Post a new update</Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <TextField size="small" fullWidth placeholder="Describe progress, blockers, or next steps..." value={newUpdateText} onChange={e => setNewUpdateText(e.target.value)} multiline minRows={2} sx={{ bgcolor: '#fff' }} />
-                    <Button variant="contained" sx={{ minWidth: 'auto', px: 3, bgcolor: '#0078D4', boxShadow: 'none' }} onClick={() => handleSaveProjectDetails(newUpdateText)} disabled={!newUpdateText.trim() || savingDetails}>
-                      Post
-                    </Button>
-                  </Box>
+                <Paper sx={{ p: 3, mb: 4, border: '1px solid #EDEBE9', boxShadow: 'none', borderRadius: 1, bgcolor: '#F3F2F1' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#323130', fontWeight: 600, mb: 2 }}>Post a New Project Update</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField size="small" fullWidth placeholder="Update Title" value={newUpdateTitle} onChange={e => setNewUpdateTitle(e.target.value)} sx={{ bgcolor: '#fff' }} />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField size="small" fullWidth placeholder="Describe progress, blockers, or next steps..." value={newUpdateDesc} onChange={e => setNewUpdateDesc(e.target.value)} multiline minRows={3} sx={{ bgcolor: '#fff' }} />
+                    </Grid>
+                    <Grid item xs={12} sm={8}>
+                      <Typography variant="caption" sx={{ color: '#605E5C', display: 'block', mb: 1 }}>Update Overall Progress ({newUpdateProgress}%)</Typography>
+                      <Box sx={{ px: 1 }}>
+                        <Slider value={newUpdateProgress} onChange={(e, val) => setNewUpdateProgress(val)} step={5} marks min={0} max={100} sx={{ color: '#0078D4' }} />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}>
+                      <Button component="label" variant="outlined" startIcon={<CloudUpload />} sx={{ textTransform: 'none', color: '#605E5C', borderColor: '#EDEBE9', bgcolor: '#fff' }}>
+                        {newUpdateFiles.length > 0 ? `${newUpdateFiles.length} file(s)` : 'Attach Files'}
+                        <input type="file" hidden multiple onChange={(e) => setNewUpdateFiles(Array.from(e.target.files))} />
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                      <Button variant="contained" endIcon={<SendIcon />} sx={{ px: 4, bgcolor: '#0078D4', boxShadow: 'none', textTransform: 'none' }} onClick={handleSaveProjectUpdate} disabled={!newUpdateTitle.trim() || !newUpdateDesc.trim() || postingUpdate}>
+                        {postingUpdate ? 'Posting...' : 'Post Update'}
+                      </Button>
+                    </Grid>
+                  </Grid>
                 </Paper>
                 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {selectedSub.projectDetails?.updates?.length > 0 ? (
                     [...selectedSub.projectDetails.updates].reverse().map((update, idx) => (
-                      <Paper key={idx} sx={{ p: 2, border: '1px solid #EDEBE9', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', borderRadius: 1 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Avatar sx={{ width: 24, height: 24, bgcolor: '#0078D4', fontSize: '0.75rem' }}>{update.user?.charAt(0) || 'U'}</Avatar>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130' }}>{update.user}</Typography>
+                      <Paper key={idx} sx={{ p: 3, border: '1px solid #EDEBE9', boxShadow: '0 1px 2px rgba(0,0,0,0.02)', borderRadius: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: '#0078D4', fontSize: '0.875rem' }}>{(update.updatedBy || update.user || 'U').charAt(0)}</Avatar>
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130' }}>{update.title || 'Project Update'}</Typography>
+                              <Typography variant="caption" sx={{ color: '#605E5C' }}>{(update.updatedBy || update.user)} • {new Date(update.timestamp).toLocaleString()}</Typography>
+                            </Box>
                           </Box>
-                          <Typography variant="caption" sx={{ color: '#605E5C' }}>{new Date(update.timestamp).toLocaleString()}</Typography>
+                          {update.progressPercentage !== undefined && (
+                            <Chip label={`${update.progressPercentage}% Progress`} size="small" sx={{ bgcolor: '#E0E7FF', color: '#4338CA', fontWeight: 600 }} />
+                          )}
                         </Box>
-                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: '#323130', ml: 4 }}>{update.text}</Typography>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: '#323130', pl: 5.5, mb: 2 }}>{update.description || update.text}</Typography>
+                        
+                        {update.attachments && update.attachments.length > 0 && (
+                          <Box sx={{ pl: 5.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            {update.attachments.map((att, aIdx) => (
+                              <Chip key={aIdx} icon={<AttachFileIcon fontSize="small" />} label={att.filename} size="small" variant="outlined" component="a" href={att.url} target="_blank" clickable sx={{ borderColor: '#EDEBE9', color: '#605E5C' }} />
+                            ))}
+                          </Box>
+                        )}
+
                       </Paper>
                     ))
                   ) : (

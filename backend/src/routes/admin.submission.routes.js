@@ -1,7 +1,8 @@
 const express = require('express');
-const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionReview, exportSubmissionsCSV, deleteSubmission, assignSubmissionEmail, updateFinanceReview, updateProjectDetails } = require('../controllers/admin.submission.controller');
+const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionReview, exportSubmissionsCSV, deleteSubmission, assignSubmissionEmail, updateFinanceReview, updateProjectDetails, addProjectUpdate } = require('../controllers/admin.submission.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const auditLog = require('../middlewares/audit.middleware');
+const upload = require('../middlewares/upload.middleware');
 
 const router = express.Router();
 
@@ -35,5 +36,12 @@ router.route('/:id/finance-review')
 
 router.route('/:id/project-details')
   .patch(auditLog('UPDATE_PROJECT_DETAILS', 'Submission'), updateProjectDetails);
+
+router.route('/:id/project-updates')
+  .post(
+    auditLog('ADD_PROJECT_UPDATE', 'Submission'),
+    upload.array('attachments', 5),
+    addProjectUpdate
+  );
 
 module.exports = router;
