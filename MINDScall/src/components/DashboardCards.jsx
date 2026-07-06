@@ -11,6 +11,7 @@ import {
   TrendingDown as TrendDownIcon,
   ListAltOutlined as ListAltIcon,
 } from '@mui/icons-material';
+
 const iconMap = {
   Lightbulb: LightbulbIcon,
   Description: DescIcon,
@@ -22,89 +23,96 @@ const iconMap = {
 
 const DashboardCards = ({ dynamicStats = [] }) => {
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={2.5}>
       {dynamicStats.map((stat) => {
         const IconComponent = iconMap[stat.icon] || LightbulbIcon;
         const isUp = stat.trend === 'up';
         return (
           <Grid xs={12} sm={6} lg={3} key={stat.id}>
             <Card
+              elevation={0}
               sx={{
-                borderRadius: 3,
-                p: 0.5,
+                borderRadius: 2,
+                border: '1px solid #E5E7EB',
                 position: 'relative',
-                overflow: 'visible',
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
+                cursor: 'default',
+                transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
                 '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.12)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  borderColor: '#D1D5DB',
                 },
+                // Colored top accent bar
                 '&::before': {
                   content: '""',
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   right: 0,
-                  height: 4,
-                  borderRadius: '16px 16px 0 0',
+                  height: 3,
                   backgroundColor: stat.color,
+                  borderRadius: '12px 12px 0 0',
                 },
               }}
             >
-              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
-                      variant="caption"
                       sx={{
-                        color: '#78909C',
-                        fontWeight: 600,
+                        color: '#9CA3AF',
+                        fontWeight: 700,
                         textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        fontSize: '0.72rem',
+                        letterSpacing: '0.6px',
+                        fontSize: '0.6875rem',
                         display: 'block',
-                        mb: 1,
+                        mb: 1.25,
                       }}
                     >
                       {stat.title}
                     </Typography>
                     <Typography
-                      variant="h4"
-                      sx={{ fontWeight: 800, color: '#212121', lineHeight: 1 }}
+                      sx={{
+                        fontWeight: 800,
+                        color: '#111827',
+                        fontSize: '2rem',
+                        lineHeight: 1,
+                        letterSpacing: '-0.5px',
+                      }}
                     >
-                      {stat.value.toLocaleString()}
+                      {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                     </Typography>
                   </Box>
                   <Avatar
                     sx={{
                       bgcolor: stat.bg,
-                      width: 52,
-                      height: 52,
-                      borderRadius: 2.5,
+                      width: 48,
+                      height: 48,
+                      borderRadius: 2,
+                      flexShrink: 0,
                     }}
                   >
-                    <IconComponent sx={{ color: stat.color, fontSize: 26 }} />
+                    <IconComponent sx={{ color: stat.color, fontSize: 22 }} />
                   </Avatar>
                 </Box>
 
+                {/* Trend indicator */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2 }}>
                   {isUp ? (
-                    <TrendUpIcon sx={{ color: '#2E7D32', fontSize: 16 }} />
+                    <TrendUpIcon sx={{ color: '#2E7D32', fontSize: 14 }} />
                   ) : (
-                    <TrendDownIcon sx={{ color: '#C62828', fontSize: 16 }} />
+                    <TrendDownIcon sx={{ color: '#DC2626', fontSize: 14 }} />
                   )}
                   <Typography
-                    variant="caption"
                     sx={{
                       fontWeight: 700,
-                      color: isUp ? '#2E7D32' : '#C62828',
-                      fontSize: '0.8rem',
+                      color: isUp ? '#2E7D32' : '#DC2626',
+                      fontSize: '0.75rem',
                     }}
                   >
                     {stat.change}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#9E9E9E', fontSize: '0.78rem' }}>
+                  <Typography sx={{ color: '#9CA3AF', fontSize: '0.75rem' }}>
                     vs last month
                   </Typography>
                 </Box>

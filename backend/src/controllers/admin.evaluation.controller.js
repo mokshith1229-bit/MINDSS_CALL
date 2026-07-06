@@ -14,8 +14,16 @@ const EmailLog = require('../models/EmailLog.model');
 
 exports.createCommittee = async (req, res, next) => {
   try {
-    const { name, members } = req.body;
-    const committee = await Committee.create({ name, members });
+    const { name, description, active, members } = req.body;
+    if (!members || members.length !== 6) {
+      return next(new ApiError(400, 'A committee must have exactly 6 members.'));
+    }
+    const auditHistory = [{
+      members,
+      updatedBy: req.user?.email || 'Admin',
+      updatedAt: new Date()
+    }];
+    const committee = await Committee.create({ name, description, active, members, auditHistory });
     res.status(201).json(new ApiResponse(201, { committee }, 'Committee created successfully'));
   } catch (err) {
     next(err);
@@ -33,15 +41,26 @@ exports.getCommittees = async (req, res, next) => {
 
 exports.updateCommittee = async (req, res, next) => {
   try {
-    const { name, members } = req.body;
-    const committee = await Committee.findByIdAndUpdate(
-      req.params.id,
-      { name, members },
-      { new: true, runValidators: true }
-    );
+    const { name, description, active, members } = req.body;
+    if (members && members.length !== 6) {
+      return next(new ApiError(400, 'A committee must have exactly 6 members.'));
+    }
+    const committee = await Committee.findById(req.params.id);
     if (!committee) {
       return next(new ApiError(404, 'Committee not found'));
     }
+    if (name !== undefined) committee.name = name;
+    if (description !== undefined) committee.description = description;
+    if (active !== undefined) committee.active = active;
+    if (members) {
+      committee.members = members;
+      committee.auditHistory.push({
+        members,
+        updatedBy: req.user?.email || 'Admin',
+        updatedAt: new Date()
+      });
+    }
+    await committee.save();
     res.status(200).json(new ApiResponse(200, { committee }, 'Committee updated successfully'));
   } catch (err) {
     next(err);
@@ -61,115 +80,7 @@ exports.deleteCommittee = async (req, res, next) => {
   }
 };
 
-// =========================
-// BATCH MANAGEMENT
-// =========================
-
-exports.createBatch = async (req, res, next) => {
-  try {
-    const { name, committeeId, submissionIds } = req.body;
-    
-    // Validate committee exists
-    const committee = await Committee.findById(committeeId);
-    if (!committee) {
-      return next(new ApiError(404, 'Committee not found'));
-    }
-
-    const reviewToken = crypto.randomBytes(24).toString('hex');
-
-    const batch = await Batch.create({
-      name,
-      committeeId,
-      submissions: submissionIds || [],
-      reviewToken
-    });
-
-    res.status(201).json(new ApiResponse(201, { batch }, 'Batch created successfully'));
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.getBatches = async (req, res, next) => {
-  try {
-    const batches = await Batch.find()
-      .populate('committeeId', 'name members')
-      .populate('submissions')
-      .sort({ createdAt: -1 });
-    res.status(200).json(new ApiResponse(200, { batches }, 'Batches retrieved successfully'));
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.sendBatchEmail = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const batch = await Batch.findById(id).populate('committeeId');
-    
-    if (!batch) {
-      return next(new ApiError(404, 'Batch not found'));
-    }
-    
-    if (!batch.committeeId) {
-      return next(new ApiError(400, 'Committee associated with this batch was not found.'));
-    }
-    
-    // Update status so that the "Send Email" button is disabled on the frontend
-    batch.status = 'EMAIL_SENT';
-    await batch.save();
-    
-    // Log timeline event for each submission
-    const submissions = await Submission.find({ _id: { $in: batch.submissions } });
-    for (const sub of submissions) {
-      sub.timeline.push({
-        stage: 'Evaluation Assigned',
-        actionBy: req.user?.email || 'Admin',
-        role: 'Admin',
-        remarks: `Assigned to ${batch.committeeId?.name || 'Committee'} in Batch: ${batch.name}`,
-        timestamp: new Date()
-      });
-      await sub.save();
-    }
-
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const reviewLink = `${frontendUrl}/batch-review/${batch.reviewToken}`;
-    const recipients = batch.committeeId.members;
-    
-    const emailSubject = `MINDScall: Evaluation Required for Batch ${batch.name}`;
-    const emailHtml = `
-      <h3>MINDScall Proposal Evaluation</h3>
-      <p>Hello Committee Members (${batch.committeeId.name}),</p>
-      <p>You have been assigned to evaluate a new batch of proposals.</p>
-      <ul>
-        <li><b>Batch Name:</b> ${batch.name}</li>
-        <li><b>Proposals to Review:</b> ${batch.submissions.length}</li>
-      </ul>
-      <p>Please click the secure link below to access the review portal:</p>
-      <a href="${reviewLink}" style="padding: 10px 15px; background-color: #1976D2; color: white; text-decoration: none; border-radius: 4px;">Start Evaluation</a>
-      <br><br>
-      <p>Or copy this link into your browser: <br>${reviewLink}</p>
-      <hr />
-      <p><small>This is an automated message from MINDScall.</small></p>
-    `;
-
-    try {
-      await sendEmail({
-        email: recipients.join(', '),
-        subject: emailSubject,
-        html: emailHtml
-      });
-
-      res.status(200).json(new ApiResponse(200, { batch }, 'Batch email sent successfully'));
-    } catch (emailError) {
-      console.error('Email send failed:', emailError);
-      
-      return next(new ApiError(500, 'Failed to send email. Batch remains in PENDING status.'));
-    }
-  } catch (err) {
-    next(err);
-  }
-};
+// Removed Batch Management (Replaced by Voting Engine)
 
 // =========================
 // AUTO ASSIGN COMMITTEE
@@ -177,15 +88,18 @@ exports.sendBatchEmail = async (req, res, next) => {
 
 exports.autoAssignCommittee = async (req, res, next) => {
   try {
-    const { committeeId, submissionIds, batchName } = req.body;
+    const { evaluatorEmails, submissionIds } = req.body;
 
-    if (!committeeId || !submissionIds || submissionIds.length === 0) {
-      return next(new ApiError(400, 'committeeId and submissionIds are required'));
+    if (!evaluatorEmails || !Array.isArray(evaluatorEmails) || evaluatorEmails.length !== 6) {
+      return next(new ApiError(400, 'Exactly 6 evaluator emails are required'));
+    }
+    if (!submissionIds || submissionIds.length === 0) {
+      return next(new ApiError(400, 'submissionIds are required'));
     }
 
-    const committee = await Committee.findById(committeeId);
-    if (!committee) {
-      return next(new ApiError(404, 'Committee not found'));
+    const uniqueEmails = [...new Set(evaluatorEmails.map(e => e.trim().toLowerCase()))];
+    if (uniqueEmails.length !== 6) {
+       return next(new ApiError(400, 'All 6 evaluator emails must be unique.'));
     }
 
     const submissions = await Submission.find({ _id: { $in: submissionIds } });
@@ -193,66 +107,65 @@ exports.autoAssignCommittee = async (req, res, next) => {
       return next(new ApiError(404, 'No valid submissions found'));
     }
 
-    // Create a batch for this assignment
-    const reviewToken = crypto.randomBytes(24).toString('hex');
-    const resolvedBatchName = batchName || `Auto-Batch ${new Date().toLocaleDateString('en-IN')}`;
-    const batch = await Batch.create({
-      name: resolvedBatchName,
-      committeeId,
-      submissions: submissionIds,
-      reviewToken,
-      status: 'EMAIL_SENT'
-    });
-
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const reviewLink = `${frontendUrl}/batch-review/${reviewToken}`;
 
-    const links = [];
-    // Update each submission status to EVALUATION and log timeline
     for (const sub of submissions) {
       sub.status = 'EVALUATION';
       if (!sub.workflow) sub.workflow = {};
       sub.workflow.evaluationReview = sub.workflow.evaluationReview || {};
-      sub.workflow.evaluationReview.committeeName = committee.name;
+      sub.workflow.evaluationReview.committeeName = 'Custom Evaluation Committee';
+      sub.workflow.evaluationReview.status = 'AWAITING_VOTES';
+      
+      // Assign the 6 evaluators
+      const evaluators = uniqueEmails.map(email => ({
+        email,
+        token: crypto.randomBytes(24).toString('hex'),
+        submitted: false
+      }));
+      sub.workflow.evaluationReview.evaluators = evaluators;
+
       sub.timeline.push({
-        stage: 'Sent to Evaluation Committee',
+        stage: 'Assigned To Evaluation Committee',
         actionBy: req.user?.email || 'Admin',
         role: 'Admin',
-        remarks: `Assigned to committee: ${committee.name} in batch: ${resolvedBatchName}`,
+        remarks: `Assigned to 6 individual evaluators`,
         timestamp: new Date()
       });
       await sub.save();
 
       const title = sub.answers?.title || sub.answers?.proposaltitle || sub.businessId || 'Untitled';
-      links.push(`<li style="margin-bottom:5px;"><b>${sub.businessId || 'Proposal'}</b> – ${title}</li>`);
+
+      // Send individual emails to each of the 6 evaluators
+      for (const ev of evaluators) {
+        const reviewLink = `${frontendUrl}/evaluator-review/${ev.token}`;
+        const emailSubject = `MINDScall: Evaluation Required for Proposal ${sub.businessId}`;
+        const emailHtml = `
+          <h3>MINDScall Proposal Evaluation</h3>
+          <p>Hello Committee Member,</p>
+          <p>You have been assigned to evaluate the following proposal:</p>
+          <ul>
+            <li><b>Tracking ID:</b> ${sub.businessId}</li>
+            <li><b>Title:</b> ${title}</li>
+            <li><b>Proposer:</b> ${sub.answers?.employeeName || 'N/A'}</li>
+          </ul>
+          <p>Please click the secure link below to access your unique review portal:</p>
+          <a href="${reviewLink}" style="padding: 10px 15px; background-color: #1976D2; color: white; text-decoration: none; border-radius: 4px;">Evaluate Proposal</a>
+          <br><br>
+          <p>Or copy this link into your browser: <br>${reviewLink}</p>
+          <hr />
+          <p><small>This is an automated message from MINDScall.</small></p>
+        `;
+        
+        // Asynchronously send email to avoid blocking the whole loop if one fails
+        sendEmail({
+          email: ev.email,
+          subject: emailSubject,
+          html: emailHtml
+        }).catch(err => console.error('Failed to send evaluator email to', ev.email, err));
+      }
     }
-
-    // Send email to all committee members
-    const emailSubject = `MINDScall: Evaluation Required for Batch ${resolvedBatchName}`;
-    const emailHtml = `
-      <h3>MINDScall Proposal Evaluation</h3>
-      <p>Hello Committee Members (${committee.name}),</p>
-      <p>You have been assigned to evaluate a new batch of proposals.</p>
-      <ul>
-        <li><b>Batch Name:</b> ${resolvedBatchName}</li>
-        <li><b>Proposals to Review:</b> ${submissions.length}</li>
-      </ul>
-      <p>Please click the secure link below to access the review portal:</p>
-      <a href="${reviewLink}" style="padding: 10px 15px; background-color: #1976D2; color: white; text-decoration: none; border-radius: 4px;">Start Evaluation</a>
-      <br><br>
-      <p>Or copy this link into your browser: <br>${reviewLink}</p>
-      <hr />
-      <p><small>This is an automated message from MINDScall.</small></p>
-    `;
-
-    await sendEmail({
-      email: committee.members.join(', '),
-      subject: emailSubject,
-      html: emailHtml
-    });
-
   
-  res.status(200).json(new ApiResponse(200, { batch, assignedCount: submissions.length }, 'Auto-assigned to committee and email sent successfully.'));
+    res.status(200).json(new ApiResponse(200, { assignedCount: submissions.length }, 'Assigned to committee and secure links sent to evaluators successfully.'));
   } catch (err) {
     next(err);
   }

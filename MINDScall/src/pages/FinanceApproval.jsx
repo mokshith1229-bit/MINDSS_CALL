@@ -60,7 +60,7 @@ const FinanceApproval = () => {
     try {
       setLoading(true);
       const res = await api.get('/admin/submissions');
-      const mapped = (res.data.data.submissions || []).map(p => {
+      const mapped = (res.data.data.submissions || []).map(sub => {
         const parsed = parseSubmissionFields(p);
 
         const approvedBudget = parsed.approvedBudget;
@@ -91,10 +91,11 @@ const FinanceApproval = () => {
           benefits: parsed.benefits,
           attachments: parsed.attachments,
           answers: parsed.answers,
-          // Fix status mapping: FINANCE_APPROVED = Pending, APPROVAL_COMMITTEE = Approved
-          status: sub.status === 'FINANCE_APPROVED' ? 'Pending' :
-                  sub.status === 'APPROVAL_COMMITTEE' ? 'Approved' :
-                  sub.status === 'REJECTED' ? 'Rejected' : 'Other',
+          // Finance view sees all submissions that have passed EVALUATION and reached FINANCE.
+          // The status tab will be based on financeReview.decision if present.
+          status: (sub.workflow?.financeReview?.decision === 'APPROVED') ? 'Approved' :
+                  (sub.workflow?.financeReview?.decision === 'REJECTED') ? 'Rejected' :
+                  ['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'REJECTED', 'EVALUATION_REJECTED'].includes(sub.status) ? 'Pending' : 'Other',
           priority: numAmount > 1500000 ? 'High' : numAmount > 500000 ? 'Medium' : 'Low',
           submittedOn: new Date(sub.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
           slaDays: sub.status === 'FINANCE_APPROVED' ? 2 : 0,
@@ -110,8 +111,9 @@ const FinanceApproval = () => {
         };
       });
       
-      // Filter only those relevant to finance
-      setRequests(mapped.filter(r => ['Pending', 'Approved', 'Rejected'].includes(r.status)));
+      // Filter only those relevant to finance (Pending, Approved, Rejected)
+      const validStatuses = ['Pending', 'Approved', 'Rejected'];
+      setRequests(mapped.filter(r => validStatuses.includes(r.status)));
     } catch (err) {
       console.error('Failed to load proposals', err);
     } finally {
@@ -145,8 +147,8 @@ const FinanceApproval = () => {
 
   const confirmAction = async () => {
     try {
-      const decision = dialog.action === 'approve' ? 'APPROVABLE' : 
-                       dialog.action === 'rework' ? 'CLARIFICATION' : 'NOT_APPROVABLE';
+      const decision = dialog.action === 'approve' ? 'APPROVED' : 
+                       dialog.action === 'rework' ? 'CLARIFICATION' : 'REJECTED';
       
       await api.patch(`/admin/submissions/${selected.id}/finance-review`, {
         decision,
@@ -169,30 +171,6 @@ const FinanceApproval = () => {
 
   return (
     <Box>
-      {/* ── KPI Cards ── */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {[
-          { label: 'Pending Review',  value: pending.length,    color: '#F57C00', bg: '#FFF3E0',  icon: <PendingIcon /> },
-          { label: 'Approved',        value: approved.length,   color: '#2E7D32', bg: '#E8F5E9',  icon: <ApproveIcon /> },
-          { label: 'Rejected',        value: rejected.length,   color: '#C62828', bg: '#FFEBEE',  icon: <RejectIcon /> },
-          { label: 'Total Value',     value: `₹ ${(totalValue/100000).toFixed(1)}L`, color: '#1565C0', bg: '#E3F2FD', icon: <MoneyIcon /> },
-          { label: 'SLA Breached',    value: pending.filter(r => r.slaDays === 0).length, color: '#6A1B9A', bg: '#F3E5F5', icon: <WarningIcon /> },
-          { label: 'Total Requests',  value: requests.length,   color: '#00838F', bg: '#E0F7FA',  icon: <ReceiptIcon /> },
-        ].map(k => (
-          <Grid item xs={6} sm={4} md={2} key={k.label}>
-            <Card sx={{ borderRadius: 3, border: `1px solid ${k.color}20`, transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: `0 8px 24px ${k.color}20` } }}>
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-                  <Typography variant="h4" sx={{ fontWeight: 900, color: k.color, lineHeight: 1 }}>{k.value}</Typography>
-                  <Box sx={{ bgcolor: k.bg, borderRadius: 1.5, p: 0.6, display: 'flex', color: k.color }}>{k.icon}</Box>
-                </Box>
-                <Typography variant="caption" sx={{ color: '#78909C', fontWeight: 600, display: 'block', mt: 0.5, fontSize: '0.72rem' }}>{k.label}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
       {/* ── Queue Table ── */}
       <Fade in={true} timeout={300}>
       <Card sx={{ borderRadius: 3 }}>
@@ -205,8 +183,8 @@ const FinanceApproval = () => {
 
           <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: '1px solid #E0E0E0', mb: 1, '& .MuiTabs-indicator': { bgcolor: '#1565C0' }, '& .Mui-selected': { color: '#1565C0 !important' } }}>
             <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Pending <Chip label={pending.length} size="small" sx={{ bgcolor: '#FFF3E0', color: '#F57C00', height: 20, fontWeight: 700 }} /></Box>} />
-            <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Approvable <Chip label={approved.length} size="small" sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', height: 20, fontWeight: 700 }} /></Box>} />
-            <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Not Approvable <Chip label={rejected.length} size="small" sx={{ bgcolor: '#FFEBEE', color: '#C62828', height: 20, fontWeight: 700 }} /></Box>} />
+            <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Approved <Chip label={approved.length} size="small" sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', height: 20, fontWeight: 700 }} /></Box>} />
+            <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Rejected <Chip label={rejected.length} size="small" sx={{ bgcolor: '#FFEBEE', color: '#C62828', height: 20, fontWeight: 700 }} /></Box>} />
           </Tabs>
 
           {/* Table Header */}
@@ -279,7 +257,7 @@ const FinanceApproval = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_META[selected.status].color, flexShrink: 0 }} />
                   <Typography variant="body2" sx={{ fontWeight: 800, color: STATUS_META[selected.status].color }}>
-                    {selected.status === 'Approved' ? `Marked Approvable by Finance` : selected.status === 'Rejected' ? 'Marked Not Approvable by Finance' : 'Awaiting Finance Review'}
+                    {selected.status === 'Approved' ? `Marked Approved by Finance` : selected.status === 'Rejected' ? 'Marked Rejected by Finance' : 'Awaiting Finance Review'}
                   </Typography>
                 </Box>
               </Paper>
@@ -320,10 +298,10 @@ const FinanceApproval = () => {
                   {[
                     { stage: 'Reporting Manager', status: selected.rmApproval },
                     { stage: 'Evaluation Committee', status: selected.committeeApproval },
-                    { stage: 'Finance Review',    status: selected.status === 'Approved' ? 'Approvable' : selected.status === 'Rejected' ? 'Not Approvable' : 'Pending' },
+                    { stage: 'Finance Review',    status: selected.status === 'Approved' ? 'Approved' : selected.status === 'Rejected' ? 'Rejected' : 'Pending' },
                   ].map((stage, i) => {
-                    const isOk = stage.status === 'Approved' || stage.status === 'Approvable';
-                    const isBad = stage.status === 'Rejected' || stage.status === 'Not Approvable';
+                    const isOk = stage.status === 'Approved';
+                    const isBad = stage.status === 'Rejected';
                     const col = isOk ? '#2E7D32' : isBad ? '#C62828' : '#F57C00';
                     const bg  = isOk ? '#E8F5E9' : isBad ? '#FFEBEE' : '#FFF3E0';
                     return (
@@ -370,8 +348,8 @@ const FinanceApproval = () => {
             {/* Action Footer */}
             {selected.status === 'Pending' && (
               <Box ref={budgetRef} sx={{ p: 3, borderTop: '1px solid #E0E0E0', bgcolor: '#fff', display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                <Button fullWidth variant="contained" color="success" startIcon={<ApproveIcon />} onClick={() => openDialog('approve')} sx={{ fontWeight: 700 }}>Mark Budget Approvable</Button>
-                <Button fullWidth variant="contained" color="error" startIcon={<RejectIcon />} onClick={() => openDialog('reject')} sx={{ fontWeight: 700 }}>Mark Budget Not Approvable</Button>
+                <Button fullWidth variant="contained" color="success" startIcon={<ApproveIcon />} onClick={() => openDialog('approve')} sx={{ fontWeight: 700 }}>Mark Budget Approved</Button>
+                <Button fullWidth variant="contained" color="error" startIcon={<RejectIcon />} onClick={() => openDialog('reject')} sx={{ fontWeight: 700 }}>Mark Budget Rejected</Button>
                 <Button fullWidth variant="outlined" color="warning" startIcon={<ReworkIcon />} onClick={() => openDialog('rework')} sx={{ fontWeight: 700, borderWidth: 2 }}>Request Clarification</Button>
               </Box>
             )}
@@ -382,12 +360,12 @@ const FinanceApproval = () => {
       {/* ── Confirm Dialog ── */}
       <Dialog open={dialog.open} onClose={closeDialog} PaperProps={{ sx: { borderRadius: 3, minWidth: 400 } }}>
         <DialogTitle sx={{ fontWeight: 800, color: dialog.action === 'approve' ? '#2E7D32' : dialog.action === 'reject' ? '#C62828' : '#E65100' }}>
-          {dialog.action === 'approve' ? '✅ Mark Approvable' : dialog.action === 'reject' ? '❌ Mark Not Approvable' : '🔄 Request Clarification'}
+          {dialog.action === 'approve' ? '✅ Mark Approved' : dialog.action === 'reject' ? '❌ Mark Rejected' : '🔄 Request Clarification'}
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            {dialog.action === 'approve' ? 'You are marking this budget as approvable. It will be sent to the Final Approval Committee.' : 
-             dialog.action === 'reject' ? 'You are marking this budget as not approvable.' : 
+            {dialog.action === 'approve' ? 'You are marking this budget as approved. It will be sent to the Final Approval Committee.' : 
+             dialog.action === 'reject' ? 'You are marking this budget as rejected.' : 
              'Request clarification before proceeding.'}
           </Typography>
 

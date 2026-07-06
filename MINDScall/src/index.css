@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -6,13 +8,70 @@
 
 html, body, #root {
   height: 100%;
-  font-family: 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  background-color: #F0F2F5;
+  font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  background-color: #F4F6F8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Scrollbar styling */
+/* ─── Page Fade-In Animation ─────────────────────────────────── */
+@keyframes fadeInPage {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.page-fade-in {
+  animation: fadeInPage 0.25s ease forwards;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease forwards;
+}
+
+.slide-in-up {
+  animation: slideInUp 0.3s ease forwards;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -23,23 +82,59 @@ html, body, #root {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CFD8DC;
-  border-radius: 8px;
+  background: #D1D5DB;
+  border-radius: 100px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #90A4AE;
+  background: #9CA3AF;
 }
 
-/* Smooth transitions globally */
+/* ─── Base Reset ─────────────────────────────────────────────── */
 a {
   text-decoration: none;
   color: inherit;
 }
 
-/* Remove number input spinners */
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* ─── Enterprise Utility Classes ────────────────────────────── */
+.enterprise-card {
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.section-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 0 12px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* ─── Table Sticky Header Support ───────────────────────────── */
+.MuiTableContainer-root {
+  overflow: auto;
+  max-height: calc(100vh - 300px);
+}
+
+/* ─── Button ripple smoothing ────────────────────────────────── */
+.MuiButtonBase-root {
+  transition: all 0.18s ease !important;
+}
+
+/* ─── Focus visible override ─────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid #2E7D32;
+  outline-offset: 2px;
 }

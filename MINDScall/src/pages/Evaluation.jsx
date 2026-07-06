@@ -22,22 +22,18 @@ const Evaluation = () => {
   // Data states
   const [proposals, setProposals] = useState([]);
   const [completedProposals, setCompletedProposals] = useState([]);
-  const [committees, setCommittees] = useState([]);
-  const [batches, setBatches] = useState([]);
   
   // Selection states
   const [selectedProposals, setSelectedProposals] = useState([]);
   
   // Dialog states
   const [createCommitteeDialog, setCreateCommitteeDialog] = useState(false);
-  const [createBatchDialog, setCreateBatchDialog] = useState(false);
   
   // Form states
   const [committeeName, setCommitteeName] = useState('');
+  const [committeeDescription, setCommitteeDescription] = useState('');
+  const [committeeActive, setCommitteeActive] = useState(true);
   const [committeeMembers, setCommitteeMembers] = useState(''); // comma separated
-  
-  const [batchName, setBatchName] = useState('');
-  const [selectedCommittee, setSelectedCommittee] = useState('');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProposalData, setSelectedProposalData] = useState(null);
@@ -51,8 +47,7 @@ const Evaluation = () => {
   const fetchData = async () => {
     try {
       const subRes = await api.get('/admin/submissions');
-      const comRes = await api.get('/admin/evaluations/committees');
-      const batRes = await api.get('/admin/evaluations/batches');
+
 
       const allSubs = subRes.data.data.submissions || [];
       const formattedSubs = allSubs.map(sub => {
@@ -79,14 +74,13 @@ const Evaluation = () => {
             formData: parsed.formData,
             budget: parsed.budget,
             committeeBudget: parsed.committeeBudget,
+            workflow: sub.workflow,
           };
         });
 
       // Active = EVALUATION status, History = past evaluation stages
       setProposals(formattedSubs.filter(s => s.status === 'EVALUATION'));
-      setCompletedProposals(formattedSubs.filter(s => ['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED'].includes(s.status)));
-      setCommittees(comRes.data.data.committees);
-      setBatches(batRes.data.data.batches);
+      setCompletedProposals(formattedSubs.filter(s => ['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'EVALUATION_REJECTED'].includes(s.status) && s.workflow?.evaluationReview?.committeeName));
     } catch (err) {
       console.error('Failed to fetch evaluation data', err);
     }
@@ -95,9 +89,20 @@ const Evaluation = () => {
   const handleCreateCommittee = async () => {
     try {
       const membersArray = committeeMembers.split(',').map(e => e.trim()).filter(e => e);
-      await api.post('/admin/evaluations/committees', { name: committeeName, members: membersArray });
+      if (membersArray.length !== 6) {
+        setSnack({ open: true, msg: 'Exactly 6 emails required.', type: 'error' });
+        return;
+      }
+      await api.post('/admin/evaluations/committees', { 
+        name: committeeName, 
+        description: committeeDescription,
+        active: committeeActive,
+        members: membersArray 
+      });
       setCreateCommitteeDialog(false);
       setCommitteeName('');
+      setCommitteeDescription('');
+      setCommitteeActive(true);
       setCommitteeMembers('');
       fetchData();
     } catch (err) {
@@ -105,35 +110,7 @@ const Evaluation = () => {
     }
   };
 
-  const handleCreateBatch = async () => {
-    try {
-      await api.post('/admin/evaluations/batches', {
-        name: batchName,
-        committeeId: selectedCommittee,
-        submissionIds: selectedProposals
-      });
-      setCreateBatchDialog(false);
-      setBatchName('');
-      setSelectedCommittee('');
-      setSelectedProposals([]);
-      setTabIndex(1); // Go to batches tab
-      fetchData();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleSendBatchEmail = async (batchId) => {
-    try {
-      setSnack({ open: true, msg: 'Sending email...', type: 'info' });
-      await api.post(`/admin/evaluations/batches/${batchId}/send-email`);
-      setSnack({ open: true, msg: 'Batch email delivered successfully to committee members.', type: 'success' });
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      setSnack({ open: true, msg: err.response?.data?.error || 'Failed to send batch email', type: 'error' });
-    }
-  };
+// Removed batch functions
 
   const handleSelectProposal = (id) => {
     setSelectedProposals(prev => 
@@ -169,32 +146,31 @@ const Evaluation = () => {
         </Box>
       )
     },
-    { field: 'title', headerName: 'Title' },
-    { field: 'rmStatus', headerName: 'RM Status', renderCell: (row) => <ReviewBadge decision={row.workflow?.rmReview?.decision} /> },
-    { field: 'hodStatus', headerName: 'HOD Status', renderCell: (row) => <ReviewBadge decision={row.workflow?.hodReview?.decision} /> },
-    { field: 'status', headerName: 'Evaluation Status', renderCell: (row) => <StatusChip status={row.status} /> },
+    { field: 'title', headerName: 'Title', flex: 1 },
+    { field: 'committee', headerName: 'Committee', renderCell: (row) => row.workflow?.evaluationReview?.committeeName || 'Unassigned' },
+    { field: 'votes', headerName: 'Votes Received', renderCell: (row) => {
+        const evals = row.workflow?.evaluationReview?.evaluators || [];
+        const submitted = evals.filter(e => e.submitted).length;
+        return `${submitted} / ${evals.length || 6}`;
+    }},
+    { field: 'approves', headerName: 'Approves', renderCell: (row) => {
+        return (row.workflow?.evaluationReview?.evaluators || []).filter(e => e.decision === 'APPROVED').length;
+    }},
+    { field: 'rejects', headerName: 'Rejects', renderCell: (row) => {
+        return (row.workflow?.evaluationReview?.evaluators || []).filter(e => e.decision === 'REJECTED').length;
+    }},
+    { field: 'evalStatus', headerName: 'Eval Status', renderCell: (row) => {
+        let text = 'Awaiting Assignment';
+        const evalReview = row.workflow?.evaluationReview;
+        if (evalReview?.status) text = evalReview.status.replace(/_/g, ' ');
+        return <Chip label={text} size="small" />;
+    }},
     { field: 'actions', headerName: 'Actions', renderCell: (row) => (
       <Button size="small" variant="outlined" onClick={() => handleOpenDetails(row)}>View</Button>
     )}
   ];
 
-  const batchColumns = [
-    { field: 'name', headerName: 'Batch Name' },
-    { field: 'committee', headerName: 'Committee', renderCell: (row) => row.committeeId?.name || 'N/A' },
-    { field: 'proposals', headerName: 'Proposals Count', renderCell: (row) => row.submissions?.length || 0 },
-    { field: 'status', headerName: 'Status', renderCell: (row) => <StatusChip status={row.status} /> },
-    { field: 'actions', headerName: 'Actions', renderCell: (row) => (
-      <Button 
-        size="small" 
-        variant="contained" 
-        onClick={() => handleSendBatchEmail(row._id)}
-        disabled={row.status !== 'PENDING'}
-        startIcon={<EmailIcon />}
-      >
-        Send Email
-      </Button>
-    )}
-  ];
+// Removed batchColumns
 
   const committeeColumns = [
     { field: 'name', headerName: 'Committee Name' },
@@ -209,27 +185,12 @@ const Evaluation = () => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 800 }}>Evaluation Management</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" startIcon={<GroupIcon />} onClick={() => setCreateCommitteeDialog(true)}>
-            New Committee
-          </Button>
-          <Button 
-            variant="contained" 
-            startIcon={<ViewListIcon />} 
-            onClick={() => setCreateBatchDialog(true)}
-            disabled={selectedProposals.length === 0}
-          >
-            Create Batch ({selectedProposals.length})
-          </Button>
-        </Box>
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabIndex} onChange={(e, val) => setTabIndex(val)}>
           <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Pending <Chip label={proposals.length} size="small" sx={{ bgcolor: '#FFF3E0', color: '#F57C00', height: 20, fontWeight: 700 }} /></Box>} {...a11yProps(0)} />
-          <Tab label="Evaluation Batches" {...a11yProps(1)} />
-          <Tab label="Committees" {...a11yProps(2)} />
-          <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Completed <Chip label={completedProposals.length} size="small" sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', height: 20, fontWeight: 700 }} /></Box>} {...a11yProps(3)} />
+          <Tab label={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>Completed <Chip label={completedProposals.length} size="small" sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', height: 20, fontWeight: 700 }} /></Box>} {...a11yProps(1)} />
         </Tabs>
       </Box>
 
@@ -245,28 +206,6 @@ const Evaluation = () => {
       )}
 
       {tabIndex === 1 && (
-        <Fade in={true} timeout={300}>
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Evaluation Batches</Typography>
-            <DataTable columns={batchColumns} rows={batches} getRowId={(r) => r._id} />
-          </CardContent>
-        </Card>
-        </Fade>
-      )}
-
-      {tabIndex === 2 && (
-        <Fade in={true} timeout={300}>
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Committees</Typography>
-            <DataTable columns={committeeColumns} rows={committees} getRowId={(r) => r._id} />
-          </CardContent>
-        </Card>
-        </Fade>
-      )}
-
-      {tabIndex === 3 && (
         <Fade in={true} timeout={300}>
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
@@ -292,7 +231,15 @@ const Evaluation = () => {
           />
           <TextField
             margin="dense"
-            label="Member Emails (comma separated)"
+            label="Description"
+            fullWidth
+            value={committeeDescription}
+            onChange={(e) => setCommitteeDescription(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Member Emails (exactly 6, comma separated)"
             fullWidth
             multiline
             rows={3}
@@ -306,39 +253,7 @@ const Evaluation = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={createBatchDialog} onClose={() => setCreateBatchDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Evaluation Batch</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            You are creating a batch with <b>{selectedProposals.length}</b> selected proposals.
-          </Typography>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Batch Name"
-            fullWidth
-            value={batchName}
-            onChange={(e) => setBatchName(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <FormControl fullWidth>
-            <InputLabel>Assign Committee</InputLabel>
-            <Select
-              value={selectedCommittee}
-              label="Assign Committee"
-              onChange={(e) => setSelectedCommittee(e.target.value)}
-            >
-              {committees.map(c => (
-                <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateBatchDialog(false)}>Cancel</Button>
-          <Button onClick={handleCreateBatch} variant="contained" disabled={!batchName || !selectedCommittee}>Create Batch</Button>
-        </DialogActions>
-      </Dialog>
+// Removed Create Batch Dialog
 
       {/* Minimalist Premium Detail Drawer */}
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 700 }, bgcolor: '#FAFAFA' } }}>
@@ -383,9 +298,9 @@ const Evaluation = () => {
                     <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px solid #EEEEEE' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700, textTransform: 'uppercase' }}>Reporting Manager</Typography>
-                        <ReviewBadge decision={selectedProposalData.workflow?.rmReview?.decision} />
+                        <ReviewBadge decision={selectedProposalData.workflow?.rmReview?.decision || 'APPROVED'} />
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121', mb: 0.5 }}>{selectedProposalData.workflow?.rmReview?.reviewerName || selectedProposalData.workflow?.rmReview?.reviewerEmail || selectedProposalData.rmValue || 'Not Assigned'}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121', mb: 0.5 }}>{selectedProposalData.workflow?.rmReview?.reviewerName || selectedProposalData.workflow?.rmReview?.reviewerEmail || selectedProposalData.rmValue || 'Auto-Approved / N/A'}</Typography>
                       {selectedProposalData.workflow?.rmReview?.timestamp && (
                         <Typography variant="caption" sx={{ color: '#9E9E9E', display: 'block', mb: 1 }}>Reviewed on: {new Date(selectedProposalData.workflow.rmReview.timestamp).toLocaleString()}</Typography>
                       )}
@@ -401,9 +316,9 @@ const Evaluation = () => {
                     <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px solid #EEEEEE' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700, textTransform: 'uppercase' }}>Head of Department</Typography>
-                        <ReviewBadge decision={selectedProposalData.workflow?.hodReview?.decision} />
+                        <ReviewBadge decision={selectedProposalData.workflow?.hodReview?.decision || 'APPROVED'} />
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121', mb: 0.5 }}>{selectedProposalData.workflow?.hodReview?.reviewerName || selectedProposalData.workflow?.hodReview?.reviewerEmail || selectedProposalData.hodValue || 'Not Assigned'}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121', mb: 0.5 }}>{selectedProposalData.workflow?.hodReview?.reviewerName || selectedProposalData.workflow?.hodReview?.reviewerEmail || selectedProposalData.hodValue || 'Auto-Approved / N/A'}</Typography>
                       {selectedProposalData.workflow?.hodReview?.timestamp && (
                         <Typography variant="caption" sx={{ color: '#9E9E9E', display: 'block', mb: 1 }}>Reviewed on: {new Date(selectedProposalData.workflow.hodReview.timestamp).toLocaleString()}</Typography>
                       )}
@@ -417,6 +332,52 @@ const Evaluation = () => {
                   </Grid>
                 </Grid>
               </Box>
+
+              {/* Evaluation Committee Decisions Info */}
+              {selectedProposalData.workflow?.evaluationReview && (
+                <Box sx={{ bgcolor: '#ffffff', p: 3, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 2, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>
+                    Evaluation Committee: {selectedProposalData.workflow.evaluationReview.committeeName || 'Unknown'}
+                  </Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#757575', textTransform: 'uppercase', display: 'block', mb: 1 }}>Overall Status</Typography>
+                    <Chip label={selectedProposalData.workflow.evaluationReview.status?.replace(/_/g, ' ') || 'Pending'} color={
+                      selectedProposalData.workflow.evaluationReview.status === 'PASSED_EVALUATION' ? 'success' :
+                      selectedProposalData.workflow.evaluationReview.status === 'REJECTED_BY_COMMITTEE' ? 'error' : 'default'
+                    } sx={{ fontWeight: 600 }} />
+                  </Box>
+                  <Grid container spacing={2}>
+                    {selectedProposalData.workflow.evaluationReview.evaluators?.map((evaluator, idx) => (
+                      <Grid item xs={12} md={6} key={idx}>
+                        <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px solid #EEEEEE' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121' }}>{evaluator.email}</Typography>
+                            <ReviewBadge decision={evaluator.decision} />
+                          </Box>
+                          <Typography variant="caption" sx={{ color: '#9E9E9E', display: 'block', mb: 1 }}>
+                            {evaluator.submitted ? `Voted on: ${new Date(evaluator.submittedDate).toLocaleString()}` : 'Awaiting Vote'}
+                          </Typography>
+                          {evaluator.submitted && evaluator.scores && (
+                            <Box sx={{ mt: 1 }}>
+                              {Object.entries(evaluator.scores).map(([k, v]) => (
+                                <Typography key={k} variant="caption" sx={{ display: 'block', color: '#616161' }}>
+                                  {formatKey(k)}: {v}/10
+                                </Typography>
+                              ))}
+                            </Box>
+                          )}
+                          {evaluator.comments && (
+                            <Box sx={{ mt: 1, p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+                              <Typography variant="caption" sx={{ color: '#616161', fontStyle: 'italic', display: 'block', mb: 0.5 }}>Remarks:</Typography>
+                              <Typography variant="body2" sx={{ color: '#424242' }}>"{evaluator.comments}"</Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
               
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Executive Summary</Typography>

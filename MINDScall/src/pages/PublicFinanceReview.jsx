@@ -17,8 +17,8 @@ import { formatKey } from '../utils/submissionParser';
 const API_BASE = 'http://localhost:5000/api/v1';
 
 const decisionMeta = {
-  APPROVABLE:     { label: 'Approve Budget',       color: '#2E7D32', bg: '#E8F5E9', icon: <CheckCircleIcon sx={{ fontSize: 18 }} /> },
-  NOT_APPROVABLE: { label: 'Reject Budget',         color: '#C62828', bg: '#FFEBEE', icon: <CancelIcon sx={{ fontSize: 18 }} /> },
+  APPROVED:       { label: 'Approve Budget',        color: '#2E7D32', bg: '#E8F5E9', icon: <CheckCircleIcon sx={{ fontSize: 18 }} /> },
+  REJECTED:       { label: 'Reject Budget',         color: '#C62828', bg: '#FFEBEE', icon: <CancelIcon sx={{ fontSize: 18 }} /> },
   CLARIFICATION:  { label: 'Request Clarification', color: '#E65100', bg: '#FFF3E0', icon: <HelpOutlineIcon sx={{ fontSize: 18 }} /> },
 };
 
@@ -44,7 +44,7 @@ const PublicFinanceReview = () => {
       const init = {};
       bData.submissions.forEach(sub => {
         init[sub.id] = {
-          decision: sub.existingFinanceReview?.decision || 'APPROVABLE',
+          decision: sub.existingFinanceReview?.decision || 'APPROVED',
           remarks: sub.existingFinanceReview?.remarks || '',
           approvedBudget: sub.existingFinanceReview?.approvedBudget || '',
         };
@@ -267,12 +267,12 @@ const PublicFinanceReview = () => {
                       <Select
                         label="Your Decision"
                         value={reviews[sub.id]?.decision || ''}
-                        onChange={e => handleChange(sub.id, 'decision', e.target.value)}
+                        onChange={(e) => handleChange(sub.id, 'decision', e.target.value)}
                       >
-                        <MenuItem value="APPROVABLE">
+                        <MenuItem value="APPROVED">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CheckCircleIcon sx={{ color: '#2E7D32', fontSize: 18 }} />
-                            Budget Approvable — Send to Approval Committee
+                            Budget Approved — Send to Approval Committee
                           </Box>
                         </MenuItem>
                         <MenuItem value="CLARIFICATION">
@@ -281,17 +281,17 @@ const PublicFinanceReview = () => {
                             Needs Revision / Clarification
                           </Box>
                         </MenuItem>
-                        <MenuItem value="NOT_APPROVABLE">
+                        <MenuItem value="REJECTED">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CancelIcon sx={{ color: '#C62828', fontSize: 18 }} />
-                            Budget Not Approvable — Reject
+                            Budget Rejected — Reject
                           </Box>
                         </MenuItem>
                       </Select>
                     </FormControl>
 
-                    {/* Approved Budget (shown for APPROVABLE decisions) */}
-                    {reviews[sub.id]?.decision === 'APPROVABLE' && (
+                    {/* Approved Budget (shown for APPROVED decisions) */}
+                    {reviews[sub.id]?.decision === 'APPROVED' && (
                       <TextField
                         fullWidth size="small"
                         label="Approved Budget (₹)"

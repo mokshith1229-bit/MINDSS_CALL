@@ -11,16 +11,20 @@ exports.getReviewByToken = async (req, res, next) => {
   try {
     const { token } = req.params;
 
-    // Find submission by RM token
+    // Find submission by RM token or HOD token
     const submission = await Submission.findOne({
-      'workflow.rmReviewToken': token
+      $or: [
+        { 'workflow.rmReviewToken': token },
+        { 'workflow.hodReviewToken': token }
+      ]
     }).lean();
 
     if (!submission) {
       return next(new ApiError(404, 'Invalid or expired review token'));
     }
 
-    const reviewData = submission.workflow.rmReview || {};
+    const isHodReview = submission.workflow.hodReviewToken === token;
+    const reviewData = isHodReview ? (submission.workflow.hodReview || {}) : (submission.workflow.rmReview || {});
 
     // Extract public safe details
     const ans = submission.answers || {};
@@ -52,7 +56,7 @@ exports.getReviewByToken = async (req, res, next) => {
 
     const publicData = {
       submissionId: submission._id,
-      stage: 'RM',
+      stage: isHodReview ? 'HOD' : 'RM',
       status: submission.status,
       title,
       abstract,
@@ -62,7 +66,7 @@ exports.getReviewByToken = async (req, res, next) => {
       department: dept,
       attachments: submission.attachments || [],
       existingReview: {
-        decision: reviewData.decision,
+        decision: reviewData.decision || 'PENDING',
         remarks: reviewData.remarks,
         timestamp: reviewData.timestamp
       }
@@ -87,61 +91,146 @@ exports.submitReview = async (req, res, next) => {
     }
 
     const submission = await Submission.findOne({
-      'workflow.rmReviewToken': token
+      $or: [
+        { 'workflow.rmReviewToken': token },
+        { 'workflow.hodReviewToken': token }
+      ]
     });
 
     if (!submission) {
       return next(new ApiError(404, 'Invalid or expired review token'));
     }
     
-    // Resolve names if available
-    let reviewerName = '';
-    let reviewerEmail = '';
-    if (submission.answers) {
-      reviewerName = submission.answers.rmName || submission.answers.managerName || submission.answers.reportingManagerName || '';
-      reviewerEmail = submission.answers.rmEmail || submission.answers.managerEmail || submission.answers.reportingManagerEmail || '';
-    }
+    const isHodReview = submission.workflow.hodReviewToken === token;
 
-    submission.workflow.rmReview.decision = decision;
-    submission.workflow.rmReview.remarks = remarks;
-    submission.workflow.rmReview.reviewerEmail = reviewerEmail;
-    submission.workflow.rmReview.reviewerName = reviewerName;
-    submission.workflow.rmReview.timestamp = new Date();
-    
-    if (decision === 'APPROVED') {
-      submission.status = 'EVALUATION';
-      submission.timeline.push({
-        stage: 'RM Approved',
-        actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
-        role: 'Reporting Manager',
-        remarks: remarks || 'Reporting Manager approved the proposal.',
-        timestamp: new Date()
-      });
-      submission.timeline.push({
-        stage: 'Evaluation Started',
-        actionBy: 'System',
-        role: 'System',
-        remarks: 'Proposal moved to Evaluation Committee queue.',
-        timestamp: new Date()
-      });
-    } else if (decision === 'REJECTED') {
-      submission.status = 'REJECTED';
-      submission.timeline.push({
-        stage: 'RM Rejected',
-        actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
-        role: 'Reporting Manager',
-        remarks: remarks || 'Reporting Manager rejected the proposal.',
-        timestamp: new Date()
-      });
-    } else if (decision === 'CLARIFICATION') {
-      submission.status = 'REVIEWING'; // Send back to initial review queue
-      submission.timeline.push({
-        stage: 'RM Clarification Requested',
-        actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
-        role: 'Reporting Manager',
-        remarks: remarks || 'Reporting Manager requested clarification.',
-        timestamp: new Date()
-      });
+    if (!isHodReview) {
+      // RM REVIEW LOGIC
+      let reviewerName = '';
+      let reviewerEmail = '';
+      if (submission.answers) {
+        reviewerName = submission.answers.rmName || submission.answers.managerName || submission.answers.reportingManagerName || '';
+        reviewerEmail = submission.answers.rmEmail || submission.answers.managerEmail || submission.answers.reportingManagerEmail || '';
+      }
+
+      submission.workflow.rmReview.decision = decision;
+      submission.workflow.rmReview.remarks = remarks;
+      submission.workflow.rmReview.reviewerEmail = reviewerEmail;
+      submission.workflow.rmReview.reviewerName = reviewerName;
+      submission.workflow.rmReview.timestamp = new Date();
+      
+      if (decision === 'APPROVED') {
+        const hodApproved = submission.workflow?.hodReview?.decision === 'APPROVED';
+        
+        if (hodApproved) {
+          submission.status = 'EVALUATION';
+          submission.timeline.push({
+            stage: 'RM Approved',
+            actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+            role: 'Reporting Manager',
+            remarks: remarks || 'Reporting Manager approved the proposal. Both RM and HOD have now approved.',
+            timestamp: new Date()
+          });
+          submission.timeline.push({
+            stage: 'Evaluation Started',
+            actionBy: 'System',
+            role: 'System',
+            remarks: 'Proposal moved to Evaluation Committee queue.',
+            timestamp: new Date()
+          });
+        } else {
+          submission.status = 'AWAITING_HOD_REVIEW';
+          submission.timeline.push({
+            stage: 'RM Approved',
+            actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+            role: 'Reporting Manager',
+            remarks: remarks || 'Reporting Manager approved the proposal. Awaiting HOD Review.',
+            timestamp: new Date()
+          });
+        }
+
+      } else if (decision === 'REJECTED') {
+        submission.status = 'REJECTED';
+        submission.timeline.push({
+          stage: 'RM Rejected',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
+          remarks: remarks || 'Reporting Manager rejected the proposal.',
+          timestamp: new Date()
+        });
+      } else if (decision === 'CLARIFICATION') {
+        submission.status = 'REVIEWING'; // Send back to initial review queue
+        submission.timeline.push({
+          stage: 'RM Clarification Requested',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Reporting Manager',
+          remarks: remarks || 'Reporting Manager requested clarification.',
+          timestamp: new Date()
+        });
+      }
+    } else {
+      // HOD REVIEW LOGIC
+      let reviewerName = '';
+      let reviewerEmail = '';
+      if (submission.answers) {
+        reviewerName = submission.answers.hodName || 'HOD';
+        reviewerEmail = submission.answers.hodEmail || '';
+      }
+
+      if (!submission.workflow.hodReview) submission.workflow.hodReview = {};
+      submission.workflow.hodReview.decision = decision;
+      submission.workflow.hodReview.remarks = remarks;
+      submission.workflow.hodReview.reviewerEmail = reviewerEmail;
+      submission.workflow.hodReview.reviewerName = reviewerName;
+      submission.workflow.hodReview.timestamp = new Date();
+
+      if (decision === 'APPROVED') {
+        const rmApproved = submission.workflow?.rmReview?.decision === 'APPROVED';
+
+        if (rmApproved) {
+          submission.status = 'EVALUATION';
+          submission.timeline.push({
+            stage: 'HOD Approved',
+            actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+            role: 'Head of Department',
+            remarks: remarks || 'Head of Department approved the proposal. Both RM and HOD have now approved.',
+            timestamp: new Date()
+          });
+          submission.timeline.push({
+            stage: 'Evaluation Started',
+            actionBy: 'System',
+            role: 'System',
+            remarks: 'Proposal moved to Evaluation Committee queue.',
+            timestamp: new Date()
+          });
+        } else {
+          submission.status = 'AWAITING_RM_REVIEW';
+          submission.timeline.push({
+            stage: 'HOD Approved',
+            actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+            role: 'Head of Department',
+            remarks: remarks || 'Head of Department approved the proposal. Awaiting RM Review.',
+            timestamp: new Date()
+          });
+        }
+      } else if (decision === 'REJECTED') {
+        submission.status = 'REJECTED';
+        submission.timeline.push({
+          stage: 'HOD Rejected',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Head of Department',
+          remarks: remarks || 'Head of Department rejected the proposal.',
+          timestamp: new Date()
+        });
+      } else if (decision === 'CLARIFICATION') {
+        submission.status = 'REVIEWING';
+        submission.timeline.push({
+          stage: 'HOD Clarification Requested',
+          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+          role: 'Head of Department',
+          remarks: remarks || 'Head of Department requested clarification.',
+          timestamp: new Date()
+        });
+      }
     }
 
     await submission.save();
@@ -226,21 +315,35 @@ exports.submitRmBatch = async (req, res, next) => {
       submission.workflow.rmReview.timestamp = new Date();
       
       if (decision === 'APPROVED') {
-        submission.status = 'EVALUATION';
-        submission.timeline.push({
-          stage: 'RM Approved',
-          actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
-          role: 'Reporting Manager',
-          remarks: remarks || 'Reporting Manager approved the proposal.',
-          timestamp: new Date()
-        });
-        submission.timeline.push({
-          stage: 'Evaluation Started',
-          actionBy: 'System',
-          role: 'System',
-          remarks: 'Proposal moved to Evaluation Committee queue.',
-          timestamp: new Date()
-        });
+        const hodApproved = submission.workflow?.hodReview?.decision === 'APPROVED';
+        
+        if (hodApproved) {
+          submission.status = 'EVALUATION';
+          submission.timeline.push({
+            stage: 'RM Approved',
+            actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+            role: 'Reporting Manager',
+            remarks: remarks || 'Reporting Manager approved the proposal. Both RM and HOD have now approved.',
+            timestamp: new Date()
+          });
+          submission.timeline.push({
+            stage: 'Evaluation Started',
+            actionBy: 'System',
+            role: 'System',
+            remarks: 'Proposal moved to Evaluation Committee queue.',
+            timestamp: new Date()
+          });
+        } else {
+          submission.status = 'AWAITING_HOD_REVIEW';
+          submission.timeline.push({
+            stage: 'RM Approved',
+            actionBy: reviewerName ? `${reviewerName} (${reviewerEmail})` : reviewerEmail,
+            role: 'Reporting Manager',
+            remarks: remarks || 'Reporting Manager approved the proposal. Awaiting HOD Review.',
+            timestamp: new Date()
+          });
+        }
+
       } else if (decision === 'REJECTED') {
         submission.status = 'REJECTED';
         submission.timeline.push({

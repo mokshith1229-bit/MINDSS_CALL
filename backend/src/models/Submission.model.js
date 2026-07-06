@@ -45,7 +45,7 @@ const submissionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['NEW', 'REVIEWING', 'AWAITING_RM_REVIEW', 'RM_REVIEW', 'AWAITING_HOD_REVIEW', 'HOD_REVIEW', 'EVALUATION', 'FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'REJECTED'],
+      enum: ['NEW', 'REVIEWING', 'AWAITING_RM_REVIEW', 'RM_REVIEW', 'AWAITING_HOD_REVIEW', 'HOD_REVIEW', 'EVALUATION', 'EVALUATION_REJECTED', 'FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'REJECTED', 'IMPLEMENTATION', 'COMPLETED'],
       default: 'NEW',
     },
     workflow: {
@@ -70,14 +70,30 @@ const submissionSchema = new mongoose.Schema(
         reviewerName: { type: String, default: '' },
         remarks: { type: String, default: '' },
         approvedBudget: { type: Number, default: null },
-        decision: { type: String, enum: ['PENDING', 'APPROVABLE', 'NOT_APPROVABLE', 'CLARIFICATION'], default: 'PENDING' },
+        decision: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED', 'CLARIFICATION'], default: 'PENDING' },
         timestamp: { type: Date, default: null }
       },
       evaluationReview: {
         committeeName: { type: String, default: '' },
         remarks: { type: String, default: '' },
         decision: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED', 'CLARIFICATION'], default: 'PENDING' },
-        timestamp: { type: Date, default: null }
+        timestamp: { type: Date, default: null },
+        evaluators: [{
+          email: String,
+          token: String,
+          submitted: { type: Boolean, default: false },
+          submittedDate: Date,
+          scores: {
+            innovation: Number,
+            technicalFeasibility: Number,
+            businessImpact: Number,
+            scalability: Number,
+            riskAssessment: Number
+          },
+          comments: String,
+          decision: { type: String, enum: ['APPROVED', 'REJECTED'] }
+        }],
+        status: { type: String, enum: ['AWAITING_ASSIGNMENT', 'AWAITING_VOTES', 'UNDER_EVALUATION', 'PASSED_EVALUATION', 'REJECTED_BY_COMMITTEE'], default: 'AWAITING_ASSIGNMENT' }
       }
     },
     timeline: [

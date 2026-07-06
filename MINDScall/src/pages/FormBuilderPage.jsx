@@ -331,7 +331,7 @@ const PreviewDialog = ({ open, onClose, form }) => {
           }}
         >
           <Typography variant="subtitle2" sx={{ color: '#2E7D32', fontWeight: 700 }}>
-            CubeTech Innovation Portal — Submission Preview
+            MINDS — Enterprise Innovation Platform · Submission Preview
           </Typography>
           <Typography variant="caption" sx={{ color: '#558B2F' }}>
             Please review your submission carefully before submitting.
@@ -546,7 +546,7 @@ const FormBuilderPage = () => {
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.72)', ml: 0.5 }}>
-              CubeTech Innovation Portal — Submit your ideas and proposals for review
+              MINDS — Cube Highways Innovation Centre · Submit your ideas and proposals for review
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>

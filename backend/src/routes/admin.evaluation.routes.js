@@ -4,9 +4,6 @@ const {
   getCommittees,
   updateCommittee,
   deleteCommittee,
-  createBatch,
-  getBatches,
-  sendBatchEmail,
   autoAssignCommittee,
   autoAssignEvalByEmail,
   autoAssignFinance,
@@ -26,10 +23,7 @@ router.get('/committees', getCommittees);
 router.patch('/committees/:id', updateCommittee);
 router.delete('/committees/:id', deleteCommittee);
 
-// Batch Routes
-router.post('/batches', createBatch);
-router.get('/batches', getBatches);
-router.post('/batches/:id/send-email', sendBatchEmail);
+// Batch Routes removed
 
 // Auto-Assign Committee (creates batch + sends email + updates submission statuses)
 router.post('/auto-assign-committee', autoAssignCommittee);

@@ -1,9 +1,9 @@
 const express = require('express');
-const { getBatchByToken, submitBatchReview } = require('../controllers/public.evaluation.controller');
+const { getEvaluationByToken, submitEvaluationReview } = require('../controllers/public.evaluation.controller');
 
 const router = express.Router();
 
-router.get('/:token', getBatchByToken);
-router.patch('/:token', submitBatchReview);
+router.get('/:token', getEvaluationByToken);
+router.patch('/:token', submitEvaluationReview);
 
 module.exports = router;

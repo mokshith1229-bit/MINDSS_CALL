@@ -19,6 +19,7 @@ import PublicFinanceReview from '../pages/PublicFinanceReview';
 import PublicTracking from '../pages/PublicTracking';
 import Login from '../pages/Login';
 import RDOngoingProjects from '../pages/RDOngoingProjects';
+import PublicEvaluatorReview from '../pages/PublicEvaluatorReview';
 import { authStore } from '../store/authStore';
 
 const ProtectedRoute = ({ children }) => {
@@ -51,6 +52,7 @@ const AppRoutes = () => {
       <Route path="/batch-review/:token" element={<PublicBatchReview />} />
       <Route path="/rm-batch-review/:token" element={<RMBatchReview />} />
       <Route path="/finance-review/:token" element={<PublicFinanceReview />} />
+      <Route path="/evaluator-review/:token" element={<PublicEvaluatorReview />} />
 
       {/* Admin routes — wrapped in MainLayout AND ProtectedRoute */}
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>

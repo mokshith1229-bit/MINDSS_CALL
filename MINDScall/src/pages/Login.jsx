@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, TextField, Button, Alert, Paper, InputAdornment, IconButton,
-  CircularProgress
+  CircularProgress, Divider,
 } from '@mui/material';
-import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon } from '@mui/icons-material';
+import {
+  Email, Lock, Visibility, VisibilityOff,
+  CheckCircleOutlined as CheckIcon,
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { authStore } from '../store/authStore';
 import logo from '../assets/logo.png';
+
+const features = [
+  'End-to-end innovation lifecycle management',
+  'Multi-stage evaluation & approval workflows',
+  'Real-time R&D project tracking & reporting',
+  'Role-based access for all stakeholders',
+];
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -22,8 +32,6 @@ const Login = () => {
         navigate('/dashboard');
       }
     });
-    
-    // Redirect immediately if already authenticated
     if (authStore.getState().isAuthenticated) {
       navigate('/dashboard');
     }
@@ -37,170 +45,311 @@ const Login = () => {
   };
 
   return (
-    <Box sx={{
-      height: '100vh',
-      display: 'flex',
-      background: '#f4f6f8',
-    }}>
-      {/* Left side - Branding/Hero */}
-      <Box sx={{
-        flex: 1,
-        display: { xs: 'none', md: 'flex' },
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        background: 'linear-gradient(135deg, #1A2332 0%, #243447 100%)',
-        color: '#fff',
-        p: 8,
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        {/* Background Decorative Circles */}
-        <Box sx={{ position: 'absolute', top: -100, left: -100, width: 400, height: 400, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
-        <Box sx={{ position: 'absolute', bottom: -50, right: -50, width: 300, height: 300, borderRadius: '50%', background: 'rgba(76, 175, 80, 0.1)' }} />
-        
-        <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 500 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-            <Box component="img" src={logo} alt="Logo" sx={{ width: 56, height: 56, borderRadius: 2 }} />
-            <Typography variant="h3" sx={{ fontWeight: 900, letterSpacing: '-1px' }}>
-              CubeTech
-            </Typography>
-          </Box>
-          <Typography variant="h4" sx={{ fontWeight: 300, mb: 3, lineHeight: 1.4 }}>
-            Enterprise Innovation & Proposal Management
-          </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', mb: 6 }}>
-            Streamline your organizational ideas, evaluate CAPEX proposals, and drive strategic growth through our central portal.
-          </Typography>
-          
-          <Box sx={{ display: 'flex', gap: 3 }}>
+    <Box
+      sx={{
+        height: '100vh',
+        display: 'flex',
+        bgcolor: '#F4F6F8',
+        fontFamily: '"Inter", "Segoe UI", sans-serif',
+      }}
+    >
+      {/* ── Left Panel: Brand ── */}
+      <Box
+        sx={{
+          flex: 1,
+          display: { xs: 'none', md: 'flex' },
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          backgroundColor: '#111C2D',
+          color: '#fff',
+          p: 5,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Subtle background pattern */}
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `
+              radial-gradient(circle at 20% 80%, rgba(46,125,50,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(46,125,50,0.06) 0%, transparent 50%)
+            `,
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Top: Logo + Brand */}
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 5 }}>
+            <Box
+              component="img"
+              src={logo}
+              alt="MINDS Logo"
+              sx={{ width: 54, height: 54, objectFit: 'contain' }}
+            />
             <Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#4CAF50' }}>10k+</Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Ideas Managed</Typography>
+              <Typography
+                sx={{
+                  fontWeight: 900,
+                  fontSize: '1.75rem',
+                  letterSpacing: '0.1em',
+                  color: '#FFFFFF',
+                  lineHeight: 1,
+                  fontFamily: '"Inter", "Segoe UI", sans-serif',
+                }}
+              >
+                MINDS
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '0.7rem',
+                  color: '#4CAF50',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                  lineHeight: 1.2,
+                  mt: 0.25,
+                }}
+              >
+                Cube Highways Innovation Centre
+              </Typography>
+            </Box>
+          </Box>
+
+          <Typography
+            sx={{
+              fontSize: '1.5rem',
+              fontWeight: 300,
+              color: '#E5E7EB',
+              lineHeight: 1.45,
+              mb: 1.5,
+              maxWidth: 440,
+            }}
+          >
+            Enterprise Innovation Management Platform
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '0.92rem',
+              color: 'rgba(255,255,255,0.5)',
+              lineHeight: 1.65,
+              maxWidth: 420,
+              mb: 4,
+            }}
+          >
+            Streamline your organizational ideas, evaluate proposals, manage R&D projects, and drive strategic growth through a single enterprise portal.
+          </Typography>
+
+          {/* Feature checklist */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {features.map((f) => (
+              <Box key={f} sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                <CheckIcon sx={{ color: '#4CAF50', fontSize: 16, flexShrink: 0 }} />
+                <Typography sx={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.68)', fontWeight: 400 }}>
+                  {f}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        {/* Bottom: Stats */}
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mb: 3 }} />
+          <Box sx={{ display: 'flex', gap: 4 }}>
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', color: '#4CAF50' }}>10k+</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', mt: 0.2 }}>Ideas Managed</Typography>
             </Box>
             <Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#2196F3' }}>99%</Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Approval SLA</Typography>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', color: '#60A5FA' }}>99%</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', mt: 0.2 }}>Approval SLA</Typography>
+            </Box>
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', color: '#FCD34D' }}>8</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', mt: 0.2 }}>Departments</Typography>
             </Box>
           </Box>
         </Box>
       </Box>
 
-      {/* Right side - Login Form */}
-      <Box sx={{
-        flex: { xs: 1, md: 0.8 },
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: { xs: 3, sm: 6, md: 8 }
-      }}>
-        <Paper elevation={0} sx={{
-          width: '100%',
-          maxWidth: 440,
-          p: { xs: 4, sm: 5 },
-          borderRadius: 4,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
-          bgcolor: '#fff',
-          border: '1px solid rgba(0,0,0,0.05)'
-        }}>
-          <Box sx={{ mb: 4, textAlign: 'center' }}>
-            <Box component="img" src={logo} alt="Logo" sx={{ width: 48, height: 48, borderRadius: 1.5, mb: 2, display: { md: 'none' } }} />
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#1A2332', mb: 1 }}>
-              Welcome Back
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#64748B' }}>
-              Please enter your credentials to access your dashboard
+      {/* ── Right Panel: Login Form ── */}
+      <Box
+        sx={{
+          flex: { xs: 1, md: 0 },
+          width: { xs: '100%', md: 480 },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: '#F4F6F8',
+          p: { xs: 3, md: 5 },
+        }}
+      >
+        <Box sx={{ width: '100%', maxWidth: 420 }}>
+          {/* Mobile logo */}
+          <Box
+            sx={{
+              display: { xs: 'flex', md: 'none' },
+              alignItems: 'center',
+              gap: 1.5,
+              mb: 4,
+              justifyContent: 'center',
+            }}
+          >
+            <Box component="img" src={logo} alt="MINDS" sx={{ width: 40, height: 40, objectFit: 'contain' }} />
+            <Typography sx={{ fontWeight: 900, fontSize: '1.35rem', letterSpacing: '0.08em', color: '#111827' }}>
+              MINDS
             </Typography>
           </Box>
 
-          {auth.error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-              {auth.error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleLogin}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-              <Box>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', mb: 0.8, display: 'block' }}>Email Address</Typography>
-                <TextField
-                  fullWidth
-                  placeholder="admin@cubetech.com"
-                  variant="outlined"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Email sx={{ color: '#94A3B8', fontSize: 20 }} />
-                      </InputAdornment>
-                    ),
-                    sx: { borderRadius: 2, bgcolor: '#F8FAFC', '& fieldset': { borderColor: '#E2E8F0' } }
-                  }}
-                />
-              </Box>
-
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.8 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569' }}>Password</Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#2563EB', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Forgot Password?</Typography>
-                </Box>
-                <TextField
-                  fullWidth
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  variant="outlined"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock sx={{ color: '#94A3B8', fontSize: 20 }} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
-                          {showPassword ? <VisibilityOff sx={{ color: '#94A3B8', fontSize: 20 }} /> : <Visibility sx={{ color: '#94A3B8', fontSize: 20 }} />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                    sx: { borderRadius: 2, bgcolor: '#F8FAFC', '& fieldset': { borderColor: '#E2E8F0' } }
-                  }}
-                />
-              </Box>
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={auth.loading || !email || !password}
-                sx={{
-                  mt: 2,
-                  py: 1.5,
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  boxShadow: '0 8px 16px rgba(46, 125, 50, 0.2)',
-                  background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)',
-                    boxShadow: '0 12px 20px rgba(46, 125, 50, 0.3)',
-                  }
-                }}
+          {/* Form card */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 3.5, md: 4.5 },
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              bgcolor: '#ffffff',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            }}
+          >
+            <Box sx={{ mb: 4 }}>
+              <Typography
+                sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#111827', mb: 0.5 }}
               >
-                {auth.loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
-              </Button>
+                Sign in to MINDS
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                Enter your credentials to access the platform
+              </Typography>
             </Box>
-          </form>
 
+            {auth.error && (
+              <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+                {auth.error}
+              </Alert>
+            )}
+
+            <form onSubmit={handleLogin}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                {/* Email */}
+                <Box>
+                  <Typography
+                    sx={{ fontWeight: 600, color: '#374151', mb: 0.75, display: 'block', fontSize: '0.84rem' }}
+                    component="label"
+                    htmlFor="login-email"
+                  >
+                    Email Address <Box component="span" sx={{ color: '#DC2626' }}>*</Box>
+                  </Typography>
+                  <TextField
+                    id="login-email"
+                    fullWidth
+                    placeholder="you@cubehighways.com"
+                    variant="outlined"
+                    size="small"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Email sx={{ color: '#9CA3AF', fontSize: 18 }} />
+                        </InputAdornment>
+                      ),
+                      sx: { bgcolor: '#F9FAFB', '& fieldset': { borderColor: '#E5E7EB' } },
+                    }}
+                  />
+                </Box>
+
+                {/* Password */}
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                    <Typography
+                      sx={{ fontWeight: 600, color: '#374151', fontSize: '0.84rem' }}
+                      component="label"
+                      htmlFor="login-password"
+                    >
+                      Password <Box component="span" sx={{ color: '#DC2626' }}>*</Box>
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '0.8rem',
+                        color: '#2E7D32',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        '&:hover': { textDecoration: 'underline' },
+                      }}
+                    >
+                      Forgot password?
+                    </Typography>
+                  </Box>
+                  <TextField
+                    id="login-password"
+                    fullWidth
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    variant="outlined"
+                    size="small"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock sx={{ color: '#9CA3AF', fontSize: 18 }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            size="small"
+                          >
+                            {showPassword
+                              ? <VisibilityOff sx={{ color: '#9CA3AF', fontSize: 18 }} />
+                              : <Visibility sx={{ color: '#9CA3AF', fontSize: 18 }} />
+                            }
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                      sx: { bgcolor: '#F9FAFB', '& fieldset': { borderColor: '#E5E7EB' } },
+                    }}
+                  />
+                </Box>
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  disabled={auth.loading || !email || !password}
+                  sx={{
+                    mt: 1,
+                    py: 1.25,
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    letterSpacing: '0.2px',
+                  }}
+                  id="login-submit"
+                >
+                  {auth.loading ? <CircularProgress size={20} color="inherit" /> : 'Sign In'}
+                </Button>
+              </Box>
+            </form>
+          </Paper>
+
+          {/* Footer */}
           <Box sx={{ mt: 4, textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#94A3B8' }}>
-              Hint: Use <strong>admin@cubetech.com</strong> / <strong>admin123</strong> to test.
+            <Typography sx={{ fontSize: '0.72rem', color: '#D1D5DB' }}>
+              © 2026 Cube Highways Innovation Centre · All rights reserved
+            </Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: '#D1D5DB', mt: 0.5 }}>
+              MINDS — Enterprise Innovation Management Platform
             </Typography>
           </Box>
-        </Paper>
+        </Box>
       </Box>
     </Box>
   );

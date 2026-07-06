@@ -1,39 +1,52 @@
 import React from 'react';
 import {
-  Box, Grid, Typography, Card, CardContent, Avatar, Chip, Paper, Divider,
+  Box, Grid, Typography, Card, CardContent, Chip, Divider,
   LinearProgress, IconButton, Tooltip,
 } from '@mui/material';
 import {
   MoreVert as MoreIcon,
-  ArrowUpward as ArrowUpIcon,
+  CalendarToday as CalendarIcon,
+  Refresh as RefreshIcon,
+  TrendingUp as TrendUpIcon,
+  TrendingDown as TrendDownIcon,
 } from '@mui/icons-material';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  Legend, ResponsiveContainer, AreaChart, Area,
+  Legend, ResponsiveContainer,
 } from 'recharts';
 import DashboardCards from '../components/DashboardCards';
 import DataTable, { StatusChip, UserCell, TypeBadge } from '../components/DataTable';
 import api from '../utils/api';
 
 const recentColumns = [
-  { 
-    field: 'trackingId', 
-    headerName: 'Tracking ID', 
-    width: 140, 
+  {
+    field: 'trackingId',
+    headerName: 'Tracking ID',
+    width: 150,
     renderCell: (row) => (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-start' }}>
-        <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827' }}>{row.trackingId || row.businessId || 'N/A'}</Typography>
-        {row.wbsCode && <Typography variant="caption" sx={{ color: '#6B7280' }}>WBS: {row.wbsCode}</Typography>}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+        <Typography sx={{ fontWeight: 700, color: '#111827', fontSize: '0.84rem' }}>
+          {row.trackingId || row.businessId || 'N/A'}
+        </Typography>
+        {row.wbsCode && (
+          <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF' }}>WBS: {row.wbsCode}</Typography>
+        )}
         <TypeBadge type={row.submissionType} />
       </Box>
-    ) 
+    ),
   },
   {
     field: 'assignedTo',
-    headerName: 'User',
-    renderCell: (row) => <UserCell avatar={row.assignedTo && row.assignedTo !== 'Unassigned' ? row.assignedTo[0] : '?'} name={row.assignedTo} subtitle={row.stage} />,
+    headerName: 'Submitted By',
+    renderCell: (row) => (
+      <UserCell
+        avatar={row.assignedTo && row.assignedTo !== 'Unknown' ? row.assignedTo[0] : '?'}
+        name={row.assignedTo}
+        subtitle={row.stage}
+      />
+    ),
   },
-  { field: 'subId', headerName: 'Item / Idea' },
+  { field: 'subId', headerName: 'Title / Idea' },
   { field: 'lastUpdated', headerName: 'Date' },
   {
     field: 'status',
@@ -42,37 +55,95 @@ const recentColumns = [
   },
 ];
 
+const SectionHeader = ({ title, subtitle, action }) => (
+  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
+    <Box>
+      <Typography sx={{ fontWeight: 700, fontSize: '0.9375rem', color: '#111827' }}>{title}</Typography>
+      {subtitle && (
+        <Typography sx={{ fontSize: '0.78rem', color: '#9CA3AF', mt: 0.25 }}>{subtitle}</Typography>
+      )}
+    </Box>
+    {action}
+  </Box>
+);
+
 const Dashboard = () => {
   const [submissions, setSubmissions] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [lastRefresh, setLastRefresh] = React.useState(new Date());
+
+  const fetchStats = async () => {
+    try {
+      const res = await api.get('/admin/submissions');
+      setSubmissions((res.data.data.submissions || []).filter((s) => s.status !== 'DELETED'));
+      setLastRefresh(new Date());
+    } catch (err) {
+      console.error('Failed to load dashboard stats', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await api.get('/admin/submissions');
-        setSubmissions(res.data.data.submissions || []);
-      } catch (err) {
-        console.error('Failed to load dashboard stats', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStats();
   }, []);
 
   const totalSubs = submissions.length;
-  const pending = submissions.filter(s => s.status === 'NEW' || s.status === 'REVIEWING').length;
-  const approved = submissions.filter(s => s.status === 'APPROVED').length;
+  const pending = submissions.filter((s) => s.status === 'NEW' || s.status === 'REVIEWING').length;
+  const approved = submissions.filter((s) => s.status === 'APPROVED').length;
+  const rejected = submissions.filter((s) => s.status === 'REJECTED').length;
+  const underReview = submissions.filter((s) => s.status === 'REVIEWING').length;
   const implementationRate = totalSubs > 0 ? Math.round((approved / totalSubs) * 100) : 0;
 
+  const now = new Date();
+  const today = now.toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+
   const dynamicStats = [
-    { id: 'total_subs', title: 'Total Submissions', value: totalSubs, change: '+12%', trend: 'up', icon: 'ListAlt', color: '#1565C0', bg: '#E3F2FD' },
-    { id: 'pending', title: 'Pending Reviews', value: pending, change: '-2%', trend: 'down', icon: 'HourglassEmpty', color: '#F57C00', bg: '#FFF3E0' },
-    { id: 'approved', title: 'Approved Ideas', value: approved, change: '+5%', trend: 'up', icon: 'CheckCircle', color: '#2E7D32', bg: '#E8F5E9' },
-    { id: 'rate', title: 'Implementation Rate', value: implementationRate + '%', change: '+1.5%', trend: 'up', icon: 'TrendingUp', color: '#6A1B9A', bg: '#F3E5F5' },
+    {
+      id: 'total_subs',
+      title: 'Total Ideas Submitted',
+      value: totalSubs,
+      change: '+12%',
+      trend: 'up',
+      icon: 'ListAlt',
+      color: '#1D4ED8',
+      bg: '#EFF6FF',
+    },
+    {
+      id: 'approved',
+      title: 'Approved Ideas',
+      value: approved,
+      change: '+5%',
+      trend: 'up',
+      icon: 'CheckCircle',
+      color: '#2E7D32',
+      bg: '#F0FDF4',
+    },
+    {
+      id: 'under_review',
+      title: 'Ideas Under Review',
+      value: underReview,
+      change: '-2%',
+      trend: 'down',
+      icon: 'HourglassEmpty',
+      color: '#D97706',
+      bg: '#FFFBEB',
+    },
+    {
+      id: 'rate',
+      title: 'Implementation Rate',
+      value: implementationRate + '%',
+      change: '+1.5%',
+      trend: 'up',
+      icon: 'TrendingUp',
+      color: '#7C3AED',
+      bg: '#F5F3FF',
+    },
   ];
 
-  const recent = submissions.slice(0, 5).map(s => ({
+  const recent = submissions.map((s) => ({
     id: s._id,
     trackingId: s.trackingId || s.businessId,
     wbsCode: s.wbsCode,
@@ -81,212 +152,243 @@ const Dashboard = () => {
     assignedTo: s.answers?.name || 'Unknown',
     stage: s.answers?.department || '',
     subId: s.answers?.title || 'Untitled',
-    lastUpdated: new Date(s.createdAt).toLocaleDateString(),
-    status: s.status === 'NEW' ? 'Pending' :
-            s.status === 'REVIEWING' ? 'Under Review' :
-            s.status === 'APPROVED' ? 'Approved' : 'Rejected'
+    lastUpdated: new Date(s.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+    status:
+      s.status === 'NEW' ? 'Pending' :
+      s.status === 'REVIEWING' ? 'Under Review' :
+      s.status === 'APPROVED' ? 'Approved' :
+      'Rejected',
   }));
 
   const dynamicMonthlyData = React.useMemo(() => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const data = [];
-    const now = new Date();
+    const nowD = new Date();
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = new Date(nowD.getFullYear(), nowD.getMonth() - i, 1);
       data.push({
         month: months[d.getMonth()],
         monthVal: d.getMonth(),
         yearVal: d.getFullYear(),
         submissions: 0,
         evaluations: 0,
-        approvals: 0
+        approvals: 0,
       });
     }
-
-    submissions.forEach(s => {
-      const createdAt = new Date(s.createdAt);
-      const m = createdAt.getMonth();
-      const y = createdAt.getFullYear();
-      
-      const bucket = data.find(b => b.monthVal === m && b.yearVal === y);
+    submissions.forEach((s) => {
+      const m = new Date(s.createdAt).getMonth();
+      const y = new Date(s.createdAt).getFullYear();
+      const bucket = data.find((b) => b.monthVal === m && b.yearVal === y);
       if (bucket) {
         bucket.submissions++;
-        if (s.status === 'REVIEWING' || s.status === 'APPROVED' || s.status === 'REJECTED') {
-          bucket.evaluations++;
-        }
-        if (s.status === 'APPROVED') {
-          bucket.approvals++;
-        }
+        if (['REVIEWING', 'APPROVED', 'REJECTED'].includes(s.status)) bucket.evaluations++;
+        if (s.status === 'APPROVED') bucket.approvals++;
       }
     });
-
-    return data.map(({ month, submissions, evaluations, approvals }) => ({
-      month,
-      submissions,
-      evaluations,
-      approvals
-    }));
+    return data.map(({ month, submissions, evaluations, approvals }) => ({ month, submissions, evaluations, approvals }));
   }, [submissions]);
 
-  const ideasPct = totalSubs > 0 ? Math.round((submissions.filter(s => s.answers?.submissionType?.toLowerCase() === 'idea' || !s.answers?.submissionType).length / totalSubs) * 100) : 0;
-  const evaluationPct = totalSubs > 0 ? Math.round((submissions.filter(s => s.status === 'REVIEWING').length / totalSubs) * 100) : 0;
-  const approvedPct = totalSubs > 0 ? Math.round((submissions.filter(s => s.status === 'APPROVED').length / totalSubs) * 100) : 0;
+  const evaluationPct = totalSubs > 0 ? Math.round((underReview / totalSubs) * 100) : 0;
+  const approvedPct = totalSubs > 0 ? Math.round((approved / totalSubs) * 100) : 0;
+  const ideasPct = totalSubs > 0 ? Math.round((submissions.filter((s) => !s.answers?.submissionType || s.answers.submissionType.toLowerCase() === 'idea').length / totalSubs) * 100) : 0;
+  const onTrackRate = totalSubs > 0 ? Math.round((submissions.filter((s) => s.status !== 'REJECTED').length / totalSubs) * 100) : 100;
+  const atRiskRate = 100 - onTrackRate;
 
   const progressItems = [
-    { label: 'Ideas Submitted', value: ideasPct, color: '#2E7D32' },
-    { label: 'Under Evaluation', value: evaluationPct, color: '#F57C00' },
-    { label: 'Approved & Active', value: approvedPct, color: '#0277BD' },
-    { label: 'Implementation Rate', value: implementationRate, color: '#6A1B9A' },
+    { label: 'Ideas vs Proposals', value: ideasPct, color: '#2E7D32' },
+    { label: 'Under Evaluation', value: evaluationPct, color: '#D97706' },
+    { label: 'Approved & Active', value: approvedPct, color: '#1D4ED8' },
+    { label: 'Implementation Rate', value: implementationRate, color: '#7C3AED' },
   ];
 
-  const onTrackRate = totalSubs > 0 ? Math.round((submissions.filter(s => s.status !== 'REJECTED').length / totalSubs) * 100) : 100;
-  const atRiskRate = totalSubs > 0 ? 100 - onTrackRate : 0;
+  const customTooltipStyle = {
+    borderRadius: 8,
+    border: '1px solid #E5E7EB',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+    fontSize: 12,
+    fontFamily: '"Inter", sans-serif',
+  };
 
   return (
     <Box>
-      {/* Welcome Banner */}
-      <Box
+      {/* ── Executive Summary Bar ── */}
+      <Card
         sx={{
-          background: 'linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #388E3C 100%)',
-          borderRadius: 3,
-          p: 3,
           mb: 3,
-          position: 'relative',
-          overflow: 'hidden',
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: -40,
-            right: -40,
-            width: 200,
-            height: 200,
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255,255,255,0.05)',
-          },
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            bottom: -60,
-            right: 80,
-            width: 150,
-            height: 150,
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255,255,255,0.04)',
-          },
+          borderRadius: 2,
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         }}
+        elevation={0}
       >
-        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>
-          Welcome back, Admin 👋
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }}>
-          Here's what's happening in your innovation pipeline today — June 5, 2026
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-          {[
-            { label: '12 New Ideas', color: '#A5D6A7' },
-            { label: '3 Pending Reviews', color: '#FFCC02' },
-            { label: '1 Meeting Today', color: '#80DEEA' },
-          ].map((tag) => (
-            <Chip
-              key={tag.label}
-              label={tag.label}
-              size="small"
-              sx={{ bgcolor: 'rgba(255,255,255,0.12)', color: tag.color, fontWeight: 600, fontSize: '0.75rem', border: `1px solid ${tag.color}30` }}
-            />
-          ))}
-        </Box>
-      </Box>
+        <CardContent sx={{ py: 2, px: 3, '&:last-child': { pb: 2 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box>
+                <Typography sx={{ fontWeight: 700, color: '#111827', fontSize: '0.9375rem' }}>
+                  Innovation Management Dashboard
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25 }}>
+                  <CalendarIcon sx={{ fontSize: 13, color: '#9CA3AF' }} />
+                  <Typography sx={{ fontSize: '0.78rem', color: '#9CA3AF' }}>{today}</Typography>
+                </Box>
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              {[
+                { label: `${totalSubs} Total`, color: '#EFF6FF', textColor: '#1D4ED8', border: '#BFDBFE' },
+                { label: `${pending} Pending`, color: '#FFFBEB', textColor: '#D97706', border: '#FDE68A' },
+                { label: `${approved} Approved`, color: '#F0FDF4', textColor: '#2E7D32', border: '#BBF7D0' },
+              ].map((tag) => (
+                <Chip
+                  key={tag.label}
+                  label={tag.label}
+                  size="small"
+                  sx={{
+                    bgcolor: tag.color,
+                    color: tag.textColor,
+                    border: `1px solid ${tag.border}`,
+                    fontWeight: 700,
+                    fontSize: '0.72rem',
+                  }}
+                />
+              ))}
+              <Tooltip title={`Last refreshed: ${lastRefresh.toLocaleTimeString()}`}>
+                <IconButton size="small" onClick={fetchStats} sx={{ color: '#9CA3AF', '&:hover': { color: '#374151' } }}>
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
 
-      {/* KPI Cards */}
+      {/* ── KPI Cards ── */}
       <DashboardCards dynamicStats={dynamicStats} />
 
       <Grid container spacing={3} sx={{ mt: 0.5 }}>
-        {/* Bar Chart */}
+        {/* ── Activity Chart ── */}
         <Grid item xs={12} lg={8}>
-          <Card sx={{ borderRadius: 3 }}>
+          <Card elevation={0} sx={{ borderRadius: 2 }}>
             <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Innovation Activity Overview</Typography>
-                  <Typography variant="caption" sx={{ color: '#9E9E9E' }}>Monthly ideas, proposals & approvals</Typography>
-                </Box>
-                <Tooltip title="More options">
-                  <IconButton size="small"><MoreIcon /></IconButton>
-                </Tooltip>
-              </Box>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={dynamicMonthlyData} barGap={4} barSize={14}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9E9E9E' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9E9E9E' }} />
-                  <ReTooltip
-                    contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', fontSize: 12 }}
+              <SectionHeader
+                title="Innovation Activity Overview"
+                subtitle="Monthly submissions, evaluations & approvals"
+                action={
+                  <Tooltip title="More options">
+                    <IconButton size="small" sx={{ color: '#9CA3AF' }}>
+                      <MoreIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                }
+              />
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={dynamicMonthlyData} barGap={3} barSize={12}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#9CA3AF', fontFamily: 'Inter' }}
                   />
-                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-                  <Bar dataKey="submissions" name="Submissions" fill="#4CAF50" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="evaluations" name="Evaluations" fill="#2196F3" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="approvals" name="Approvals" fill="#FF9800" radius={[4, 4, 0, 0]} />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#9CA3AF', fontFamily: 'Inter' }}
+                  />
+                  <ReTooltip contentStyle={customTooltipStyle} cursor={{ fill: '#F9FAFB' }} />
+                  <Legend
+                    wrapperStyle={{ fontSize: 12, paddingTop: 16, fontFamily: 'Inter' }}
+                  />
+                  <Bar dataKey="submissions" name="Submissions" fill="#4CAF50" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="evaluations" name="Evaluations" fill="#60A5FA" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="approvals" name="Approvals" fill="#FBBF24" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Progress Panel */}
+        {/* ── Pipeline Progress ── */}
         <Grid item xs={12} lg={4}>
-          <Card sx={{ borderRadius: 3, height: '100%' }}>
+          <Card elevation={0} sx={{ borderRadius: 2, height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Pipeline Progress</Typography>
-              <Typography variant="caption" sx={{ color: '#9E9E9E' }}>Current quarter performance</Typography>
-              <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <SectionHeader
+                title="Pipeline Health"
+                subtitle="Current quarter performance"
+              />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 0.5 }}>
                 {progressItems.map((item) => (
                   <Box key={item.label}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.8 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#37474F' }}>{item.label}</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: item.color }}>{item.value}%</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151' }}>
+                        {item.label}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.84rem', fontWeight: 700, color: item.color }}>
+                        {item.value}%
+                      </Typography>
                     </Box>
                     <LinearProgress
                       variant="determinate"
                       value={item.value}
                       sx={{
-                        bgcolor: `${item.color}20`,
-                        '& .MuiLinearProgress-bar': { bgcolor: item.color, borderRadius: 4 },
+                        bgcolor: `${item.color}18`,
+                        '& .MuiLinearProgress-bar': { bgcolor: item.color },
                       }}
                     />
                   </Box>
                 ))}
               </Box>
 
-              <Divider sx={{ my: 2.5 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Divider sx={{ my: 3 }} />
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#2E7D32' }}>{onTrackRate}%</Typography>
-                  <Typography variant="caption" sx={{ color: '#9E9E9E' }}>On Track</Typography>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#2E7D32', lineHeight: 1 }}>
+                    {onTrackRate}%
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', mt: 0.4 }}>On Track</Typography>
                 </Box>
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#F57C00' }}>{atRiskRate}%</Typography>
-                  <Typography variant="caption" sx={{ color: '#9E9E9E' }}>At Risk</Typography>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#D97706', lineHeight: 1 }}>
+                    {atRiskRate}%
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', mt: 0.4 }}>At Risk</Typography>
                 </Box>
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#0277BD' }}>Q2</Typography>
-                  <Typography variant="caption" sx={{ color: '#9E9E9E' }}>Current Quarter</Typography>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#1D4ED8', lineHeight: 1 }}>
+                    Q{Math.ceil((now.getMonth() + 1) / 3)}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', mt: 0.4 }}>Quarter</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Area Chart */}
+        {/* ── Recent Activities Table ── */}
         <Grid item xs={12}>
-          <Card sx={{ borderRadius: 3 }}>
+          <Card elevation={0} sx={{ borderRadius: 2 }}>
             <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Recent Activities</Typography>
-                  <Typography variant="caption" sx={{ color: '#9E9E9E' }}>Latest innovation submissions and updates</Typography>
-                </Box>
-                <Chip label="Live" size="small" sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700, fontSize: '0.72rem' }} />
-              </Box>
+              <SectionHeader
+                title="Recent Activities"
+                subtitle="Latest innovation submissions and workflow updates"
+                action={
+                  <Chip
+                    label="Live"
+                    size="small"
+                    sx={{
+                      bgcolor: '#F0FDF4',
+                      color: '#2E7D32',
+                      fontWeight: 700,
+                      fontSize: '0.72rem',
+                      border: '1px solid #BBF7D0',
+                    }}
+                  />
+                }
+              />
               <DataTable columns={recentColumns} rows={recent} />
             </CardContent>
           </Card>

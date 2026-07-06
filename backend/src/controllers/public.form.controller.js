@@ -162,7 +162,6 @@ exports.submitForm = async (req, res, next) => {
       answers: parsedAnswers,
       formData,
       submitterEmail: resolvedSubmitterEmail,
-      attachments: files,
       timeline: [
         {
           stage: 'Submission Created',

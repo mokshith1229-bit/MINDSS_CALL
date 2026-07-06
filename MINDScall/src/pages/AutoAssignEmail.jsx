@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, InputAdornment,
   Avatar, Chip, Button, Divider, Snackbar, Alert, CircularProgress,
-  Checkbox, Fade, Tabs, Tab,
+  Checkbox, Fade, Tabs, Tab, FormControl, Select, MenuItem, InputLabel,
   Tooltip, IconButton
 } from '@mui/material';
 import {
@@ -105,14 +105,14 @@ const AutoAssignEmail = () => {
   const propListRef = useRef(null);
   const detailsRef  = useRef(null);
 
-  // ── Tab 2: Evaluation Committee (email-based) ──
+  // ── Tab 2: Evaluation Committee ──
   const [evalSubs, setEvalSubs]           = useState([]);
   const [evalSearch, setEvalSearch]       = useState('');
   const [evalFilter, setEvalFilter]       = useState('All');
   const [selEvalIds, setSelEvalIds]       = useState([]);
-  const [evalBatchName, setEvalBatchName] = useState('');
   const [selEvalProp, setSelEvalProp]     = useState(null);
-  const [evalReviewerEmails, setEvalReviewerEmails] = useState(['']);
+  const [committees, setCommittees]       = useState([]);
+  const [evalEmails, setEvalEmails]       = useState(['', '', '', '', '', '']);
 
   // ── Tab 3: Finance Assignment ──
   const [financeSubs, setFinanceSubs] = useState([]);
@@ -156,7 +156,7 @@ const AutoAssignEmail = () => {
       });
       const mngrs = Object.keys(rmMap).map(email => {
         const props = rmMap[email];
-        const rmAssigned = props.some(p => ['AWAITING_RM_REVIEW', 'RM_REVIEW', 'HOD_REVIEW'].includes(p.status));
+        const rmAssigned = props.some(p => ['AWAITING_RM_REVIEW', 'RM_REVIEW', 'AWAITING_HOD_REVIEW', 'HOD_REVIEW'].includes(p.status));
         const hasNew     = props.some(p => ['NEW', 'REVIEWING'].includes(p.status));
         let status = 'Completed';
         if (hasNew) status = 'Unassigned';
@@ -181,7 +181,9 @@ const AutoAssignEmail = () => {
       // ── Finance pool: FINANCE_APPROVED (both eval-approved and eval-rejected route here) ──
       setFinanceSubs(parsed.filter(s => s.status === 'FINANCE_APPROVED'));
 
-      // No committees fetch needed anymore
+      // ── Fetch active committees ──
+      const commRes = await api.get('/admin/evaluations/committees');
+      setCommittees(commRes.data.data.committees.filter(c => c.active !== false));
     } catch (err) {
       console.error('Failed to fetch data:', err);
       setSnack({ open: true, msg: 'Failed to load data', type: 'error' });
@@ -218,7 +220,7 @@ ${p.benefits}
 Please log in to the portal to review this proposal and provide your feedback.
 
 Best regards,
-CubeTech Innovation Team`);
+MINDS Innovation Team — Cube Highways Innovation Centre`);
     } else {
       setEmailBody('');
     }
@@ -301,24 +303,26 @@ CubeTech Innovation Team`);
     return matchSearch;
   });
 
-  const handleAddEvalEmail    = () => setEvalReviewerEmails(prev => [...prev, '']);
-  const handleRemoveEvalEmail = idx => setEvalReviewerEmails(prev => prev.filter((_, i) => i !== idx));
-  const handleEvalEmailChange = (idx, val) => setEvalReviewerEmails(prev => prev.map((e, i) => i === idx ? val : e));
+  const handleEvalEmailChange = (idx, val) => setEvalEmails(prev => prev.map((e, i) => i === idx ? val : e));
 
-  const handleAutoAssignEvalByEmail = async () => {
-    const validEmails = evalReviewerEmails.filter(e => e.trim());
-    if (validEmails.length === 0 || selEvalIds.length === 0) {
-      setSnack({ open: true, msg: 'Add at least one evaluator email and select proposals', type: 'error' }); return;
+  const handleAutoAssignEvalCommittee = async () => {
+    const validEmails = evalEmails.filter(e => e.trim());
+    if (validEmails.length !== 6 || selEvalIds.length === 0) {
+      setSnack({ open: true, msg: 'Please provide exactly 6 evaluator emails and select at least one proposal', type: 'error' }); return;
+    }
+    const uniqueEmails = [...new Set(validEmails.map(e => e.trim().toLowerCase()))];
+    if (uniqueEmails.length !== 6) {
+      setSnack({ open: true, msg: 'All 6 evaluator emails must be unique', type: 'error' }); return;
     }
     try {
-      await api.post('/admin/evaluations/auto-assign-eval-by-email', {
-        evaluatorEmails: validEmails, submissionIds: selEvalIds, batchName: evalBatchName || undefined,
+      await api.post('/admin/evaluations/auto-assign-eval-committee', {
+        evaluatorEmails: uniqueEmails, submissionIds: selEvalIds,
       });
-      setSnack({ open: true, msg: `${selEvalIds.length} proposal(s) sent to evaluators — email dispatched!`, type: 'success' });
-      setSelEvalIds([]); setEvalReviewerEmails(['']); setEvalBatchName(''); setSelEvalProp(null);
+      setSnack({ open: true, msg: `${selEvalIds.length} proposal(s) assigned — 6 secure emails dispatched per proposal!`, type: 'success' });
+      setSelEvalIds([]); setEvalEmails(['', '', '', '', '', '']); setSelEvalProp(null);
       await fetchData();
     } catch (err) {
-      setSnack({ open: true, msg: err.response?.data?.message || 'Failed to assign to evaluators', type: 'error' });
+      setSnack({ open: true, msg: err.response?.data?.message || 'Failed to assign evaluators', type: 'error' });
     }
   };
 
@@ -640,8 +644,8 @@ CubeTech Innovation Team`);
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>Send to Evaluators</Typography>
                 </Box>
                 <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>
-                  Select proposals → enter evaluator emails → send secure review links.
-                  Evaluators submit their decision (approve or reject) via the link.
+                  Select proposals → choose a 6-member evaluation committee → system generates 6 secure links.
+                  Each evaluator submits their vote individually.
                 </Typography>
 
                 {/* Selected count */}
@@ -652,16 +656,10 @@ CubeTech Innovation Team`);
                   </Typography>
                 </Box>
 
-                {/* Evaluator Emails */}
+                {/* Manual 6-Email Inputs */}
                 <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Evaluator Email(s)</Typography>
-                    <Button size="small" startIcon={<AddIcon />} onClick={handleAddEvalEmail}
-                      sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', color: '#2E7D32' }}>
-                      Add Email
-                    </Button>
-                  </Box>
-                  {evalReviewerEmails.map((email, idx) => (
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Evaluator Emails (Required: exactly 6)</Typography>
+                  {evalEmails.map((email, idx) => (
                     <Box key={idx} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
                       <TextField
                         fullWidth size="small"
@@ -673,22 +671,9 @@ CubeTech Innovation Team`);
                           startAdornment: <InputAdornment position="start"><EmailIcon sx={{ fontSize: 18, color: '#9E9E9E' }} /></InputAdornment>
                         }}
                       />
-                      {evalReviewerEmails.length > 1 && (
-                        <IconButton size="small" onClick={() => handleRemoveEvalEmail(idx)} sx={{ color: '#EF5350' }}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      )}
                     </Box>
                   ))}
-                  <Typography variant="caption" sx={{ color: '#78909C' }}>
-                    Each evaluator receives a secure link to review all selected proposals.
-                  </Typography>
                 </Box>
-
-                {/* Optional batch name */}
-                <TextField fullWidth size="small" label="Batch Name (optional)"
-                  placeholder={`Eval-Batch-${new Date().toLocaleDateString('en-IN')}`}
-                  value={evalBatchName} onChange={e => setEvalBatchName(e.target.value)} sx={{ mb: 2 }} />
 
                 {/* Info box */}
                 <Box sx={{ p: 1.5, bgcolor: '#F3E5F5', borderRadius: 2, mb: 2, border: '1px solid #CE93D8' }}>
@@ -701,10 +686,10 @@ CubeTech Innovation Team`);
                 </Box>
 
                 <Button variant="contained" fullWidth size="large"
-                  disabled={selEvalIds.length === 0 || !evalReviewerEmails.some(e => e.trim())}
-                  onClick={handleAutoAssignEvalByEmail} startIcon={<SendIcon />}
+                  disabled={selEvalIds.length === 0 || evalEmails.filter(e => e.trim()).length !== 6}
+                  onClick={handleAutoAssignEvalCommittee} startIcon={<SendIcon />}
                   sx={{ fontWeight: 700, py: 1.5, bgcolor: '#2E7D32', '&:hover': { bgcolor: '#1B5E20' } }}>
-                  Send Evaluation Email ({selEvalIds.length})
+                  Assign Evaluators & Send Emails ({selEvalIds.length})
                 </Button>
 
                 {selEvalProp && (

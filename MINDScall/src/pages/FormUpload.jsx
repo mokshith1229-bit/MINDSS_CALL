@@ -429,14 +429,28 @@ const ResponsesDialog = ({ open, onClose, form }) => {
         </DialogTitle>
         <Divider />
         <Box sx={{ px: 3, py: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+          <ToggleButtonGroup value={filter} exclusive onChange={(_, v) => v && setFilter(v)} size="small">
+            {[['all', 'All'], ['new', 'New'], ['reviewing', 'Under Review'], ['approved', 'Approved'], ['rejected', 'Rejected']].map(([v, l]) => (
+              <ToggleButton 
+                key={v} 
+                value={v} 
+                sx={{ 
+                  px: 2, 
+                  fontWeight: 600, 
+                  fontSize: '0.78rem',
+                  ...(v === 'rejected' ? { 
+                    '&.Mui-selected': { color: '#DC2626', bgcolor: '#FEE2E2', '&:hover': { bgcolor: '#FEE2E2' } },
+                    color: '#DC2626'
+                  } : {})
+                }}
+              >
+                {l}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
           <TextField size="small" placeholder="Search responses..." value={search} onChange={e => setSearch(e.target.value)}
             InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: '#94A3B8' }} /></InputAdornment> }}
             sx={{ flex: 1, minWidth: 200 }} />
-          <ToggleButtonGroup value={filter} exclusive onChange={(_, v) => v && setFilter(v)} size="small">
-            {[['all', 'All'], ['new', 'New'], ['reviewing', 'Under Review'], ['approved', 'Approved'], ['rejected', 'Rejected']].map(([v, l]) => (
-              <ToggleButton key={v} value={v} sx={{ px: 2, fontWeight: 600, fontSize: '0.78rem' }}>{l}</ToggleButton>
-            ))}
-          </ToggleButtonGroup>
         </Box>
         <DialogContent sx={{ p: 0, overflow: 'auto' }}>
           {filtered.length === 0 ? (

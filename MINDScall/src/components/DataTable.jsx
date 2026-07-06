@@ -1,92 +1,190 @@
 import React from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Avatar, Typography, Box, Chip, TablePagination,
+  Paper, Avatar, Typography, Box, Chip, TablePagination, InputAdornment,
+  TextField, IconButton, Tooltip,
 } from '@mui/material';
+import {
+  Search as SearchIcon,
+  InboxOutlined as InboxIcon,
+} from '@mui/icons-material';
 
-const statusColors = {
-  Pending: { bg: '#FFF8E1', color: '#F57C00', border: '#FFE082' },
-  Approved: { bg: '#E8F5E9', color: '#2E7D32', border: '#A5D6A7' },
-  Rejected: { bg: '#FFEBEE', color: '#C62828', border: '#EF9A9A' },
-  Scheduled: { bg: '#E3F2FD', color: '#0277BD', border: '#90CAF9' },
-  'Under Review': { bg: '#F3E5F5', color: '#6A1B9A', border: '#CE93D8' },
-  'In Progress': { bg: '#E0F7FA', color: '#00695C', border: '#80DEEA' },
-  Completed: { bg: '#F1F8E9', color: '#388E3C', border: '#AED581' },
+// ── Status badge color system ──────────────────────────────────────────────────
+const getStatusColors = (status) => {
+  const s = String(status || '').toUpperCase();
+  if (s.includes('APPROVED') || s === 'APPROVED') {
+    return { bg: '#F0FDF4', color: '#166534', border: '#BBF7D0' };
+  }
+  if (s.includes('REJECTED') || s === 'REJECTED') {
+    return { bg: '#FEF2F2', color: '#991B1B', border: '#FCA5A5' };
+  }
+  if (s === 'PENDING' || s.includes('PENDING')) {
+    return { bg: '#FFFBEB', color: '#92400E', border: '#FDE68A' };
+  }
+  if (s === 'UNDER REVIEW' || s.includes('REVIEW')) {
+    return { bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE' };
+  }
+  if (s === 'COMPLETED') {
+    return { bg: '#F0FDF4', color: '#14532D', border: '#86EFAC' };
+  }
+  if (s === 'DRAFT') {
+    return { bg: '#F9FAFB', color: '#374151', border: '#E5E7EB' };
+  }
+  if (s.includes('PROGRESS') || s === 'IN PROGRESS') {
+    return { bg: '#F0F9FF', color: '#0C4A6E', border: '#BAE6FD' };
+  }
+  if (s === 'SCHEDULED') {
+    return { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+  }
+  return { bg: '#F9FAFB', color: '#6B7280', border: '#E5E7EB' };
 };
 
-const DataTable = ({ columns, rows, rowsPerPageDefault = 7 }) => {
+const DataTable = ({ columns, rows, rowsPerPageDefault = 7, searchable = false }) => {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(rowsPerPageDefault);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
-  const displayed = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const filteredRows = React.useMemo(() => {
+    if (!searchable || !searchQuery.trim()) return rows;
+    const q = searchQuery.toLowerCase();
+    return rows.filter((row) =>
+      Object.values(row).some((v) =>
+        v && String(v).toLowerCase().includes(q)
+      )
+    );
+  }, [rows, searchQuery, searchable]);
+
+  const displayed = filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
-    <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #EEEEEE' }} elevation={0}>
-      <TableContainer>
-        <Table size="medium">
-          <TableHead>
-            <TableRow>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.field}
-                  align={col.align || 'left'}
-                  sx={{ py: 1.8, px: 2.5 }}
-                >
-                  {col.headerName}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {displayed.map((row, idx) => (
-              <TableRow
-                key={row.id || idx}
-                hover
-                sx={{
-                  '&:hover': { backgroundColor: '#F9FBE7' },
-                  '&:last-child td': { border: 0 },
-                  borderBottom: '1px solid #F5F5F5',
-                }}
-              >
+    <Box>
+      {searchable && (
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            size="small"
+            placeholder="Search records..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+            sx={{ width: 280 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: '#9CA3AF', fontSize: 18 }} />
+                </InputAdornment>
+              ),
+              sx: { bgcolor: '#F9FAFB', borderRadius: 2 },
+            }}
+          />
+        </Box>
+      )}
+
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 2,
+          overflow: 'hidden',
+          border: '1px solid #E5E7EB',
+        }}
+      >
+        <TableContainer sx={{ maxHeight: 520 }}>
+          <Table stickyHeader size="medium">
+            <TableHead>
+              <TableRow>
                 {columns.map((col) => (
-                  <TableCell key={col.field} align={col.align || 'left'} sx={{ py: 1.8, px: 2.5 }}>
-                    {col.renderCell ? col.renderCell(row) : (
-                      <Typography variant="body2" sx={{ color: '#37474F' }}>
-                        {row[col.field]}
-                      </Typography>
-                    )}
+                  <TableCell
+                    key={col.field}
+                    align={col.align || 'left'}
+                    sx={{
+                      py: 1.5,
+                      px: 2,
+                      bgcolor: '#F9FAFB',
+                      fontWeight: 700,
+                      color: '#374151',
+                      fontSize: '0.72rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.6px',
+                      borderBottom: '2px solid #E5E7EB',
+                      whiteSpace: 'nowrap',
+                      width: col.width || 'auto',
+                    }}
+                  >
+                    {col.headerName}
                   </TableCell>
                 ))}
               </TableRow>
-            ))}
-            {displayed.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" sx={{ color: '#9E9E9E' }}>No records found</Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      {rows.length > rowsPerPage && (
-        <TablePagination
-          component="div"
-          count={rows.length}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          onPageChange={(e, p) => setPage(p)}
-          onRowsPerPageChange={(e) => { setRowsPerPage(+e.target.value); setPage(0); }}
-          rowsPerPageOptions={[5, 7, 10, 25]}
-          sx={{ borderTop: '1px solid #F0F0F0' }}
-        />
-      )}
-    </Paper>
+            </TableHead>
+            <TableBody>
+              {displayed.map((row, idx) => (
+                <TableRow
+                  key={row.id || idx}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: '#F8FAFF',
+                    },
+                    '&:last-child td': { border: 0 },
+                    borderBottom: '1px solid #F3F4F6',
+                    transition: 'background-color 0.12s ease',
+                  }}
+                >
+                  {columns.map((col) => (
+                    <TableCell
+                      key={col.field}
+                      align={col.align || 'left'}
+                      sx={{ py: 1.5, px: 2, borderBottom: '1px solid #F3F4F6' }}
+                    >
+                      {col.renderCell ? col.renderCell(row) : (
+                        <Typography sx={{ fontSize: '0.875rem', color: '#374151' }}>
+                          {row[col.field] ?? '—'}
+                        </Typography>
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+
+              {displayed.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center" sx={{ py: 6, border: 0 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                      <InboxIcon sx={{ fontSize: 40, color: '#D1D5DB' }} />
+                      <Typography sx={{ fontSize: '0.9rem', color: '#9CA3AF', fontWeight: 600 }}>
+                        No records are currently available
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.8rem', color: '#D1D5DB' }}>
+                        {searchQuery ? 'Try adjusting your search.' : 'Data will appear here once submissions are received.'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {filteredRows.length > rowsPerPage && (
+          <TablePagination
+            component="div"
+            count={filteredRows.length}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            onPageChange={(e, p) => setPage(p)}
+            onRowsPerPageChange={(e) => { setRowsPerPage(+e.target.value); setPage(0); }}
+            rowsPerPageOptions={[5, 7, 10, 25]}
+            sx={{
+              borderTop: '1px solid #F3F4F6',
+              '& .MuiTablePagination-select': { fontSize: '0.84rem' },
+              '& .MuiTablePagination-displayedRows': { fontSize: '0.84rem', color: '#6B7280' },
+            }}
+          />
+        )}
+      </Paper>
+    </Box>
   );
 };
 
+// ── Status Chip ───────────────────────────────────────────────────────────────
 export const StatusChip = ({ status }) => {
-  const colors = statusColors[status] || { bg: '#F5F5F5', color: '#616161', border: '#E0E0E0' };
+  const colors = getStatusColors(status);
   return (
     <Chip
       label={status}
@@ -95,74 +193,80 @@ export const StatusChip = ({ status }) => {
         bgcolor: colors.bg,
         color: colors.color,
         border: `1px solid ${colors.border}`,
-        fontWeight: 600,
-        fontSize: '0.72rem',
-        height: 24,
+        fontWeight: 700,
+        fontSize: '0.7rem',
+        height: 22,
+        '& .MuiChip-label': { px: 1 },
       }}
     />
   );
 };
 
+// ── User Cell ─────────────────────────────────────────────────────────────────
 export const UserCell = ({ avatar, name, subtitle }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
     <Avatar
       sx={{
-        width: 34,
-        height: 34,
-        background: 'linear-gradient(135deg, #2E7D32, #66BB6A)',
+        width: 32,
+        height: 32,
+        bgcolor: '#2E7D32',
         fontSize: '0.72rem',
         fontWeight: 700,
+        flexShrink: 0,
       }}
     >
       {avatar}
     </Avatar>
-    <Box>
-      <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121' }}>{name}</Typography>
-      {subtitle && <Typography variant="caption" sx={{ color: '#9E9E9E' }}>{subtitle}</Typography>}
+    <Box sx={{ minWidth: 0 }}>
+      <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: '0.84rem' }} noWrap>
+        {name}
+      </Typography>
+      {subtitle && (
+        <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF' }} noWrap>
+          {subtitle}
+        </Typography>
+      )}
     </Box>
   </Box>
 );
 
+// ── SLA Cell ──────────────────────────────────────────────────────────────────
 export const SLACell = ({ days, status }) => {
-  if (days === undefined || days === null) return <Typography variant="caption" sx={{ color: '#9E9E9E' }}>N/A</Typography>;
-  
-  let colors = { bg: '#E8F5E9', color: '#2E7D32', text: `${days} Days Left` };
-  if (status === 'warning' || days <= 2 && days >= 0) colors = { bg: '#FFF3E0', color: '#E65100', text: `${days} Days Left` };
-  if (status === 'overdue' || days < 0) colors = { bg: '#FFEBEE', color: '#C62828', text: `${Math.abs(days)} Days Overdue` };
+  if (days === undefined || days === null) {
+    return <Typography sx={{ fontSize: '0.78rem', color: '#D1D5DB' }}>N/A</Typography>;
+  }
+  let colors = { bg: '#F0FDF4', color: '#166534', text: `${days} Days Left` };
+  if (days <= 2 && days >= 0) colors = { bg: '#FFFBEB', color: '#92400E', text: `${days} Days Left` };
+  if (days < 0) colors = { bg: '#FEF2F2', color: '#991B1B', text: `${Math.abs(days)} Days Overdue` };
 
   return (
     <Chip
       label={colors.text}
       size="small"
-      sx={{
-        bgcolor: colors.bg,
-        color: colors.color,
-        fontWeight: 700,
-        fontSize: '0.65rem',
-        height: 22,
-      }}
+      sx={{ bgcolor: colors.bg, color: colors.color, fontWeight: 700, fontSize: '0.68rem', height: 22 }}
     />
   );
 };
 
+// ── Type Badge ────────────────────────────────────────────────────────────────
 export const TypeBadge = ({ type }) => {
   const isIdea = String(type || '').toUpperCase() === 'IDEA';
   const label = isIdea ? 'IDEA' : 'PROPOSAL';
-  const colorParams = isIdea 
-    ? { bg: '#E8F5E9', color: '#2E7D32', border: '#A5D6A7' } 
-    : { bg: '#E3F2FD', color: '#0277BD', border: '#90CAF9' };
-    
+  const colors = isIdea
+    ? { bg: '#F0FDF4', color: '#166534', border: '#BBF7D0' }
+    : { bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE' };
   return (
     <Chip
       label={label}
       size="small"
       sx={{
-        bgcolor: colorParams.bg,
-        color: colorParams.color,
-        border: `1px solid ${colorParams.border}`,
+        bgcolor: colors.bg,
+        color: colors.color,
+        border: `1px solid ${colors.border}`,
         fontWeight: 700,
-        fontSize: '0.65rem',
-        height: 22,
+        fontSize: '0.62rem',
+        height: 18,
+        '& .MuiChip-label': { px: 0.75 },
       }}
     />
   );

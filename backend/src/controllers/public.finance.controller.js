@@ -67,7 +67,7 @@ exports.getFinanceBatchByToken = async (req, res, next) => {
  * PATCH /api/v1/public/finance-reviews/:token
  * Public — finance reviewer submits their decisions
  * Body: { reviews: [{ submissionId, decision, remarks, approvedBudget, reviewerName }] }
- * decision: 'APPROVABLE' | 'NOT_APPROVABLE' | 'CLARIFICATION'
+ * decision: 'APPROVED' | 'REJECTED' | 'CLARIFICATION'
  */
 exports.submitFinanceBatchReview = async (req, res, next) => {
   try {
@@ -89,22 +89,15 @@ exports.submitFinanceBatchReview = async (req, res, next) => {
       const sub = await Submission.findById(submissionId);
       if (!sub || sub.status !== 'FINANCE_APPROVED') continue;
 
-      // Save finance review data
-      sub.workflow = sub.workflow || {};
-      sub.workflow.financeReview = {
-        reviewerName: reviewerName || 'Finance Reviewer',
-        remarks,
-        approvedBudget: approvedBudget ? Number(approvedBudget) : null,
-        decision,
-        timestamp: new Date()
-      };
-
-      let eventName = '';
-      let newStatus = '';
-
-      if (decision === 'APPROVABLE') {
-        newStatus = 'APPROVAL_COMMITTEE';
-        eventName = 'Finance Approved';
+      if (decision === 'APPROVED') {
+        sub.status = 'APPROVAL_COMMITTEE';
+        sub.workflow.financeReview = {
+          reviewerName: reviewerName || 'Finance Reviewer',
+          remarks,
+          approvedBudget: approvedBudget ? Number(approvedBudget) : null,
+          decision: 'APPROVED',
+          timestamp: new Date()
+        };
         sub.timeline.push({
           stage: 'Finance Approved',
           actionBy: reviewerName || 'Finance Reviewer',
@@ -119,9 +112,15 @@ exports.submitFinanceBatchReview = async (req, res, next) => {
           remarks: 'Proposal routed to Approval Committee queue.',
           timestamp: new Date()
         });
-      } else if (decision === 'NOT_APPROVABLE') {
-        newStatus = 'REJECTED';
-        eventName = 'Finance Rejected';
+      } else if (decision === 'REJECTED') {
+        sub.status = 'REJECTED';
+        sub.workflow.financeReview = {
+          reviewerName: reviewerName || 'Finance Reviewer',
+          remarks,
+          approvedBudget: approvedBudget ? Number(approvedBudget) : null,
+          decision: 'REJECTED',
+          timestamp: new Date()
+        };
         sub.timeline.push({
           stage: 'Finance Rejected',
           actionBy: reviewerName || 'Finance Reviewer',

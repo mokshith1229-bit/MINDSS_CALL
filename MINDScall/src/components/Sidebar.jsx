@@ -1,47 +1,88 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  Tooltip, Divider, IconButton, Typography, Collapse,
+  Tooltip, Divider, IconButton, Typography,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   CloudUpload as UploadIcon,
   Email as EmailIcon,
   Assessment as EvaluationIcon,
-  VideoCall as MeetingIcon,
   CheckCircle as ApprovalIcon,
   ChevronLeft as ChevronLeftIcon,
   Menu as MenuIcon,
-  Business as BusinessIcon,
   Assessment as ReportsIcon,
   Settings as SettingsIcon,
   AccountBalance as FinanceIcon,
-  Science as ScienceIcon,
+  Assignment as RDReviewIcon,
+  FolderOpen as ProjectsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
 
-const EXPANDED_WIDTH = 260;
-const COLLAPSED_WIDTH = 72;
+const EXPANDED_WIDTH = 264;
+const COLLAPSED_WIDTH = 68;
 
-const navItems = [
-  { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { label: 'Form Upload', icon: <UploadIcon />, path: '/form-upload' },
-  { label: 'Auto Assign Email', icon: <EmailIcon />, path: '/auto-assign-email' },
-  { label: 'R&D Review', icon: <ScienceIcon />, path: '/rd-review' },
-  { label: 'Evaluation', icon: <EvaluationIcon />, path: '/evaluation' },
-  { label: 'Finance Approval', icon: <FinanceIcon />, path: '/finance-approval' },
-  { label: 'Approval', icon: <ApprovalIcon />, path: '/approval' },
-  { label: 'R&D Ongoing Projects', icon: <BusinessIcon />, path: '/rd-ongoing-projects' },
-  { label: 'Reports', icon: <ReportsIcon />, path: '/reports' },
-  { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+// Brand green extracted from MINDS logo
+const BRAND_GREEN = '#2E7D32';
+const BRAND_GREEN_BG = 'rgba(46, 125, 50, 0.14)';
+const BRAND_GREEN_HOVER = 'rgba(46, 125, 50, 0.08)';
+const SIDEBAR_BG = '#111C2D';
+const SIDEBAR_SECTION_LABEL = 'rgba(255,255,255,0.32)';
+const NAV_TEXT_ACTIVE = '#FFFFFF';
+const NAV_TEXT_DEFAULT = 'rgba(255,255,255,0.58)';
+const NAV_ICON_ACTIVE = '#5EC265';
+const NAV_ICON_DEFAULT = 'rgba(255,255,255,0.42)';
+
+const navSections = [
+  {
+    sectionLabel: null,
+    items: [
+      { label: 'Dashboard', icon: <DashboardIcon fontSize="small" />, path: '/dashboard' },
+    ],
+  },
+  {
+    sectionLabel: 'Innovation',
+    items: [
+      { label: 'Form Upload', icon: <UploadIcon fontSize="small" />, path: '/form-upload' },
+      { label: 'R&D Review', icon: <RDReviewIcon fontSize="small" />, path: '/rd-review' },
+    ],
+  },
+  {
+    sectionLabel: 'Workflow',
+    items: [
+      { label: 'Auto Assign Email', icon: <EmailIcon fontSize="small" />, path: '/auto-assign-email' },
+      { label: 'Evaluation Committee', icon: <EvaluationIcon fontSize="small" />, path: '/evaluation' },
+      { label: 'Finance Review', icon: <FinanceIcon fontSize="small" />, path: '/finance-approval' },
+      { label: 'Approval Committee', icon: <ApprovalIcon fontSize="small" />, path: '/approval' },
+    ],
+  },
+  {
+    sectionLabel: 'Projects',
+    items: [
+      { label: 'R&D Ongoing Projects', icon: <ProjectsIcon fontSize="small" />, path: '/rd-ongoing-projects' },
+    ],
+  },
+  {
+    sectionLabel: 'Analytics',
+    items: [
+      { label: 'Reports', icon: <ReportsIcon fontSize="small" />, path: '/reports' },
+    ],
+  },
+  {
+    sectionLabel: 'Administration',
+    items: [
+      { label: 'Settings', icon: <SettingsIcon fontSize="small" />, path: '/settings' },
+    ],
+  },
 ];
 
 const Sidebar = ({ open, onToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isActive = (path) => location.pathname === path || (path === '/dashboard' && location.pathname === '/');
+  const isActive = (path) =>
+    location.pathname === path || (path === '/dashboard' && location.pathname === '/');
 
   return (
     <Drawer
@@ -51,29 +92,31 @@ const Sidebar = ({ open, onToggle }) => {
         flexShrink: 0,
         whiteSpace: 'nowrap',
         boxSizing: 'border-box',
-        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
         '& .MuiDrawer-paper': {
           width: open ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
           overflowX: 'hidden',
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          backgroundColor: '#1A2332',
+          transition: 'width 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+          backgroundColor: SIDEBAR_BG,
           color: '#ffffff',
           borderRight: 'none',
-          boxShadow: '4px 0 20px rgba(0,0,0,0.15)',
+          boxShadow: '2px 0 12px rgba(0,0,0,0.18)',
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >
-      {/* Logo Area */}
+      {/* ── Logo / Brand Area ── */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: open ? 'space-between' : 'center',
           px: open ? 2 : 0,
-          py: 1.5,
+          py: 0,
           minHeight: 64,
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          background: 'linear-gradient(135deg, #1A2332 0%, #243447 100%)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          flexShrink: 0,
         }}
       >
         {open ? (
@@ -82,139 +125,222 @@ const Sidebar = ({ open, onToggle }) => {
               <Box
                 component="img"
                 src={logo}
-                alt="CubeTech Logo"
-                sx={{ height: 36, width: 36, objectFit: 'contain', borderRadius: 1 }}
+                alt="MINDS Logo"
+                sx={{ height: 38, width: 38, objectFit: 'contain', flexShrink: 0 }}
               />
-              <Box>
+              <Box sx={{ minWidth: 0 }}>
                 <Typography
-                  variant="subtitle1"
-                  sx={{ color: '#fff', fontWeight: 800, lineHeight: 1.2, fontSize: '0.95rem' }}
+                  sx={{
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: '1.05rem',
+                    letterSpacing: '0.06em',
+                    lineHeight: 1.15,
+                    fontFamily: '"Inter", "Segoe UI", sans-serif',
+                  }}
                 >
-                  CubeTech
+                  MINDS
                 </Typography>
                 <Typography
-                  variant="caption"
-                  sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', display: 'block' }}
+                  sx={{
+                    color: 'rgba(255,255,255,0.45)',
+                    fontSize: '0.6rem',
+                    lineHeight: 1.3,
+                    display: 'block',
+                    fontWeight: 500,
+                    letterSpacing: '0.01em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
                 >
-                  Innovation Portal
+                  Enterprise Innovation Platform
                 </Typography>
               </Box>
             </Box>
-            <IconButton onClick={onToggle} sx={{ color: 'rgba(255,255,255,0.7)', p: 0.5 }}>
-              <ChevronLeftIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title="Collapse sidebar" placement="right">
+              <IconButton
+                onClick={onToggle}
+                size="small"
+                sx={{
+                  color: 'rgba(255,255,255,0.45)',
+                  flexShrink: 0,
+                  '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.06)' },
+                }}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </>
         ) : (
-          <Tooltip title="Expand Sidebar" placement="right">
-            <IconButton onClick={onToggle} sx={{ color: 'rgba(255,255,255,0.8)', p: 1 }}>
+          <Tooltip title="Expand sidebar" placement="right">
+            <IconButton
+              onClick={onToggle}
+              size="small"
+              sx={{
+                color: 'rgba(255,255,255,0.55)',
+                '&:hover': { color: 'rgba(255,255,255,0.9)', bgcolor: 'rgba(255,255,255,0.06)' },
+              }}
+            >
               <MenuIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
       </Box>
 
-      {/* Nav Items */}
-      <List sx={{ px: 1, pt: 2, flex: 1 }}>
-        {navItems.map((item) => {
-          const active = isActive(item.path);
-          return (
-            <Tooltip key={item.path} title={!open ? item.label : ''} placement="right">
-              <ListItem disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    borderRadius: 2,
-                    px: open ? 2 : 1.5,
-                    py: 1.2,
-                    justifyContent: open ? 'flex-start' : 'center',
-                    minHeight: 48,
-                    position: 'relative',
-                    backgroundColor: active ? 'rgba(46, 125, 50, 0.25)' : 'transparent',
-                    '&::before': active ? {
-                      content: '""',
-                      position: 'absolute',
-                      left: 0,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 3,
-                      height: '60%',
-                      backgroundColor: '#4CAF50',
-                      borderRadius: '0 3px 3px 0',
-                    } : {},
-                    '&:hover': {
-                      backgroundColor: active ? 'rgba(46, 125, 50, 0.30)' : 'rgba(255,255,255,0.06)',
-                    },
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: open ? 40 : 'auto',
-                      color: active ? '#4CAF50' : 'rgba(255,255,255,0.55)',
-                      justifyContent: 'center',
-                      transition: 'color 0.2s ease',
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  {open && (
-                    <ListItemText
-                      primary={
-                        <Typography
-                          noWrap
+      {/* ── Navigation ── */}
+      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', py: 1.5 }}>
+        {navSections.map((section, sIdx) => (
+          <Box key={sIdx}>
+            {/* Section Label */}
+            {open && section.sectionLabel && (
+              <Typography
+                sx={{
+                  fontSize: '0.625rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.9px',
+                  textTransform: 'uppercase',
+                  color: SIDEBAR_SECTION_LABEL,
+                  px: 2.5,
+                  pt: sIdx === 0 ? 0.5 : 1.5,
+                  pb: 0.5,
+                  display: 'block',
+                }}
+              >
+                {section.sectionLabel}
+              </Typography>
+            )}
+            {!open && section.sectionLabel && sIdx > 0 && (
+              <Divider sx={{ my: 0.75, borderColor: 'rgba(255,255,255,0.07)', mx: 1.5 }} />
+            )}
+
+            <List sx={{ px: 1, py: 0 }}>
+              {section.items.map((item) => {
+                const active = isActive(item.path);
+                return (
+                  <Tooltip key={item.path} title={!open ? item.label : ''} placement="right" arrow>
+                    <ListItem disablePadding sx={{ mb: 0.25 }}>
+                      <ListItemButton
+                        onClick={() => navigate(item.path)}
+                        sx={{
+                          borderRadius: '6px',
+                          px: open ? 1.5 : 1,
+                          py: 0.85,
+                          justifyContent: open ? 'flex-start' : 'center',
+                          minHeight: 40,
+                          position: 'relative',
+                          backgroundColor: active ? BRAND_GREEN_BG : 'transparent',
+                          // Green left border for active item
+                          '&::before': active ? {
+                            content: '""',
+                            position: 'absolute',
+                            left: 0,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: 3,
+                            height: '65%',
+                            backgroundColor: BRAND_GREEN,
+                            borderRadius: '0 3px 3px 0',
+                          } : {},
+                          '&:hover': {
+                            backgroundColor: active
+                              ? BRAND_GREEN_BG
+                              : BRAND_GREEN_HOVER,
+                          },
+                          transition: 'background-color 0.15s ease',
+                        }}
+                      >
+                        <ListItemIcon
                           sx={{
-                            fontSize: '0.88rem',
-                            fontWeight: active ? 700 : 400,
-                            color: active ? '#ffffff' : 'rgba(255,255,255,0.65)',
-                            transition: 'all 0.2s ease',
+                            minWidth: open ? 34 : 'auto',
+                            color: active ? NAV_ICON_ACTIVE : NAV_ICON_DEFAULT,
+                            justifyContent: 'center',
+                            transition: 'color 0.15s ease',
                           }}
                         >
-                          {item.label}
-                        </Typography>
-                      }
-                    />
-                  )}
-                </ListItemButton>
-              </ListItem>
-            </Tooltip>
-          );
-        })}
-      </List>
+                          {item.icon}
+                        </ListItemIcon>
+                        {open && (
+                          <ListItemText
+                            primary={
+                              <Typography
+                                noWrap
+                                sx={{
+                                  fontSize: '0.8375rem',
+                                  fontWeight: active ? 700 : 500,
+                                  color: active ? NAV_TEXT_ACTIVE : NAV_TEXT_DEFAULT,
+                                  transition: 'all 0.15s ease',
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                {item.label}
+                              </Typography>
+                            }
+                            sx={{ my: 0 }}
+                          />
+                        )}
+                      </ListItemButton>
+                    </ListItem>
+                  </Tooltip>
+                );
+              })}
+            </List>
+          </Box>
+        ))}
+      </Box>
 
-      {/* Bottom Area */}
-      <Box sx={{ pb: 2, px: 1, borderTop: '1px solid rgba(255,255,255,0.08)', pt: 2 }}>
+      {/* ── Bottom: Powered by & User ── */}
+      <Box
+        sx={{
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          py: 1.5,
+          px: open ? 1.5 : 0.5,
+          flexShrink: 0,
+        }}
+      >
+        {/* User section */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1.5,
-            px: open ? 1.5 : 0,
+            gap: 1.2,
+            px: 0.5,
+            py: 0.75,
+            borderRadius: '6px',
             justifyContent: open ? 'flex-start' : 'center',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+            cursor: 'default',
           }}
         >
           <Box
             sx={{
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #2E7D32, #66BB6A)',
+              background: 'linear-gradient(135deg, #2E7D32, #4CAF50)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Typography variant="caption" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.7rem' }}>
-              AT
+            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.7rem' }}>
+              AD
             </Typography>
           </Box>
           {open && (
-            <Box>
-              <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600, display: 'block', fontSize: '0.8rem' }}>
-                Admin User
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{ color: '#E5E7EB', fontWeight: 600, fontSize: '0.775rem', lineHeight: 1.2 }}
+                noWrap
+              >
+                Administrator
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.68rem' }}>
-                System Administrator
+              <Typography
+                sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.625rem', lineHeight: 1.2 }}
+                noWrap
+              >
+                Cube Highways Innovation Centre
               </Typography>
             </Box>
           )}

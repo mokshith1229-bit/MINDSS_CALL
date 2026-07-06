@@ -150,24 +150,6 @@ const Approval = () => {
 
   return (
     <Box>
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {[
-          { label: 'Pending Approval', count: pending.length, color: '#F57C00', bg: '#FFF3E0' },
-          { label: 'Approved', count: approved.length, color: '#2E7D32', bg: '#E8F5E9' },
-          { label: 'Rejected', count: rejected.length, color: '#C62828', bg: '#FFEBEE' },
-          { label: 'Total Value', count: '₹ 2.2Cr', color: '#0277BD', bg: '#E1F5FE' },
-        ].map((s) => (
-          <Grid item xs={6} sm={3} key={s.label}>
-            <Card sx={{ borderRadius: 3, textAlign: 'center', py: 0.5 }}>
-              <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ fontWeight: 800, color: s.color }}>{s.count}</Typography>
-                <Typography variant="body2" sx={{ color: '#78909C', fontWeight: 600, mt: 0.5 }}>{s.label}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
       <Fade in={true} timeout={300}>
       <Card sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 3 }}>
@@ -184,6 +166,23 @@ const Approval = () => {
         </CardContent>
       </Card>
       </Fade>
+
+      <Grid container spacing={2.5} sx={{ mt: 3, mb: 3 }}>
+        {[
+          { label: 'Pending Approval', count: pending.length, color: '#F57C00', bg: '#FFF3E0' },
+          { label: 'Approved', count: approved.length, color: '#2E7D32', bg: '#E8F5E9' },
+          { label: 'Rejected', count: rejected.length, color: '#C62828', bg: '#FFEBEE' },
+        ].map((s) => (
+          <Grid item xs={6} sm={4} key={s.label}>
+            <Card sx={{ borderRadius: 3, textAlign: 'center', py: 0.5 }}>
+              <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: s.color }}>{s.count}</Typography>
+                <Typography variant="body2" sx={{ color: '#78909C', fontWeight: 600, mt: 0.5 }}>{s.label}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 600 }, bgcolor: '#F8FAFC' } }}>
         {selectedApp && (

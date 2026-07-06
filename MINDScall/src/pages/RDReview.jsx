@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, TextField, InputAdornment,
   Button, Drawer, IconButton, Chip, Tabs, Tab, Divider, CircularProgress,
-  List, ListItem, ListItemButton, ListItemText, Tooltip, Avatar, Fade
+  List, ListItem, ListItemButton, ListItemText, Tooltip, Avatar, Fade,
+  FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -29,6 +30,7 @@ const RDReview = () => {
   const [search, setSearch] = useState('');
   const [selectedFormId, setSelectedFormId] = useState('ALL');
   const [activeTab, setActiveTab] = useState(0); // 0: All, 1: Ideas, 2: Proposals
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSub, setSelectedSub] = useState(null);
@@ -71,7 +73,7 @@ const RDReview = () => {
           submissionId: `SUB-${sub._id.toString().substring(18).toUpperCase()}`,
           submissionDate: new Date(sub.createdAt).toLocaleDateString()
         };
-      });
+      }).filter(sub => sub.formId);
       
       setSubmissions(parsedSubs);
 
@@ -79,7 +81,6 @@ const RDReview = () => {
       const formMap = {};
       parsedSubs.forEach(sub => {
         const fId = sub.formId;
-        if (!fId) return;
         if (!formMap[fId]) {
           formMap[fId] = {
             id: fId,
@@ -119,6 +120,11 @@ const RDReview = () => {
     // Filter by Type Tab
     if (activeTab === 1 && s.type !== 'Idea') return false;
     if (activeTab === 2 && s.type !== 'Proposal') return false;
+    // Filter by Status
+    if (statusFilter !== 'ALL') {
+      const sStatus = s.status === 'NEW' ? 'Pending' : s.status;
+      if (sStatus !== statusFilter) return false;
+    }
     // Search
     if (search) {
       const q = search.toLowerCase();
@@ -252,16 +258,31 @@ const RDReview = () => {
                     <Tab label="Proposals" />
                   </Tabs>
                 </Box>
-                <TextField
-                  size="small"
-                  placeholder="Search title, ID, or employee..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-                  }}
-                  sx={{ width: 250 }}
-                />
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <FormControl size="small" sx={{ minWidth: 180 }}>
+                    <InputLabel>Status Filter</InputLabel>
+                    <Select
+                      value={statusFilter}
+                      label="Status Filter"
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <MenuItem value="ALL">All Statuses</MenuItem>
+                      {[...new Set(submissions.map(s => s.status === 'NEW' ? 'Pending' : s.status))].sort().map(status => (
+                        <MenuItem key={status} value={status}>{status}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    size="small"
+                    placeholder="Search title, ID, or employee..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                    }}
+                    sx={{ width: 250 }}
+                  />
+                </Box>
               </Box>
 
               <Fade in={true} timeout={400}>

@@ -234,6 +234,7 @@ const PublicForm = () => {
   const [wbsCode, setWbsCode] = useState('');
   const [wbsPreview, setWbsPreview] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   React.useEffect(() => {
     if (formData.category && formData.subCategory && formData.innovationType) {
@@ -339,6 +340,7 @@ const PublicForm = () => {
 
   const handleSubmit = async () => {
     if (validateStep(currentStepKey)) {
+      setIsSubmitting(true);
       try {
         const payload = new FormData();
         // Map formData to answers, using projectTitle or proposalTitle as unified "title"
@@ -364,13 +366,16 @@ const PublicForm = () => {
           if (data.data?.trackingId) setTrackingId(data.data.trackingId);
           if (data.data?.businessId || data.data?.wbsCode) setWbsCode(data.data.businessId || data.data.wbsCode);
           setPreviewOpen(false);
+          setIsSubmitting(false);
           setSubmitted(true);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           const errData = await res.json();
+          setIsSubmitting(false);
           setSnack({ open: true, msg: errData.error || 'Submission failed. Please try again.', type: 'error' });
         }
       } catch (err) {
+        setIsSubmitting(false);
         setSnack({ open: true, msg: 'Server error. Please try again.', type: 'error' });
       }
     }
@@ -914,9 +919,10 @@ const PublicForm = () => {
                         variant="contained"
                         startIcon={<SendIcon />}
                         onClick={handleSubmit}
+                        disabled={isSubmitting}
                         sx={{ bgcolor: '#0078D4', '&:hover': { bgcolor: '#106EBE' } }}
                       >
-                        Submit
+                        {isSubmitting ? 'Submitting...' : 'Submit'}
                       </MsButton>
                     </>
                   )}
@@ -1124,7 +1130,7 @@ const PublicForm = () => {
         </DialogContent>
         <DialogActions sx={{ p: 3, borderTop: '1px solid #EDEBE9', bgcolor: '#F8FAFC' }}>
           <MsButton onClick={() => setPreviewOpen(false)} sx={{ color: '#323130', fontWeight: 600 }}>Edit Details</MsButton>
-          <MsButton variant="contained" startIcon={<SendIcon />} onClick={handleSubmit} sx={{ bgcolor: '#0078D4', fontWeight: 600, '&:hover': { bgcolor: '#106EBE' } }}>Confirm & Submit</MsButton>
+          <MsButton variant="contained" startIcon={<SendIcon />} onClick={handleSubmit} disabled={isSubmitting} sx={{ bgcolor: '#0078D4', fontWeight: 600, '&:hover': { bgcolor: '#106EBE' } }}>{isSubmitting ? 'Submitting...' : 'Confirm & Submit'}</MsButton>
         </DialogActions>
       </Dialog>
 
