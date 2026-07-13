@@ -25,22 +25,33 @@ const app = express();
 // Security Middleware
 app.use(helmet());
 
-// CORS MUST be applied before the rate limiter so that blocked requests still get CORS headers.
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL]
-  : ['http://localhost:5173', 'http://localhost:3000'];
+// CORS Configuration
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://localhost:3000',
+  'https://mindss-call-three.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    // In development, allow any origin
+    // Allow if exactly in list OR if it's a vercel preview domain
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
     return callback(new Error(`CORS: Origin ${origin} not allowed`));
   },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  optionsSuccessStatus: 200, // Some legacy browsers and Vercel edge choke on 204
+};
+
+app.use(cors(corsOptions));
+// Explicitly handle pre-flight OPTIONS requests for all routes to prevent 404s
+app.options('*', cors(corsOptions));
 
 // Rate Limiting
 const limiter = rateLimit({
