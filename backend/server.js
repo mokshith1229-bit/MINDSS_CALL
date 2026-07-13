@@ -20,3 +20,6 @@ process.on('unhandledRejection', (err, promise) => {
   // Close server & exit process
   server.close(() => process.exit(1));
 });
+
+// Export app for Vercel Serverless
+module.exports = app;
