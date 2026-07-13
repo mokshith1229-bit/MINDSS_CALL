@@ -90,7 +90,12 @@ app.use('/api/v1/notifications', notificationRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.send('MINDScall API is running...');
+  res.json({ server: "running" });
+});
+
+// Health endpoint
+app.get('/api/v1/health', (req, res) => {
+  res.json({ status: "ok" });
 });
 
 // Handle undefined routes
