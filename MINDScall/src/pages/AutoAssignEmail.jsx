@@ -261,7 +261,7 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
     try {
       const res = await api.patch(`/admin/submissions/${selProp._id}/assign-email`, { stage: 'RM', email: managerEmail });
       const { token } = res.data.data;
-      const reviewLink = `${import.meta.env.VITE_APP_URL || 'http://localhost:5173'}/review/${token}`;
+      const reviewLink = `${import.meta.env.VITE_APP_URL}/review/${token}`;
       const finalBody = `${emailBody}\n\nSecure Review Link:\n${reviewLink}`;
       const subject = encodeURIComponent('Proposal Review Request (RM)');
       const body = encodeURIComponent(finalBody);

@@ -240,7 +240,7 @@ const PublicForm = () => {
     if (formData.category && formData.subCategory && formData.innovationType) {
       const fetchWbs = async () => {
         try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/public/forms/wbs/preview?category=${encodeURIComponent(formData.category)}&subCategory=${encodeURIComponent(formData.subCategory)}&innovationType=${encodeURIComponent(formData.innovationType)}`);
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/public/forms/wbs/preview?category=${encodeURIComponent(formData.category)}&subCategory=${encodeURIComponent(formData.subCategory)}&innovationType=${encodeURIComponent(formData.innovationType)}`);
           if (res.ok) {
             const data = await res.json();
             if (data.data?.wbsCode) setWbsPreview(data.data.wbsCode);
@@ -356,7 +356,7 @@ const PublicForm = () => {
         payload.append('submitterEmail', formData.officialEmail);
         files.forEach(f => payload.append('attachments', f));
 
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/public/forms/${slug}/submit`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/public/forms/${slug}/submit`, {
           method: 'POST',
           body: payload
         });

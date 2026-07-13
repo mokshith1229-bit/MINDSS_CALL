@@ -9,7 +9,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import axios from 'axios';
 import { formatKey } from '../utils/submissionParser';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL;
 
 const PublicBatchReview = () => {
   const { token } = useParams();
@@ -147,7 +147,7 @@ const PublicBatchReview = () => {
                       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1976D2' }}>Attachments</Typography>
                       <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
                         {sub.attachments.map((att, i) => {
-                          const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                          const backendBase = (import.meta.env.VITE_API_URL || '').replace('/api/v1', '');
                           const fullUrl = att.url ? (att.url.startsWith('http') ? att.url : `${backendBase}${att.url}`) : '#';
                           return (
                             <Chip 

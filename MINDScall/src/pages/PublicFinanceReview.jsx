@@ -14,7 +14,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import axios from 'axios';
 import { formatKey } from '../utils/submissionParser';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL;
 
 const decisionMeta = {
   APPROVED:       { label: 'Approve Budget',        color: '#2E7D32', bg: '#E8F5E9', icon: <CheckCircleIcon sx={{ fontSize: 18 }} /> },
@@ -242,7 +242,7 @@ const PublicFinanceReview = () => {
                       <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1976D2', mb: 1 }}>Attachments</Typography>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         {sub.attachments.map((att, i) => {
-                          const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                          const backendBase = (import.meta.env.VITE_API_URL || '').replace('/api/v1', '');
                           const url = att.url?.startsWith('http') ? att.url : `${backendBase}${att.url}`;
                           return (
                             <Chip key={i} icon={<PictureAsPdfIcon />} label={att.filename || 'Document'}
