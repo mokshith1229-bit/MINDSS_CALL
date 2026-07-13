@@ -9,7 +9,11 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (err) {
     console.error(`MongoDB Connection Error: ${err.message}`);
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    } else {
+      console.error('[STARTUP] ❌ Vercel DB Connection Failed! Retrying on next request...');
+    }
   }
 };
 
