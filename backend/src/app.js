@@ -93,7 +93,18 @@ app.get('/', (req, res) => {
 
 // Health endpoint
 app.get('/api/v1/health', (req, res) => {
-  res.json({ status: "ok" });
+  const mongoose = require('mongoose');
+  const uri = process.env.MONGODB_URI;
+  res.json({
+    status: "ok",
+    database: {
+      readyState: mongoose.connection.readyState,
+      readyStateDesc: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown',
+      hasUri: !!uri,
+      uriLength: uri ? uri.length : 0,
+      uriStart: uri ? uri.substring(0, 20) : 'none'
+    }
+  });
 });
 
 // Handle undefined routes
