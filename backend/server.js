@@ -54,7 +54,7 @@ try {
   // Export a dummy app that returns 500 so Vercel doesn't crash the lambda but shows the error
   const express = require('express');
   const fallbackApp = express();
-  fallbackApp.all('*', (req, res) => {
+  fallbackApp.use((req, res) => {
     res.status(500).json({
       success: false,
       message: 'Vercel Server Startup Crash',

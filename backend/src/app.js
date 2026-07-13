@@ -50,8 +50,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Explicitly handle pre-flight OPTIONS requests for all routes to prevent 404s
-app.options('*', cors(corsOptions));
 
 // Rate Limiting
 const limiter = rateLimit({
