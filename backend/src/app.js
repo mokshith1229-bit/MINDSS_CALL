@@ -71,6 +71,17 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
+// Database connection middleware to ensure DB is connected on every request (crucial for Serverless)
+app.use(async (req, res, next) => {
+  try {
+    const { connectDB } = require('./config/db');
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Mount routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
