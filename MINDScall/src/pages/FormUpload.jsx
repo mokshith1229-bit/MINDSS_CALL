@@ -800,7 +800,17 @@ const DEFAULT_SECTIONS = [
   { id: 'sec-2', title: 'Organization Details', fields: [{ id: 'department', label: 'Department', type: 'dropdown', required: true, enabled: true }, { id: 'subDepartment', label: 'Sub Department', type: 'dropdown', required: true, enabled: true }, { id: 'subSubDepartment', label: 'Sub Sub Department', type: 'dropdown', required: false, enabled: true }] },
   { id: 'sec-3', title: 'Classification', fields: [{ id: 'processProduct', label: 'Process / Product Development', type: 'dropdown', required: true, enabled: true }] },
   { id: 'sec-4', title: 'Management Information', fields: [{ id: 'reportingManagerName', label: 'Reporting Manager Name', type: 'text', required: true, enabled: true }, { id: 'reportingManagerEmail', label: 'Reporting Manager Email', type: 'email', required: true, enabled: true }, { id: 'hodName', label: 'HOD Name', type: 'text', required: true, enabled: true }, { id: 'hodEmail', label: 'HOD Email', type: 'email', required: true, enabled: true }] },
-  { id: 'sec-5', title: 'Submission Details', fields: [{ id: 'title', label: 'Submission Title', type: 'text', required: true, enabled: true }, { id: 'introduction', label: 'Introduction', type: 'textarea', required: true, enabled: true }, { id: 'methodology', label: 'Methodology', type: 'textarea', required: true, enabled: true }, { id: 'benefits', label: 'Benefits', type: 'textarea', required: true, enabled: true }] },
+  { id: 'sec-5', title: 'Submission Details', fields: [
+    { id: 'title', label: 'Project title', type: 'text', required: true, enabled: true },
+    { id: 'problemStatement', label: 'PROBLEM STATEMENT', type: 'textarea', required: true, enabled: true },
+    { id: 'proposedSolution', label: 'Proposed solution', type: 'textarea', required: true, enabled: true },
+    { id: 'objectives', label: 'Objectives', type: 'textarea', required: true, enabled: true },
+    { id: 'keyDeliverables', label: 'Key Deliverables', type: 'textarea', required: true, enabled: true },
+    { id: 'timelinesAndBudget', label: 'Timelines and Budget', type: 'textarea', required: true, enabled: true },
+    { id: 'overallBudget', label: 'Overall Budget', type: 'textarea', required: true, enabled: true },
+    { id: 'expectedBenefits', label: 'Expected Benefits', type: 'textarea', required: true, enabled: true },
+    { id: 'projectTeam', label: 'Project Team', type: 'textarea', required: true, enabled: true }
+  ] },
   { id: 'sec-6', title: 'Attachments', fields: [{ id: 'attachments', label: 'Attachments', type: 'file', required: false, enabled: true }] }
 ];
 
@@ -930,82 +940,14 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
 
           <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             Form Sections & Fields
-            <Chip label="Transparent Builder" size="small" sx={{ bgcolor: '#E0F2FE', color: '#0284C7', fontWeight: 700, fontSize: '0.7rem' }} />
+            <Chip label="Enterprise Builder" size="small" sx={{ bgcolor: '#E0F2FE', color: '#0284C7', fontWeight: 700, fontSize: '0.7rem' }} />
           </Typography>
           
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {formData.sections.map(sec => {
-              const activeCount = sec.fields.filter(f => f.enabled).length;
-              return (
-                <Accordion 
-                  key={sec.id} 
-                  expanded={expandedSec === sec.id} 
-                  onChange={(e, expanded) => setExpandedSec(expanded ? sec.id : false)}
-                  sx={{ 
-                    borderRadius: '8px !important', 
-                    border: '1px solid #E5E7EB', 
-                    boxShadow: 'none',
-                    '&:before': { display: 'none' },
-                    overflow: 'hidden'
-                  }}
-                >
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: expandedSec === sec.id ? '#F8FAFC' : '#fff', borderBottom: expandedSec === sec.id ? '1px solid #E5E7EB' : 'none' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 1 }}>
-                      <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>{sec.title}</Typography>
-                      <Chip label={`${activeCount} field${activeCount !== 1 ? 's' : ''}`} size="small" sx={{ bgcolor: activeCount > 0 ? '#DBEAFE' : '#F1F5F9', color: activeCount > 0 ? '#2563EB' : '#64748B', fontWeight: 600, fontSize: '0.7rem' }} />
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails sx={{ bgcolor: '#fff', p: 0 }}>
-                    <List disablePadding>
-                      {sec.fields.map((f, i) => (
-                        <ListItem key={f.id} sx={{ borderBottom: '1px solid #F1F5F9', py: 1.5, px: 2, display: 'flex', gap: 2, alignItems: 'center', opacity: f.enabled ? 1 : 0.5 }}>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                            <IconButton size="small" onClick={() => moveField(sec.id, i, -1)} disabled={i === 0} sx={{ p: 0 }}><UpIcon fontSize="small" /></IconButton>
-                            <IconButton size="small" onClick={() => moveField(sec.id, i, 1)} disabled={i === sec.fields.length - 1} sx={{ p: 0 }}><DownIcon fontSize="small" /></IconButton>
-                          </Box>
-                          
-                          <Box sx={{ flex: 1 }}>
-                            <TextField 
-                              size="small" 
-                              variant="standard"
-                              value={f.label} 
-                              onChange={(e) => handleFieldChange(sec.id, f.id, 'label', e.target.value)}
-                              InputProps={{ disableUnderline: true, sx: { fontWeight: 600, fontSize: '0.9rem', color: '#334155' } }}
-                              fullWidth
-                            />
-                            <Typography variant="caption" sx={{ color: '#94A3B8', fontFamily: 'monospace', display: 'block', mb: 1 }}>{f.type}</Typography>
-                            {['dropdown', 'radio', 'checkbox'].includes(f.type) && (
-                              <TextField
-                                size="small"
-                                fullWidth
-                                placeholder="Comma-separated options..."
-                                value={(f.options || []).join(', ')}
-                                onChange={(e) => handleFieldChange(sec.id, f.id, 'options', e.target.value.split(',').map(s => s.trim()))}
-                                sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.75rem', bgcolor: '#F8FAFC' } }}
-                                InputProps={{ sx: { height: 30 } }}
-                              />
-                            )}
-                          </Box>
-
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FormControlLabel 
-                              control={<Checkbox size="small" checked={f.required} onChange={(e) => handleFieldChange(sec.id, f.id, 'required', e.target.checked)} disabled={!f.enabled} />} 
-                              label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Required</Typography>} 
-                              sx={{ m: 0 }}
-                            />
-                            <FormControlLabel 
-                              control={<Switch size="small" checked={f.enabled} onChange={(e) => handleFieldChange(sec.id, f.id, 'enabled', e.target.checked)} color="success" />} 
-                              label={<Typography variant="caption" sx={{ fontWeight: 600 }}>Show</Typography>}
-                              sx={{ m: 0 }}
-                            />
-                          </Box>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </AccordionDetails>
-                </Accordion>
-              );
-            })}
+            <FormBuilder
+              sections={formData.sections}
+              onChange={(newSecs) => setFormData(p => ({ ...p, sections: newSecs }))}
+            />
           </Box>
         </Box>
 
@@ -1023,26 +965,52 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
               {formData.description && <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>{formData.description}</Typography>}
             </Box>
             <CardContent sx={{ p: 3 }}>
-              {formData.sections.filter(sec => sec.fields.some(f => f.enabled)).map((sec, si) => (
-                <Box key={sec.id} sx={{ mb: 3 }}>
-                  <Box sx={{ mb: 2, pb: 1, borderBottom: '2px solid #F1F5F9' }}>
-                    <Chip label={`Section ${si + 1}`} size="small" sx={{ bgcolor: '#1A2332', color: '#fff', fontWeight: 700, fontSize: '0.65rem', height: 18, mr: 1 }} />
-                    <Typography component="span" variant="subtitle2" sx={{ fontWeight: 800, color: '#1A2332' }}>{sec.title}</Typography>
-                  </Box>
-                  <Grid container spacing={2}>
-                    {sec.fields.filter(f => f.enabled).map(field => (
-                      <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
-                        {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={2} InputLabelProps={{ shrink: true }} disabled size="small" />
-                          : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
-                            : field.type === 'dropdown' ? <FormControl fullWidth disabled size="small"><InputLabel>{field.label}{field.required ? ' *' : ''}</InputLabel><Select label={`${field.label}${field.required ? ' *' : ''}`} value="">{field.options?.length > 0 ? field.options.map((opt, idx) => <MenuItem key={idx} value={opt}>{opt}</MenuItem>) : <MenuItem value="">No options</MenuItem>}</Select></FormControl>
-                              : field.type === 'radio' ? <FormControl disabled size="small"><Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600 }}>{field.label}{field.required ? ' *' : ''}</Typography><Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>{field.options?.length > 0 ? field.options.map((opt, idx) => <FormControlLabel key={idx} control={<Checkbox disabled size="small" />} label={opt} />) : <Typography variant="caption" color="error">No options added</Typography>}</Box></FormControl>
-                                : <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth type={field.type === 'date' ? 'date' : 'text'} InputLabelProps={{ shrink: true }} disabled size="small" />}
-                      </Grid>
+              {formData.sections.map((sec, si) => {
+                const hasSubSecs = sec.subSections && sec.subSections.length > 0;
+                const hasFields = sec.fields && sec.fields.length > 0;
+                if (!hasSubSecs && !hasFields) return null;
+
+                return (
+                  <Box key={sec.id} sx={{ mb: 3.5 }}>
+                    <Box sx={{ mb: 2, pb: 1, borderBottom: '2px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip label={`Section ${si + 1}`} size="small" sx={{ bgcolor: '#1A2332', color: '#fff', fontWeight: 700, fontSize: '0.65rem', height: 18 }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1A2332' }}>{sec.title}</Typography>
+                    </Box>
+                    
+                    {/* Flat fields */}
+                    <Grid container spacing={2} sx={{ mb: hasSubSecs ? 2 : 0 }}>
+                      {(sec.fields || []).filter(f => f.enabled !== false).map(field => (
+                        <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
+                          {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={2} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />
+                            : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
+                              : field.type === 'dropdown' ? <FormControl fullWidth disabled size="small"><InputLabel shrink>{field.label}{field.required ? ' *' : ''}</InputLabel><Select label={field.label} value="" notched>{(field.options || []).map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}</Select></FormControl>
+                                : field.type === 'radio' ? <FormControl disabled size="small"><Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600 }}>{field.label}{field.required ? ' *' : ''}</Typography><Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>{(field.options || []).map(o => <FormControlLabel key={o} control={<Checkbox disabled size="small" />} label={o} />)}</Box></FormControl>
+                                  : <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth type={field.type === 'date' ? 'date' : 'text'} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />}
+                        </Grid>
+                      ))}
+                    </Grid>
+
+                    {/* Sub-sections */}
+                    {(sec.subSections || []).map((sub) => (
+                      <Box key={sub.id} sx={{ mb: 2, ml: 2, p: 2, border: '1px solid #E2E8F0', borderRadius: 2, bgcolor: '#FAFBFB' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#334155', mb: 1.5 }}>{sub.title}</Typography>
+                        <Grid container spacing={2}>
+                          {(sub.fields || []).filter(f => f.enabled !== false).map(field => (
+                            <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
+                              {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={2} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />
+                                : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
+                                  : field.type === 'dropdown' ? <FormControl fullWidth disabled size="small"><InputLabel shrink>{field.label}{field.required ? ' *' : ''}</InputLabel><Select label={field.label} value="" notched>{(field.options || []).map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}</Select></FormControl>
+                                    : field.type === 'radio' ? <FormControl disabled size="small"><Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600 }}>{field.label}{field.required ? ' *' : ''}</Typography><Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>{(field.options || []).map(o => <FormControlLabel key={o} control={<Checkbox disabled size="small" />} label={o} />)}</Box></FormControl>
+                                      : <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth type={field.type === 'date' ? 'date' : 'text'} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />}
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </Box>
                     ))}
-                  </Grid>
-                </Box>
-              ))}
-              {formData.sections.filter(sec => sec.fields.some(f => f.enabled)).length === 0 && (
+                  </Box>
+                );
+              })}
+              {formData.sections.length === 0 && (
                 <Box sx={{ textAlign: 'center', py: 4, color: '#94A3B8' }}>
                   <Typography variant="body2">No fields are enabled. Enable fields in the builder to see the preview.</Typography>
                 </Box>
