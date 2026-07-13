@@ -76,12 +76,29 @@ exports.submitForm = async (req, res, next) => {
     // Resolve submitter email from new field names
     const resolvedSubmitterEmail = submitterEmail || parsedAnswers.officialEmail || parsedAnswers.managerEmail || '';
 
-    const counter = await Counter.findByIdAndUpdate(
-      { _id: counterId },
-      { $inc: { seq: 1 } },
-      { new: true, upsert: true }
+    // ── Gap-filling businessId: reuse deleted numbers ──────────────────────
+    // Fetch all existing seq numbers for this type
+    const existing = await Submission.find(
+      { businessId: { $regex: `^${counterId}-` } },
+      { businessId: 1, _id: 0 }
+    ).lean();
+    const usedNums = new Set(
+      existing.map((s) => {
+        const parts = s.businessId?.split('-');
+        return parts && parts[1] ? parseInt(parts[1], 10) : null;
+      }).filter((n) => n !== null && !isNaN(n))
     );
-    const businessId = `${counterId}-${String(counter.seq).padStart(3, '0')}`;
+    // Find the first positive integer not already in use
+    let nextSeq = 1;
+    while (usedNums.has(nextSeq)) nextSeq++;
+    const businessId = `${counterId}-${String(nextSeq).padStart(3, '0')}`;
+    // Keep the counter doc in sync so analytics tools can still read it
+    await Counter.findByIdAndUpdate(
+      { _id: counterId },
+      { $set: { seq: nextSeq } },
+      { upsert: true }
+    );
+    // ─────────────────────────────────────────────────────────────────────
 
     // Generate Tracking ID (Random 8 chars with MCI/MCP prefix)
     const trackingId = `${submissionType === 'Proposal' ? 'MCP' : 'MCI'}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
@@ -201,6 +218,7 @@ exports.submitForm = async (req, res, next) => {
     next(err);
   }
 };
+
 
 // @desc    Track a submission by tracking ID
 // @route   GET /api/v1/public/track/:trackingId

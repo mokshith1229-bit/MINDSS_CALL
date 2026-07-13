@@ -284,6 +284,29 @@ exports.deleteSubmission = async (req, res, next) => {
       { $pull: { submissions: submission._id } }
     );
 
+    // ── After deletion: reset counter to highest remaining seq ─────────────
+    // This ensures the gap-filling logic in submitForm works correctly
+    if (submission.businessId) {
+      const parts = submission.businessId.split('-');
+      const counterId = parts[0]; // 'IDEA' or 'PROP'
+      if (counterId === 'IDEA' || counterId === 'PROP') {
+        const remaining = await Submission.find(
+          { businessId: { $regex: `^${counterId}-` } },
+          { businessId: 1, _id: 0 }
+        ).lean();
+        const maxSeq = remaining.reduce((max, s) => {
+          const n = parseInt((s.businessId?.split('-') || [])[1], 10);
+          return !isNaN(n) && n > max ? n : max;
+        }, 0);
+        await require('../models/Counter.model').findByIdAndUpdate(
+          { _id: counterId },
+          { $set: { seq: maxSeq } },
+          { upsert: true }
+        );
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     res.status(200).json(new ApiResponse(200, null, 'Submission deleted successfully'));
   } catch (err) {
     next(err);

@@ -16,9 +16,11 @@ import {
   AccountBalance as FinanceIcon,
   Assignment as RDReviewIcon,
   FolderOpen as ProjectsIcon,
+  ManageAccounts as ManageAccountsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import { authStore } from '../store/authStore';
 
 const EXPANDED_WIDTH = 264;
 const COLLAPSED_WIDTH = 68;
@@ -72,6 +74,7 @@ const navSections = [
   {
     sectionLabel: 'Administration',
     items: [
+      { label: 'User Management', icon: <ManageAccountsIcon fontSize="small" />, path: '/user-management', roles: ['SUPER_ADMIN'] },
       { label: 'Settings', icon: <SettingsIcon fontSize="small" />, path: '/settings' },
     ],
   },
@@ -80,6 +83,8 @@ const navSections = [
 const Sidebar = ({ open, onToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = authStore.getState().user;
+  const userRole = currentUser?.role;
 
   const isActive = (path) =>
     location.pathname === path || (path === '/dashboard' && location.pathname === '/');
@@ -215,7 +220,9 @@ const Sidebar = ({ open, onToggle }) => {
             )}
 
             <List sx={{ px: 1, py: 0 }}>
-              {section.items.map((item) => {
+              {section.items
+                .filter((item) => !item.roles || item.roles.includes(userRole))
+                .map((item) => {
                 const active = isActive(item.path);
                 return (
                   <Tooltip key={item.path} title={!open ? item.label : ''} placement="right" arrow>

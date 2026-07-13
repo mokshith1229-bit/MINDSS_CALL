@@ -16,13 +16,24 @@ router.get('/me', userController.getMe);
 router.use(authorize('SUPER_ADMIN', 'ADMIN'));
 
 router.route('/')
-  .get(userController.getUsers);
+  .get(userController.getUsers)
+  .post(
+    validate(userValidation.createUser),
+    auditLog('CREATE_USER', 'User'),
+    userController.createUser
+  );
 
 router.route('/:id/role')
   .put(
     validate(userValidation.updateUserRole),
     auditLog('UPDATE_USER_ROLE', 'User'),
     userController.updateUserRole
+  );
+
+router.route('/:id/reactivate')
+  .patch(
+    auditLog('REACTIVATE_USER', 'User'),
+    userController.reactivateUser
   );
 
 router.route('/:id')

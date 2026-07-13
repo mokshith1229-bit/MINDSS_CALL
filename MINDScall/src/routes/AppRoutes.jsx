@@ -21,6 +21,7 @@ import Login from '../pages/Login';
 import RDOngoingProjects from '../pages/RDOngoingProjects';
 import PublicEvaluatorReview from '../pages/PublicEvaluatorReview';
 import { authStore } from '../store/authStore';
+import UserManagement from '../pages/UserManagement';
 
 const ProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(authStore.getState().isAuthenticated);
@@ -68,6 +69,7 @@ const AppRoutes = () => {
         <Route path="finance-approval" element={<FinanceApproval />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="user-management" element={<UserManagement />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
