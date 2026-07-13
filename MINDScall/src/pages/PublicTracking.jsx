@@ -18,6 +18,8 @@ import {
 import axios from 'axios';
 import Timeline from '../components/Timeline';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+
 const PublicTracking = () => {
   const [searchParams] = useSearchParams();
   const [trackingId, setTrackingId] = useState(searchParams.get('id') || '');
@@ -41,7 +43,7 @@ const PublicTracking = () => {
     setResult(null);
 
     try {
-      const res = await axios.get(`http://localhost:5000/api/v1/public/forms/track/${queryId.trim().toUpperCase()}`);
+      const res = await axios.get(`${API_BASE}/public/forms/track/${queryId.trim().toUpperCase()}`);
       if (res.data && res.data.success) {
         setResult(res.data.data.tracking);
       }

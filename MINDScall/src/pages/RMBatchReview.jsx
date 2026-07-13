@@ -9,6 +9,8 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import axios from 'axios';
 import { formatKey } from '../utils/submissionParser';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+
 const RMBatchReview = () => {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -26,7 +28,7 @@ const RMBatchReview = () => {
 
   const fetchBatchDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/v1/public/reviews/rm-batch/${token}`);
+      const res = await axios.get(`${API_BASE}/public/reviews/rm-batch/${token}`);
       const subs = res.data.data.submissions;
       setSubmissions(subs);
       
@@ -61,7 +63,7 @@ const RMBatchReview = () => {
     }
 
     try {
-      await axios.post(`http://localhost:5000/api/v1/public/reviews/rm-batch/${token}`, {
+      await axios.post(`${API_BASE}/public/reviews/rm-batch/${token}`, {
         reviews: reviews
       });
       alert('Batch reviews submitted successfully! You may close this window.');
@@ -142,7 +144,8 @@ const RMBatchReview = () => {
                       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1976D2' }}>Attachments</Typography>
                       <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
                         {sub.attachments.map((att, i) => {
-                          const fullUrl = att.url ? (att.url.startsWith('http') ? att.url : `http://localhost:5000${att.url}`) : '#';
+                          const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                          const fullUrl = att.url ? (att.url.startsWith('http') ? att.url : `${backendBase}${att.url}`) : '#';
                           return (
                             <Chip 
                               key={i} 

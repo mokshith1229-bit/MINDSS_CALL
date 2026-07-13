@@ -26,7 +26,21 @@ const app = express();
 app.use(helmet());
 
 // CORS MUST be applied before the rate limiter so that blocked requests still get CORS headers.
-app.use(cors());
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL]
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // In development, allow any origin
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+    return callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
+  credentials: true,
+}));
 
 // Rate Limiting
 const limiter = rateLimit({

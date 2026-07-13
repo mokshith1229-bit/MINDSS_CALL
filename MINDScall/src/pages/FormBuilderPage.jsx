@@ -470,7 +470,7 @@ const FormBuilderPage = () => {
         payload.append('submitterEmail', form.reportingManagerEmail || '');
         form.attachments.forEach(f => payload.append('attachments', f));
 
-        const res = await fetch('http://localhost:5000/api/v1/public/forms/innovation-form/submit', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/public/forms/innovation-form/submit`, {
           method: 'POST',
           body: payload
         });
