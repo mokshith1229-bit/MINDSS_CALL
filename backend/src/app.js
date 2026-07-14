@@ -19,6 +19,8 @@ const publicEvaluationRoutes = require('./routes/public.evaluation.routes');
 const publicFinanceRoutes = require('./routes/public.finance.routes');
 const meetingRoutes = require('./routes/meeting.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const reportsRoutes = require('./routes/reports.routes');
+const developerRoutes = require('./routes/developer.routes');
 
 const app = express();
 
@@ -96,6 +98,8 @@ app.use('/api/v1/public/batch-reviews', publicEvaluationRoutes);
 app.use('/api/v1/public/finance-reviews', publicFinanceRoutes);
 app.use('/api/v1/meetings', meetingRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/admin/reports', reportsRoutes);
+app.use('/api/v1/developer', developerRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

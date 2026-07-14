@@ -21,6 +21,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { authStore } from '../store/authStore';
+import { useVisibility } from '../context/VisibilityContext';
 
 const EXPANDED_WIDTH = 264;
 const COLLAPSED_WIDTH = 68;
@@ -40,42 +41,43 @@ const navSections = [
   {
     sectionLabel: null,
     items: [
-      { label: 'Dashboard', icon: <DashboardIcon fontSize="small" />, path: '/dashboard' },
+      { label: 'Dashboard', icon: <DashboardIcon fontSize="small" />, path: '/dashboard', featureKey: 'module.dashboard' },
     ],
   },
   {
     sectionLabel: 'Innovation',
     items: [
-      { label: 'Form Upload', icon: <UploadIcon fontSize="small" />, path: '/form-upload' },
-      { label: 'R&D Review', icon: <RDReviewIcon fontSize="small" />, path: '/rd-review' },
+      { label: 'Form Upload', icon: <UploadIcon fontSize="small" />, path: '/form-upload', featureKey: 'module.form_upload' },
+      { label: 'R&D Review', icon: <RDReviewIcon fontSize="small" />, path: '/rd-review', featureKey: 'module.rd_review' },
     ],
   },
   {
     sectionLabel: 'Workflow',
     items: [
-      { label: 'Auto Assign Email', icon: <EmailIcon fontSize="small" />, path: '/auto-assign-email' },
-      { label: 'Evaluation Committee', icon: <EvaluationIcon fontSize="small" />, path: '/evaluation' },
-      { label: 'Finance Review', icon: <FinanceIcon fontSize="small" />, path: '/finance-approval' },
-      { label: 'Approval Committee', icon: <ApprovalIcon fontSize="small" />, path: '/approval' },
+      { label: 'Auto Assign Email', icon: <EmailIcon fontSize="small" />, path: '/auto-assign-email', featureKey: 'module.auto_assign_email' },
+      { label: 'Evaluation Committee', icon: <EvaluationIcon fontSize="small" />, path: '/evaluation', featureKey: 'module.evaluation' },
+      { label: 'Finance Review', icon: <FinanceIcon fontSize="small" />, path: '/finance-approval', featureKey: 'module.finance_review' },
+      { label: 'Approval Committee', icon: <ApprovalIcon fontSize="small" />, path: '/approval', featureKey: 'module.approval' },
     ],
   },
   {
     sectionLabel: 'Projects',
     items: [
-      { label: 'R&D Ongoing Projects', icon: <ProjectsIcon fontSize="small" />, path: '/rd-ongoing-projects' },
+      { label: 'R&D Ongoing Projects', icon: <ProjectsIcon fontSize="small" />, path: '/rd-ongoing-projects', featureKey: 'module.rd_ongoing_projects' },
     ],
   },
   {
     sectionLabel: 'Analytics',
     items: [
-      { label: 'Reports', icon: <ReportsIcon fontSize="small" />, path: '/reports' },
+      { label: 'Reports', icon: <ReportsIcon fontSize="small" />, path: '/reports', featureKey: 'module.reports' },
     ],
   },
   {
     sectionLabel: 'Administration',
     items: [
-      { label: 'User Management', icon: <ManageAccountsIcon fontSize="small" />, path: '/user-management', roles: ['SUPER_ADMIN'] },
-      { label: 'Settings', icon: <SettingsIcon fontSize="small" />, path: '/settings' },
+      { label: 'User Management', icon: <ManageAccountsIcon fontSize="small" />, path: '/user-management', featureKey: 'module.user_management' },
+      { label: 'Settings', icon: <SettingsIcon fontSize="small" />, path: '/settings', featureKey: 'module.settings' },
+      { label: 'Feature Management', icon: <SettingsIcon fontSize="small" />, path: '/feature-management', featureKey: 'module.feature_management' },
     ],
   },
 ];
@@ -84,7 +86,7 @@ const Sidebar = ({ open, onToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = authStore.getState().user;
-  const userRole = currentUser?.role;
+  const { isVisible } = useVisibility();
 
   const isActive = (path) =>
     location.pathname === path || (path === '/dashboard' && location.pathname === '/');
@@ -221,7 +223,7 @@ const Sidebar = ({ open, onToggle }) => {
 
             <List sx={{ px: 1, py: 0 }}>
               {section.items
-                .filter((item) => !item.roles || item.roles.includes(userRole))
+                .filter((item) => item.featureKey ? isVisible(item.featureKey) : true)
                 .map((item) => {
                 const active = isActive(item.path);
                 return (
@@ -341,7 +343,7 @@ const Sidebar = ({ open, onToggle }) => {
                 sx={{ color: '#E5E7EB', fontWeight: 600, fontSize: '0.775rem', lineHeight: 1.2 }}
                 noWrap
               >
-                Administrator
+                {currentUser?.name || 'Administrator'}
               </Typography>
               <Typography
                 sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.625rem', lineHeight: 1.2 }}

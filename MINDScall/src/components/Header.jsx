@@ -30,6 +30,7 @@ const routeMeta = {
   '/reports':            { title: 'Reports',                 section: 'Analytics' },
   '/settings':           { title: 'Settings',                section: 'Administration' },
   '/meeting':            { title: 'Meetings',                section: 'Workflow' },
+  '/user-management':    { title: 'User Management',         section: 'Administration' },
 };
 
 const Header = ({ sidebarOpen }) => {

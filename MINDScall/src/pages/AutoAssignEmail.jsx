@@ -427,7 +427,11 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
         <Grid container spacing={3}>
           {/* Manager List */}
           <Grid item xs={12} lg={5}>
-            <Card sx={{ borderRadius: 3 }}>
+            <Card sx={{ 
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
+            }} elevation={0}>
               <CardContent sx={{ p: 2.5 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>Reporting Managers</Typography>
@@ -477,7 +481,11 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
 
           {/* Review Panel */}
           <Grid item xs={12} lg={7}>
-            <Card sx={{ borderRadius: 3 }}>
+            <Card sx={{ 
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
+            }} elevation={0}>
               <CardContent sx={{ p: 2.5 }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Review Assignment</Typography>
                 <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>
@@ -589,7 +597,11 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
       <TabPanel value={tabIndex} index={1}>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={7}>
-            <Card sx={{ borderRadius: 3 }}>
+            <Card sx={{ 
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
+            }} elevation={0}>
               <CardContent sx={{ p: 2.5 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                   <Box>
@@ -637,7 +649,12 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
           </Grid>
 
           <Grid item xs={12} lg={5}>
-            <Card sx={{ borderRadius: 3, position: 'sticky', top: 16 }}>
+            <Card sx={{ 
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+              position: 'sticky', top: 16 
+            }} elevation={0}>
               <CardContent sx={{ p: 2.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                   <EvalIcon sx={{ color: '#2E7D32', fontSize: 26 }} />
@@ -723,7 +740,11 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
         <Grid container spacing={3}>
           {/* Proposals pool */}
           <Grid item xs={12} lg={7}>
-            <Card sx={{ borderRadius: 3 }}>
+            <Card sx={{ 
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
+            }} elevation={0}>
               <CardContent sx={{ p: 2.5 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                   <Box>
@@ -810,7 +831,12 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
 
           {/* Finance Assignment Panel */}
           <Grid item xs={12} lg={5}>
-            <Card sx={{ borderRadius: 3, position: 'sticky', top: 16 }}>
+            <Card sx={{ 
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+              position: 'sticky', top: 16 
+            }} elevation={0}>
               <CardContent sx={{ p: 2.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                   <FinanceIcon sx={{ color: '#1565C0', fontSize: 28 }} />

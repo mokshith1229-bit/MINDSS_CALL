@@ -1271,7 +1271,6 @@ const FormUpload = () => {
   ].filter(Boolean);
 
   const TABS = [
-    { label: 'Overview', badge: null },
     { label: 'Forms', badge: forms.length },
     { label: 'Categories', badge: categories.length },
     { label: 'Templates', badge: templates.length },
@@ -1301,7 +1300,7 @@ const FormUpload = () => {
                 </Badge>
               </Tooltip>
             )}
-            <Button variant="outlined" startIcon={<CategoryIcon />} onClick={() => setTab(2)} sx={{ borderColor: '#7C3AED', color: '#7C3AED', '&:hover': { bgcolor: '#F5F3FF' } }}>
+            <Button variant="outlined" startIcon={<CategoryIcon />} onClick={() => setTab(1)} sx={{ borderColor: '#7C3AED', color: '#7C3AED', '&:hover': { bgcolor: '#F5F3FF' } }}>
               Categories
             </Button>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setFormToEdit(null); setEditorOpen(true); }}>
@@ -1348,11 +1347,10 @@ const FormUpload = () => {
           </Tabs>
         </Box>
 
-        {tab === 0 && <AnalyticsTab forms={forms} submissions={submissions} categories={categories} />}
-        {tab === 1 && <SubmissionsTab forms={forms} categories={categories} submissions={submissions} />}
-        {tab === 2 && <CategoryTab categories={categories} />}
-        {tab === 3 && <TemplatesTab templates={templates} categories={categories} onUseTemplate={tpl => { setFormToEdit(null); setEditorOpen(true); }} />}
-        {tab === 4 && <AnalyticsTab forms={forms} submissions={submissions} categories={categories} />}
+        {tab === 0 && <SubmissionsTab forms={forms} categories={categories} submissions={submissions} />}
+        {tab === 1 && <CategoryTab categories={categories} />}
+        {tab === 2 && <TemplatesTab templates={templates} categories={categories} onUseTemplate={tpl => { setFormToEdit(null); setEditorOpen(true); }} />}
+        {tab === 3 && <AnalyticsTab forms={forms} submissions={submissions} categories={categories} />}
       </Card>
 
       {/* Create/Edit Form Dialog */}

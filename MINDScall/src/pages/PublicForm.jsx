@@ -1,96 +1,166 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  Box, Card, CardContent, Typography, TextField, Button,
-  FormControl, Select, MenuItem, Stepper, Step, StepLabel,
-  Snackbar, Alert, Grid, Paper, Dialog, DialogTitle,
-  DialogContent, DialogActions, List, ListItem, ListItemIcon,
-  ListItemText, IconButton, Container, Divider, Fade, Chip, InputAdornment
+  Box, Typography, TextField, Button,
+  FormControl, Select, MenuItem,
+  Snackbar, Alert, List, ListItem, ListItemIcon,
+  ListItemText, IconButton, Divider, Chip, InputAdornment,
+  LinearProgress, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
+  Grid
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, keyframes } from '@mui/material/styles';
 import {
   Send as SendIcon, Save as SaveIcon, CheckCircle as CheckIcon,
   CloudUpload as UploadIcon, Delete as DeleteIcon,
   PictureAsPdf as PdfIcon, Description as DocIcon,
-  InsertDriveFile as FileIcon, Visibility as ViewIcon,
+  InsertDriveFile as FileIcon,
   EmojiObjects as IdeaIcon, Assignment as ProposalIcon,
-  Person as PersonIcon, Business as BusinessIcon,
-  Category as CategoryIcon, Image as ImageIcon,
-  Slideshow as SlideshowIcon, AttachFile as AttachIcon,
+  Image as ImageIcon, Slideshow as SlideshowIcon,
   Phone as PhoneIcon, Email as EmailIcon, Badge as BadgeIcon,
-  LocationOn as LocationIcon, ContentCopy as CopyIcon
+  ArrowForward as ArrowForwardIcon, ArrowBack as ArrowBackIcon,
+  Visibility as ViewIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  'Engineering',
-  'Traffic and AI',
-  'Safety',
-  'Finance',
-  'E&S',
-  'Human Resource',
-  'R&D',
-  'Others'
+  'Engineering', 'Traffic and AI', 'Safety', 'Finance',
+  'E&S', 'Human Resource', 'R&D', 'Others'
 ];
 
 const SUB_CATEGORIES = [
-  'Pavement',
-  'Materials',
-  'Structures',
-  'Design',
-  'AI and ML',
-  'Traffic Engineering',
-  'Others'
+  'Pavement', 'Materials', 'Structures', 'Design',
+  'AI and ML', 'Traffic Engineering', 'Others'
 ];
 
-const INNOVATION_TYPES = [
-  'Process Development',
-  'Product Development'
-];
+const INNOVATION_TYPES = ['Process Development', 'Product Development'];
 
-// All 5 logical sections
 const ALL_STEPS = [
-  { key: 'employee', label: 'Employee Information', description: 'Provide your personal and organizational details' },
-  { key: 'submission', label: 'Submission Details', description: 'Select the type, category, and classification' },
-  { key: 'idea', label: 'Idea Details', description: 'Describe your innovative idea' },
-  { key: 'proposal', label: 'Project Overview', description: 'Provide a comprehensive project overview' },
-  { key: 'attachments', label: 'Attachments', description: 'Upload supporting documents' },
+  { key: 'employee',    label: 'Employee Information', description: 'Provide your personal and organizational details' },
+  { key: 'submission',  label: 'Submission Details',   description: 'Select the type, category, and classification' },
+  { key: 'idea',        label: 'Idea Details',          description: 'Describe your innovative idea' },
+  { key: 'proposal',   label: 'Project Overview',       description: 'Provide a comprehensive project overview' },
+  { key: 'attachments', label: 'Attachments',           description: 'Upload supporting documents' },
 ];
+
+// ─── Animations ──────────────────────────────────────────────────────────────
+
+const fadeSlideIn = keyframes`
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+`;
 
 // ─── Styled Components ───────────────────────────────────────────────────────
 
-const MsTextField = styled(TextField)({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 4,
-    backgroundColor: '#ffffff',
-    '& fieldset': { borderColor: '#8A8886' },
-    '&:hover fieldset': { borderColor: '#323130' },
-    '&.Mui-focused fieldset': { borderColor: '#0078D4', borderWidth: '2px' },
-  },
-  '& .MuiInputBase-input': { color: '#323130', padding: '10px 14px' },
+const PageWrapper = styled(Box)({
+  minHeight: '100vh',
+  backgroundColor: '#F0F2F5',
+  fontFamily: "'Segoe UI', 'Inter', sans-serif",
+  paddingBottom: 80,
 });
 
-const MsSelect = styled(Select)({
-  borderRadius: 4,
+const FormCard = styled(Box)({
+  maxWidth: 860,
+  margin: '0 auto',
   backgroundColor: '#ffffff',
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#8A8886' },
-  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#323130' },
-  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#0078D4', borderWidth: '2px' },
-  '& .MuiSelect-select': { padding: '10px 14px', color: '#323130' },
+  borderRadius: 16,
+  boxShadow: '0 4px 40px rgba(0,0,0,0.08)',
+  overflow: 'hidden',
+  animation: `${fadeSlideIn} 0.4s ease`,
 });
 
-const MsButton = styled(Button)({
-  borderRadius: 4,
+const SectionBlock = styled(Box)({
+  padding: '40px 48px',
+  animation: `${fadeSlideIn} 0.35s ease`,
+  '@media (max-width: 600px)': {
+    padding: '28px 20px',
+  },
+});
+
+const SectionDivider = styled(Divider)({
+  borderColor: '#EAECF0',
+  margin: '0 48px',
+  '@media (max-width: 600px)': {
+    margin: '0 20px',
+  },
+});
+
+const FormField = styled(TextField)({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 10,
+    backgroundColor: '#FAFBFC',
+    fontSize: '0.95rem',
+    transition: 'all 0.2s ease',
+    '& fieldset': { borderColor: '#D0D5DD', borderWidth: '1.5px' },
+    '&:hover fieldset': { borderColor: '#98A2B3' },
+    '&.Mui-focused fieldset': { borderColor: '#12B76A', borderWidth: '2px' },
+    '&.Mui-focused': { backgroundColor: '#F6FEF9' },
+  },
+  '& .MuiInputBase-input': {
+    color: '#101828',
+    padding: '13px 16px',
+    '&::placeholder': { color: '#98A2B3', opacity: 1 },
+  },
+  '& .MuiFormHelperText-root': {
+    marginLeft: 0,
+    marginTop: 6,
+    fontSize: '0.78rem',
+  },
+  width: '100%',
+});
+
+const FormSelect = styled(Select)({
+  borderRadius: 10,
+  backgroundColor: '#FAFBFC',
+  fontSize: '0.95rem',
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#D0D5DD', borderWidth: '1.5px' },
+  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#98A2B3' },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#12B76A', borderWidth: '2px' },
+  '& .MuiSelect-select': { padding: '13px 16px', color: '#101828' },
+});
+
+const FieldGroup = styled(Box)({ marginBottom: 24 });
+
+const FieldLabel = ({ children, required }) => (
+  <Typography
+    sx={{
+      fontWeight: 600,
+      mb: 0.75,
+      color: '#344054',
+      fontSize: '0.875rem',
+      letterSpacing: '-0.01em',
+    }}
+  >
+    {children}{required && <span style={{ color: '#F04438', marginLeft: 3 }}>*</span>}
+  </Typography>
+);
+
+const SubmitBtn = styled(Button)({
+  borderRadius: 10,
+  textTransform: 'none',
+  fontWeight: 700,
+  fontSize: '0.95rem',
+  padding: '12px 32px',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+  '&:hover': { boxShadow: '0 4px 12px rgba(18,183,106,0.25)', transform: 'translateY(-1px)' },
+  transition: 'all 0.2s ease',
+});
+
+const SecondaryBtn = styled(Button)({
+  borderRadius: 10,
   textTransform: 'none',
   fontWeight: 600,
-  padding: '8px 24px',
-  boxShadow: 'none',
-  '&:hover': { boxShadow: 'none' },
+  fontSize: '0.875rem',
+  padding: '11px 24px',
+  borderColor: '#D0D5DD',
+  color: '#344054',
+  '&:hover': { borderColor: '#98A2B3', backgroundColor: '#F9FAFB' },
+  transition: 'all 0.2s ease',
 });
 
-// ─── File Upload Zone ────────────────────────────────────────────────────────
+// ─── File Helpers ─────────────────────────────────────────────────────────────
 
 const getFileIcon = (name) => {
   const ext = name.split('.').pop().toLowerCase();
@@ -101,7 +171,10 @@ const getFileIcon = (name) => {
   return <FileIcon sx={{ color: '#605E5C' }} />;
 };
 
-const formatSize = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`;
+const formatSize = b =>
+  b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`;
+
+// ─── File Upload Zone ─────────────────────────────────────────────────────────
 
 function FileZone({ files, setFiles }) {
   const onDrop = useCallback(accepted => {
@@ -123,108 +196,148 @@ function FileZone({ files, setFiles }) {
     maxSize: 10 * 1024 * 1024
   });
 
-  const removeFile = (index) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  const removeFile = (index) => setFiles(prev => prev.filter((_, i) => i !== index));
 
   return (
     <Box>
       <Box
         {...getRootProps()}
         sx={{
-          border: `2px dashed ${isDragActive ? '#0078D4' : '#C8C6C4'}`,
-          borderRadius: 2,
-          p: 5,
+          border: `2px dashed ${isDragActive ? '#12B76A' : '#D0D5DD'}`,
+          borderRadius: 3,
+          p: { xs: 4, md: 6 },
           textAlign: 'center',
           cursor: 'pointer',
-          bgcolor: isDragActive ? '#F3F9FD' : '#FAFAFA',
+          bgcolor: isDragActive ? '#F6FEF9' : '#FAFBFC',
           transition: 'all 0.25s ease',
-          '&:hover': { borderColor: '#0078D4', bgcolor: '#F3F9FD' }
+          '&:hover': { borderColor: '#12B76A', bgcolor: '#F6FEF9' }
         }}
       >
         <input {...getInputProps()} />
-        <UploadIcon sx={{ color: isDragActive ? '#0078D4' : '#605E5C', fontSize: 48, mb: 1.5 }} />
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: isDragActive ? '#0078D4' : '#323130' }}>
-          {isDragActive ? 'Drop files here…' : 'Drag & drop files here, or click to browse'}
+        <Box sx={{
+          width: 56, height: 56, borderRadius: '50%',
+          bgcolor: isDragActive ? '#D1FADF' : '#F2F4F7',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          mx: 'auto', mb: 2
+        }}>
+          <UploadIcon sx={{ color: isDragActive ? '#12B76A' : '#667085', fontSize: 28 }} />
+        </Box>
+        <Typography sx={{ fontWeight: 600, color: '#101828', fontSize: '0.95rem', mb: 0.5 }}>
+          {isDragActive ? 'Drop your files here' : 'Click to upload or drag & drop'}
         </Typography>
-        <Typography variant="caption" sx={{ color: '#605E5C', display: 'block', mt: 0.5 }}>
-          Supported: PDF, DOC, DOCX, PPT, PPTX, PNG, JPG, JPEG (Max 10MB each)
+        <Typography sx={{ color: '#667085', fontSize: '0.8rem' }}>
+          PDF, DOC, DOCX, PPT, PPTX, PNG, JPG (Max 10MB each)
         </Typography>
       </Box>
+
       {files.length > 0 && (
-        <List dense sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {files.map((f, i) => (
-            <ListItem
+            <Box
               key={i}
               sx={{
-                bgcolor: '#ffffff',
-                borderRadius: 1,
-                mb: 1,
-                border: '1px solid #EDEBE9',
+                display: 'flex', alignItems: 'center', gap: 1.5,
+                p: 2, bgcolor: '#F9FAFB', borderRadius: 2,
+                border: '1px solid #EAECF0',
+                '&:hover': { borderColor: '#12B76A', bgcolor: '#F6FEF9' },
                 transition: 'all 0.15s',
-                '&:hover': { bgcolor: '#F3F9FD', borderColor: '#0078D4' }
               }}
-              secondaryAction={
-                <IconButton size="small" onClick={() => removeFile(i)}>
-                  <DeleteIcon sx={{ fontSize: 18, color: '#d13438' }} />
-                </IconButton>
-              }
             >
-              <ListItemIcon sx={{ minWidth: 36 }}>{getFileIcon(f.name)}</ListItemIcon>
-              <ListItemText
-                primary={<Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#323130' }}>{f.name}</Typography>}
-                secondary={<Typography variant="caption" sx={{ color: '#605E5C' }}>{formatSize(f.size)}</Typography>}
-              />
-            </ListItem>
+              <Box sx={{ width: 36, height: 36, borderRadius: 1.5, bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #EAECF0' }}>
+                {getFileIcon(f.name)}
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#101828', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#667085' }}>{formatSize(f.size)}</Typography>
+              </Box>
+              <IconButton size="small" onClick={() => removeFile(i)} sx={{ color: '#F04438', '&:hover': { bgcolor: '#FEF3F2' } }}>
+                <DeleteIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
           ))}
-        </List>
+        </Box>
       )}
     </Box>
   );
 }
 
-// ─── Helper: Labeled Field ──────────────────────────────────────────────────
+// ─── Section Header ───────────────────────────────────────────────────────────
 
-const FieldLabel = ({ children, required }) => (
-  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.75, color: '#323130', fontSize: '0.82rem' }}>
-    {children} {required && <span style={{ color: '#d13438' }}>*</span>}
-  </Typography>
+const SectionHeader = ({ number, title, description }) => (
+  <Box sx={{ mb: 4 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+      <Box sx={{
+        width: 36, height: 36, borderRadius: '50%',
+        bgcolor: '#ECFDF3', border: '2px solid #12B76A',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <Typography sx={{ fontSize: '0.8rem', fontWeight: 800, color: '#12B76A' }}>
+          {String(number).padStart(2, '0')}
+        </Typography>
+      </Box>
+      <Typography sx={{ fontWeight: 700, color: '#101828', fontSize: '1.15rem', letterSpacing: '-0.02em' }}>
+        {title}
+      </Typography>
+    </Box>
+    {description && (
+      <Typography sx={{ color: '#667085', fontSize: '0.875rem', ml: '52px' }}>
+        {description}
+      </Typography>
+    )}
+    <Box sx={{ height: 2, bgcolor: '#F2F4F7', borderRadius: 1, mt: 2.5, position: 'relative' }}>
+      <Box sx={{ position: 'absolute', left: 0, top: 0, height: '100%', width: '100%', bgcolor: '#ECFDF3', borderRadius: 1, opacity: 0.6 }} />
+    </Box>
+  </Box>
 );
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Type Card (Idea / Proposal) ──────────────────────────────────────────────
+
+const TypeCard = ({ type, selected, onClick }) => (
+  <Box
+    onClick={onClick}
+    sx={{
+      p: 2.5, borderRadius: 2.5, cursor: 'pointer',
+      border: `2px solid ${selected ? '#12B76A' : '#EAECF0'}`,
+      bgcolor: selected ? '#F6FEF9' : '#FAFBFC',
+      transition: 'all 0.2s ease',
+      position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 2,
+      '&:hover': { borderColor: '#12B76A', bgcolor: '#F6FEF9', transform: 'translateY(-2px)', boxShadow: '0 4px 16px rgba(18,183,106,0.12)' },
+    }}
+  >
+    {selected && (
+      <Box sx={{ position: 'absolute', top: 12, right: 12, width: 20, height: 20, borderRadius: '50%', bgcolor: '#12B76A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CheckIcon sx={{ fontSize: 14, color: '#fff' }} />
+      </Box>
+    )}
+    <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: selected ? '#D1FADF' : '#F2F4F7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      {type === 'Idea'
+        ? <IdeaIcon sx={{ color: selected ? '#12B76A' : '#667085', fontSize: 24 }} />
+        : <ProposalIcon sx={{ color: selected ? '#12B76A' : '#667085', fontSize: 24 }} />
+      }
+    </Box>
+    <Box>
+      <Typography sx={{ fontWeight: 700, color: '#101828', fontSize: '0.95rem', mb: 0.5 }}>{type}</Typography>
+      <Typography sx={{ color: '#667085', fontSize: '0.8rem', lineHeight: 1.5 }}>
+        {type === 'Idea'
+          ? 'A new concept or innovative thought with a brief abstract for initial review.'
+          : 'A structured project plan with executive summary, problem statement, and scope.'}
+      </Typography>
+    </Box>
+  </Box>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const PublicForm = () => {
   const { slug } = useParams();
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
-    // Section 1: Employee Information
-    employeeName: '',
-    employeeId: '',
-    designation: '',
-    department: '',
-    subDepartment: '',
-    areaOfWork: '',
-    location: '',
-    officialEmail: '',
-    contactNumber: '',
-    rmName: '',
-    rmEmail: '',
-    hodName: '',
-    hodEmail: '',
-    // Section 2: Submission Details
-    submissionType: '',
-    category: '',
-    subCategory: '',
-    innovationType: '',
-    // Section 3: Idea Details
-    projectTitle: '',
-    abstract: '',
-    // Section 4: Project Overview
-    proposalTitle: '',
-    executiveSummary: '',
-    problemStatement: '',
-    objectives: '',
-    scopeOfWork: '',
+    employeeName: '', employeeId: '', designation: '', department: '',
+    officialEmail: '', contactNumber: '',
+    rmName: '', rmEmail: '', hodName: '', hodEmail: '',
+    submissionType: '', category: '', subCategory: '', innovationType: '',
+    projectTitle: '', abstract: '',
+    proposalTitle: '', executiveSummary: '', problemStatement: '', objectives: '', scopeOfWork: '',
   });
   const [files, setFiles] = useState([]);
   const [errors, setErrors] = useState({});
@@ -245,9 +358,7 @@ const PublicForm = () => {
             const data = await res.json();
             if (data.data?.wbsCode) setWbsPreview(data.data.wbsCode);
           }
-        } catch (err) {
-          console.error('Failed to fetch WBS preview', err);
-        }
+        } catch (err) { console.error('Failed to fetch WBS preview', err); }
       };
       fetchWbs();
     } else {
@@ -255,7 +366,6 @@ const PublicForm = () => {
     }
   }, [formData.category, formData.subCategory, formData.innovationType]);
 
-  // Compute visible steps based on submission type
   const visibleSteps = useMemo(() => {
     return ALL_STEPS.filter(step => {
       if (step.key === 'idea') return formData.submissionType === 'Idea';
@@ -265,7 +375,7 @@ const PublicForm = () => {
   }, [formData.submissionType]);
 
   const currentStepKey = visibleSteps[activeStep]?.key || 'employee';
-
+  const progressPct = Math.round(((activeStep + 1) / visibleSteps.length) * 100);
   const abstractWordCount = formData.abstract.trim() ? formData.abstract.trim().split(/\s+/).length : 0;
 
   const handleChange = (field, value) => {
@@ -283,9 +393,6 @@ const PublicForm = () => {
       if (!formData.employeeId.trim()) newErrors.employeeId = 'Employee ID is required';
       if (!formData.designation.trim()) newErrors.designation = 'Designation is required';
       if (!formData.department.trim()) newErrors.department = 'Department is required';
-      if (!formData.subDepartment.trim()) newErrors.subDepartment = 'Sub-Department is required';
-      if (!formData.areaOfWork.trim()) newErrors.areaOfWork = 'Area of Work is required';
-      if (!formData.location.trim()) newErrors.location = 'Location is required';
       if (!formData.officialEmail.trim()) newErrors.officialEmail = 'Official Email is required';
       else if (!emailRegex.test(formData.officialEmail)) newErrors.officialEmail = 'Enter a valid email address';
       if (!formData.contactNumber.trim()) newErrors.contactNumber = 'Contact Number is required';
@@ -297,20 +404,17 @@ const PublicForm = () => {
       if (!formData.hodEmail.trim()) newErrors.hodEmail = 'HOD Email is required';
       else if (!emailRegex.test(formData.hodEmail)) newErrors.hodEmail = 'Enter a valid email address';
     }
-
     if (stepKey === 'submission') {
       if (!formData.submissionType) newErrors.submissionType = 'Submission Type is required';
       if (!formData.category) newErrors.category = 'Category is required';
       if (!formData.subCategory) newErrors.subCategory = 'Sub-Category is required';
       if (!formData.innovationType) newErrors.innovationType = 'Innovation Type is required';
     }
-
     if (stepKey === 'idea') {
       if (!formData.projectTitle.trim()) newErrors.projectTitle = 'Project Title is required';
       if (!formData.abstract.trim()) newErrors.abstract = 'Abstract is required';
       else if (abstractWordCount > 200) newErrors.abstract = 'Abstract cannot exceed 200 words';
     }
-
     if (stepKey === 'proposal') {
       if (!formData.proposalTitle.trim()) newErrors.proposalTitle = 'Project Title is required';
       if (!formData.executiveSummary.trim()) newErrors.executiveSummary = 'Executive Summary is required';
@@ -318,8 +422,6 @@ const PublicForm = () => {
       if (!formData.objectives.trim()) newErrors.objectives = 'Objectives are required';
       if (!formData.scopeOfWork.trim()) newErrors.scopeOfWork = 'Scope of Work is required';
     }
-
-    // Attachments step has no mandatory fields
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -343,11 +445,9 @@ const PublicForm = () => {
       setIsSubmitting(true);
       try {
         const payload = new FormData();
-        // Map formData to answers, using projectTitle or proposalTitle as unified "title"
         const answersPayload = {
           ...formData,
           title: formData.submissionType === 'Proposal' ? formData.proposalTitle : formData.projectTitle,
-          // Keep legacy keys for downstream compatibility
           name: formData.employeeName,
           managerName: formData.rmName,
           managerEmail: formData.rmEmail,
@@ -381,763 +481,558 @@ const PublicForm = () => {
     }
   };
 
-  // ─── Success Screen ──────────────────────────────────────────────────────
+  // ─── Success Screen ────────────────────────────────────────────────────────
 
   if (submitted) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F3F2F1', p: 3 }}>
-        <Card sx={{ maxWidth: 520, p: 5, textAlign: 'center', borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
-          <Box sx={{ width: 72, height: 72, borderRadius: '50%', bgcolor: '#DFF6DD', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
-            <CheckIcon sx={{ fontSize: 40, color: '#107C10' }} />
+      <PageWrapper sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
+        <Box sx={{
+          maxWidth: 520, width: '100%', bgcolor: '#fff',
+          borderRadius: 4, boxShadow: '0 8px 48px rgba(0,0,0,0.10)',
+          p: { xs: 4, md: 6 }, textAlign: 'center',
+          animation: `${fadeSlideIn} 0.5s ease`,
+        }}>
+          <Box sx={{
+            width: 80, height: 80, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #12B76A, #039855)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 3,
+            boxShadow: '0 8px 24px rgba(18,183,106,0.3)',
+          }}>
+            <CheckIcon sx={{ fontSize: 44, color: '#fff' }} />
           </Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, color: '#323130' }}>Submission Successful</Typography>
-
-          {trackingId && (
-            <Box sx={{ my: 3, p: 2.5, bgcolor: '#F3F9FD', borderRadius: 2, border: '1px dashed #0078D4' }}>
-              <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tracking ID</Typography>
-              <Typography variant="h5" sx={{ color: '#0078D4', fontWeight: 700, letterSpacing: 1, mt: 0.5 }}>{trackingId}</Typography>
-            </Box>
-          )}
-
-          {wbsCode && (
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#FFF4CE', borderRadius: 2, border: '1px dashed #C19C00' }}>
-              <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>WBS Code</Typography>
-              <Typography variant="h6" sx={{ color: '#6B5900', fontWeight: 700, letterSpacing: 1, mt: 0.5 }}>{wbsCode}</Typography>
-            </Box>
-          )}
-
-          <Typography variant="body1" sx={{ color: '#605E5C', mb: 4 }}>
-            Thank you for submitting your {formData.submissionType?.toLowerCase() || 'idea'}. A confirmation email has been sent to your official email.
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: '#101828', letterSpacing: '-0.02em' }}>
+            Submission Successful!
+          </Typography>
+          <Typography sx={{ color: '#667085', mb: 4, fontSize: '0.95rem' }}>
+            Your {formData.submissionType?.toLowerCase() || 'submission'} has been received. A confirmation email has been sent to your official email address.
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-            <MsButton variant="outlined" onClick={() => window.location.href = '/track'} size="large" sx={{ borderColor: '#0078D4', color: '#0078D4', '&:hover': { bgcolor: '#F3F9FD' } }}>Track Status</MsButton>
-            <MsButton variant="contained" onClick={() => window.location.reload()} size="large" sx={{ bgcolor: '#0078D4', '&:hover': { bgcolor: '#106EBE' } }}>Submit Another</MsButton>
+          {trackingId && (
+            <Box sx={{ mb: 2.5, p: 3, bgcolor: '#F0FDF4', borderRadius: 2.5, border: '1.5px solid #A9EFC5' }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#027A48', textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>Tracking ID</Typography>
+              <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#12B76A', letterSpacing: 2 }}>{trackingId}</Typography>
+            </Box>
+          )}
+          {wbsCode && (
+            <Box sx={{ mb: 3, p: 2.5, bgcolor: '#FFFCF0', borderRadius: 2.5, border: '1.5px solid #FEC84B' }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#B54708', textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>WBS Code</Typography>
+              <Typography sx={{ fontSize: '1.1rem', fontWeight: 800, color: '#B54708' }}>{wbsCode}</Typography>
+            </Box>
+          )}
+
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <SecondaryBtn variant="outlined" onClick={() => window.location.href = '/track'} size="large">Track Status</SecondaryBtn>
+            <SubmitBtn variant="contained" onClick={() => window.location.reload()} size="large" sx={{ bgcolor: '#12B76A', '&:hover': { bgcolor: '#039855' } }}>Submit Another</SubmitBtn>
           </Box>
-        </Card>
-      </Box>
+        </Box>
+      </PageWrapper>
     );
   }
 
-  // ─── Summary Item ──────────────────────────────────────────────────────────
-
-  const renderSummaryItem = (label, value) => (
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 0.8 }}>
-      <Box sx={{ width: 3, minHeight: 28, borderRadius: 2, bgcolor: value ? '#0078D4' : '#E1DFDD', flexShrink: 0, mt: 0.2 }} />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: '0.68rem', fontWeight: 600, color: '#8A8886', letterSpacing: 0.2, lineHeight: 1.3 }}>{label}</Typography>
-        <Typography sx={{
-          fontSize: '0.82rem', fontWeight: value ? 600 : 400, color: value ? '#323130' : '#C8C6C4',
-          lineHeight: 1.35, mt: 0.15,
-          overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box',
-          WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word',
-        }}>{value || '—'}</Typography>
-      </Box>
-    </Box>
-  );
-
-  const SummarySection = ({ icon, title, children, color = '#0078D4' }) => (
-    <Box sx={{ mb: 0.5 }}>
-      <Box sx={{
-        display: 'flex', alignItems: 'center', gap: 1, py: 1, px: 1.5, mx: -1.5,
-        bgcolor: `${color}08`, borderRadius: 1, mb: 0.5,
-      }}>
-        <Box sx={{ width: 22, height: 22, borderRadius: '6px', bgcolor: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {React.cloneElement(icon, { sx: { fontSize: 13, color } })}
-        </Box>
-        <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color, letterSpacing: 0.6, textTransform: 'uppercase' }}>{title}</Typography>
-      </Box>
-      <Box sx={{ pl: 0.5 }}>
-        {children}
-      </Box>
-    </Box>
-  );
-
-  // ─── Step Content Renderers ────────────────────────────────────────────────
+  // ─── Render Sections ────────────────────────────────────────────────────────
 
   const renderEmployeeInfo = () => (
-    <Fade in timeout={300}>
-      <Box>
-        {/* Personal Details */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box sx={{ bgcolor: '#E8F0FE', p: 1, borderRadius: 1.5, display: 'flex' }}>
-            <PersonIcon sx={{ color: '#0078D4', fontSize: 20 }} />
-          </Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#323130' }}>Personal Details</Typography>
-        </Box>
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Employee Name</FieldLabel>
-            <MsTextField fullWidth placeholder="Enter your full name" value={formData.employeeName} onChange={e => handleChange('employeeName', e.target.value)} error={!!errors.employeeName} helperText={errors.employeeName} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Employee ID</FieldLabel>
-            <MsTextField fullWidth placeholder="e.g. EMP-1029" value={formData.employeeId} onChange={e => handleChange('employeeId', e.target.value)} error={!!errors.employeeId} helperText={errors.employeeId} InputProps={{ startAdornment: <InputAdornment position="start"><BadgeIcon sx={{ color: '#605E5C', fontSize: 18 }} /></InputAdornment> }} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Designation</FieldLabel>
-            <MsTextField fullWidth placeholder="e.g. Senior Engineer" value={formData.designation} onChange={e => handleChange('designation', e.target.value)} error={!!errors.designation} helperText={errors.designation} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Department</FieldLabel>
-            <MsTextField fullWidth placeholder="e.g. Engineering" value={formData.department} onChange={e => handleChange('department', e.target.value)} error={!!errors.department} helperText={errors.department} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Sub-Department</FieldLabel>
-            <MsTextField fullWidth placeholder="e.g. R&D" value={formData.subDepartment} onChange={e => handleChange('subDepartment', e.target.value)} error={!!errors.subDepartment} helperText={errors.subDepartment} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Area of Work</FieldLabel>
-            <MsTextField fullWidth placeholder="e.g. Pavement Materials" value={formData.areaOfWork} onChange={e => handleChange('areaOfWork', e.target.value)} error={!!errors.areaOfWork} helperText={errors.areaOfWork} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Location</FieldLabel>
-            <MsTextField fullWidth placeholder="e.g. Hyderabad" value={formData.location} onChange={e => handleChange('location', e.target.value)} error={!!errors.location} helperText={errors.location} InputProps={{ startAdornment: <InputAdornment position="start"><LocationIcon sx={{ color: '#605E5C', fontSize: 18 }} /></InputAdornment> }} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Official Email ID</FieldLabel>
-            <MsTextField fullWidth placeholder="name@company.com" type="email" value={formData.officialEmail} onChange={e => handleChange('officialEmail', e.target.value)} error={!!errors.officialEmail} helperText={errors.officialEmail} InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ color: '#605E5C', fontSize: 18 }} /></InputAdornment> }} />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FieldLabel required>Contact Number</FieldLabel>
-            <MsTextField fullWidth placeholder="+91 9876543210" value={formData.contactNumber} onChange={e => handleChange('contactNumber', e.target.value)} error={!!errors.contactNumber} helperText={errors.contactNumber} InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon sx={{ color: '#605E5C', fontSize: 18 }} /></InputAdornment> }} />
-          </Grid>
-        </Grid>
+    <Box key="employee">
+      {/* Personal Details */}
+      <SectionBlock>
+        <SectionHeader number={1} title="Personal Details" description="Please provide your personal and professional information." />
 
-        <Divider sx={{ my: 4 }} />
+        <FieldGroup>
+          <FieldLabel required>Full Name</FieldLabel>
+          <FormField
+            fullWidth placeholder="e.g. Rajesh Kumar"
+            value={formData.employeeName}
+            onChange={e => handleChange('employeeName', e.target.value)}
+            error={!!errors.employeeName} helperText={errors.employeeName}
+          />
+        </FieldGroup>
 
-        {/* Reporting Manager & HOD */}
-        <Grid container spacing={4}>
+        <FieldGroup>
+          <FieldLabel required>Employee ID</FieldLabel>
+          <FormField
+            fullWidth placeholder="e.g. EMP-1029"
+            value={formData.employeeId}
+            onChange={e => handleChange('employeeId', e.target.value)}
+            error={!!errors.employeeId} helperText={errors.employeeId}
+            InputProps={{ startAdornment: <InputAdornment position="start"><BadgeIcon sx={{ color: '#98A2B3', fontSize: 18 }} /></InputAdornment> }}
+          />
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Designation</FieldLabel>
+          <FormField
+            fullWidth placeholder="e.g. Senior Engineer"
+            value={formData.designation}
+            onChange={e => handleChange('designation', e.target.value)}
+            error={!!errors.designation} helperText={errors.designation}
+          />
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Department</FieldLabel>
+          <FormField
+            fullWidth placeholder="e.g. Engineering & Infrastructure"
+            value={formData.department}
+            onChange={e => handleChange('department', e.target.value)}
+            error={!!errors.department} helperText={errors.department}
+          />
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Official Email ID</FieldLabel>
+          <FormField
+            fullWidth placeholder="name@company.com" type="email"
+            value={formData.officialEmail}
+            onChange={e => handleChange('officialEmail', e.target.value)}
+            error={!!errors.officialEmail} helperText={errors.officialEmail}
+            InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ color: '#98A2B3', fontSize: 18 }} /></InputAdornment> }}
+          />
+        </FieldGroup>
+
+        <FieldGroup sx={{ mb: 0 }}>
+          <FieldLabel required>Contact Number</FieldLabel>
+          <FormField
+            fullWidth placeholder="+91 98765 43210"
+            value={formData.contactNumber}
+            onChange={e => handleChange('contactNumber', e.target.value)}
+            error={!!errors.contactNumber} helperText={errors.contactNumber}
+            InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon sx={{ color: '#98A2B3', fontSize: 18 }} /></InputAdornment> }}
+          />
+        </FieldGroup>
+      </SectionBlock>
+
+      <SectionDivider />
+
+      {/* Reporting Manager & HOD */}
+      <SectionBlock>
+        <SectionHeader number={2} title="Reporting Hierarchy" description="Details of your Reporting Manager and Head of Department." />
+
+        <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <Box sx={{ p: 3, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px solid #EDEBE9' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2.5, color: '#323130' }}>Reporting Manager</Typography>
-              <FieldLabel required>Name</FieldLabel>
-              <MsTextField fullWidth placeholder="Manager's full name" value={formData.rmName} onChange={e => handleChange('rmName', e.target.value)} error={!!errors.rmName} helperText={errors.rmName} sx={{ mb: 2.5 }} />
-              <FieldLabel required>Email ID</FieldLabel>
-              <MsTextField fullWidth placeholder="manager@company.com" type="email" value={formData.rmEmail} onChange={e => handleChange('rmEmail', e.target.value)} error={!!errors.rmEmail} helperText={errors.rmEmail} />
+            <Box sx={{ p: 3, bgcolor: '#FAFBFC', borderRadius: 3, border: '1.5px solid #EAECF0', height: '100%' }}>
+              <Typography sx={{ fontWeight: 700, color: '#101828', fontSize: '0.9rem', mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#12B76A' }} />
+                Reporting Manager
+              </Typography>
+              <FieldGroup>
+                <FieldLabel required>Full Name</FieldLabel>
+                <FormField fullWidth placeholder="Manager's full name" value={formData.rmName} onChange={e => handleChange('rmName', e.target.value)} error={!!errors.rmName} helperText={errors.rmName} />
+              </FieldGroup>
+              <FieldGroup sx={{ mb: 0 }}>
+                <FieldLabel required>Email ID</FieldLabel>
+                <FormField fullWidth placeholder="manager@company.com" type="email" value={formData.rmEmail} onChange={e => handleChange('rmEmail', e.target.value)} error={!!errors.rmEmail} helperText={errors.rmEmail} />
+              </FieldGroup>
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Box sx={{ p: 3, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px solid #EDEBE9' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2.5, color: '#323130' }}>Head of Department (HOD)</Typography>
-              <FieldLabel required>Name</FieldLabel>
-              <MsTextField fullWidth placeholder="HOD's full name" value={formData.hodName} onChange={e => handleChange('hodName', e.target.value)} error={!!errors.hodName} helperText={errors.hodName} sx={{ mb: 2.5 }} />
-              <FieldLabel required>Email ID</FieldLabel>
-              <MsTextField fullWidth placeholder="hod@company.com" type="email" value={formData.hodEmail} onChange={e => handleChange('hodEmail', e.target.value)} error={!!errors.hodEmail} helperText={errors.hodEmail} />
+            <Box sx={{ p: 3, bgcolor: '#FAFBFC', borderRadius: 3, border: '1.5px solid #EAECF0', height: '100%' }}>
+              <Typography sx={{ fontWeight: 700, color: '#101828', fontSize: '0.9rem', mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6941C6' }} />
+                Head of Department (HOD)
+              </Typography>
+              <FieldGroup>
+                <FieldLabel required>Full Name</FieldLabel>
+                <FormField fullWidth placeholder="HOD's full name" value={formData.hodName} onChange={e => handleChange('hodName', e.target.value)} error={!!errors.hodName} helperText={errors.hodName} />
+              </FieldGroup>
+              <FieldGroup sx={{ mb: 0 }}>
+                <FieldLabel required>Email ID</FieldLabel>
+                <FormField fullWidth placeholder="hod@company.com" type="email" value={formData.hodEmail} onChange={e => handleChange('hodEmail', e.target.value)} error={!!errors.hodEmail} helperText={errors.hodEmail} />
+              </FieldGroup>
             </Box>
           </Grid>
         </Grid>
-      </Box>
-    </Fade>
+      </SectionBlock>
+    </Box>
   );
 
   const renderSubmissionDetails = () => (
-    <Fade in timeout={300}>
-      <Box>
-        {/* Submission Type Selection */}
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 3, color: '#323130', fontSize: '0.9rem' }}>
-          Submission Type <span style={{ color: '#d13438' }}>*</span>
-        </Typography>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {['Idea', 'Proposal'].map((type) => (
-            <Grid item xs={12} sm={6} key={type}>
-              <Paper
-                elevation={0}
-                onClick={() => handleChange('submissionType', type)}
-                sx={{
-                  p: 3,
-                  border: '2px solid',
-                  borderColor: formData.submissionType === type ? '#0078D4' : '#E1DFDD',
-                  borderRadius: 2,
-                  cursor: 'pointer',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'all 0.2s ease',
-                  bgcolor: formData.submissionType === type ? '#F3F9FD' : '#ffffff',
-                  boxShadow: formData.submissionType === type ? '0 0 0 1px #0078D4' : 'none',
-                  '&:hover': {
-                    borderColor: formData.submissionType === type ? '#0078D4' : '#8A8886',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
-                  }
-                }}
-              >
-                {formData.submissionType === type && (
-                  <CheckIcon sx={{ position: 'absolute', top: 12, right: 12, color: '#0078D4', fontSize: 22 }} />
-                )}
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                  {type === 'Idea'
-                    ? <IdeaIcon sx={{ fontSize: 32, color: formData.submissionType === type ? '#0078D4' : '#605E5C', mr: 1.5 }} />
-                    : <ProposalIcon sx={{ fontSize: 32, color: formData.submissionType === type ? '#0078D4' : '#605E5C', mr: 1.5 }} />
-                  }
-                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#323130' }}>{type}</Typography>
-                </Box>
-                <Typography variant="body2" sx={{ color: '#605E5C', lineHeight: 1.5 }}>
-                  {type === 'Idea'
-                    ? 'Submit a new concept or innovative thought with a brief abstract for initial review.'
-                    : 'Submit a structured project plan with executive summary, problem statement, and scope of work.'}
-                </Typography>
-              </Paper>
-            </Grid>
+    <Box key="submission">
+      <SectionBlock>
+        <SectionHeader number={1} title="Submission Type" description="Choose whether you are submitting an Idea or a formal Proposal." />
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 1 }}>
+          {['Idea', 'Proposal'].map(type => (
+            <TypeCard
+              key={type} type={type}
+              selected={formData.submissionType === type}
+              onClick={() => handleChange('submissionType', type)}
+            />
           ))}
-        </Grid>
-        {errors.submissionType && <Typography color="error" variant="caption" sx={{ display: 'block', mt: -2, mb: 2 }}>{errors.submissionType}</Typography>}
-
-        <Divider sx={{ my: 3 }} />
-
-        {/* Category, Sub-Category, Innovation Type */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box sx={{ bgcolor: '#E8F0FE', p: 1, borderRadius: 1.5, display: 'flex' }}>
-            <CategoryIcon sx={{ color: '#0078D4', fontSize: 20 }} />
-          </Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#323130' }}>Classification</Typography>
         </Box>
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} sm={4}>
-            <FieldLabel required>Category</FieldLabel>
-            <FormControl fullWidth error={!!errors.category}>
-              <MsSelect value={formData.category} onChange={e => handleChange('category', e.target.value)} displayEmpty>
-                <MenuItem value="" disabled>Select Category</MenuItem>
-                {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-              </MsSelect>
-              {errors.category && <Typography color="error" variant="caption" sx={{ mt: 0.5, ml: 1 }}>{errors.category}</Typography>}
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FieldLabel required>Sub-Category</FieldLabel>
-            <FormControl fullWidth error={!!errors.subCategory}>
-              <MsSelect value={formData.subCategory} onChange={e => handleChange('subCategory', e.target.value)} displayEmpty>
-                <MenuItem value="" disabled>Select Sub-Category</MenuItem>
-                {SUB_CATEGORIES.map(sc => <MenuItem key={sc} value={sc}>{sc}</MenuItem>)}
-              </MsSelect>
-              {errors.subCategory && <Typography color="error" variant="caption" sx={{ mt: 0.5, ml: 1 }}>{errors.subCategory}</Typography>}
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FieldLabel required>Innovation Type</FieldLabel>
-            <FormControl fullWidth error={!!errors.innovationType}>
-              <MsSelect value={formData.innovationType} onChange={e => handleChange('innovationType', e.target.value)} displayEmpty>
-                <MenuItem value="" disabled>Select Innovation Type</MenuItem>
-                {INNOVATION_TYPES.map(it => <MenuItem key={it} value={it}>{it}</MenuItem>)}
-              </MsSelect>
-              {errors.innovationType && <Typography color="error" variant="caption" sx={{ mt: 0.5, ml: 1 }}>{errors.innovationType}</Typography>}
-            </FormControl>
-          </Grid>
-        </Grid>
+        {errors.submissionType && (
+          <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 1 }}>{errors.submissionType}</Typography>
+        )}
+      </SectionBlock>
 
-        {/* WBS Code - Auto Generated / Read Only */}
-        <Box sx={{ mt: 3 }}>
-          <FieldLabel>WBS Code</FieldLabel>
-          <MsTextField
-            fullWidth
-            disabled
-            value={wbsPreview || "Auto-generated upon completion of classification"}
-            InputProps={{
-              sx: { bgcolor: '#F3F2F1', color: wbsPreview ? '#323130' : '#A19F9D', fontWeight: wbsPreview ? 700 : 400 }
-            }}
+      <SectionDivider />
+
+      <SectionBlock>
+        <SectionHeader number={2} title="Classification" description="Categorize your submission for proper routing and evaluation." />
+
+        <FieldGroup>
+          <FieldLabel required>Category</FieldLabel>
+          <FormControl fullWidth error={!!errors.category}>
+            <FormSelect value={formData.category} onChange={e => handleChange('category', e.target.value)} displayEmpty>
+              <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select a category</MenuItem>
+              {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+            </FormSelect>
+            {errors.category && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{errors.category}</Typography>}
+          </FormControl>
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Sub-Category</FieldLabel>
+          <FormControl fullWidth error={!!errors.subCategory}>
+            <FormSelect value={formData.subCategory} onChange={e => handleChange('subCategory', e.target.value)} displayEmpty>
+              <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select a sub-category</MenuItem>
+              {SUB_CATEGORIES.map(sc => <MenuItem key={sc} value={sc}>{sc}</MenuItem>)}
+            </FormSelect>
+            {errors.subCategory && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{errors.subCategory}</Typography>}
+          </FormControl>
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Innovation Type</FieldLabel>
+          <FormControl fullWidth error={!!errors.innovationType}>
+            <FormSelect value={formData.innovationType} onChange={e => handleChange('innovationType', e.target.value)} displayEmpty>
+              <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select innovation type</MenuItem>
+              {INNOVATION_TYPES.map(it => <MenuItem key={it} value={it}>{it}</MenuItem>)}
+            </FormSelect>
+            {errors.innovationType && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{errors.innovationType}</Typography>}
+          </FormControl>
+        </FieldGroup>
+
+        {/* WBS Preview */}
+        <FieldGroup sx={{ mb: 0 }}>
+          <FieldLabel>WBS Code (Auto-generated)</FieldLabel>
+          <FormField
+            fullWidth disabled
+            value={wbsPreview || 'Will be generated when category fields are selected'}
+            InputProps={{ sx: { bgcolor: '#F9FAFB', color: wbsPreview ? '#101828' : '#98A2B3', fontWeight: wbsPreview ? 700 : 400 } }}
           />
-          <Typography variant="caption" sx={{ color: '#605E5C', mt: 0.5, display: 'block' }}>
-            A unique WBS code will be system-generated when you submit the form.
+          <Typography sx={{ color: '#667085', fontSize: '0.78rem', mt: 0.75 }}>
+            A unique WBS code will be assigned when you submit the form.
           </Typography>
-        </Box>
-      </Box>
-    </Fade>
+        </FieldGroup>
+      </SectionBlock>
+    </Box>
   );
 
   const renderIdeaDetails = () => (
-    <Fade in timeout={300}>
-      <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box sx={{ bgcolor: '#FFF4CE', p: 1, borderRadius: 1.5, display: 'flex' }}>
-            <IdeaIcon sx={{ color: '#C19C00', fontSize: 22 }} />
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#323130' }}>Idea Details</Typography>
-            <Typography variant="caption" sx={{ color: '#605E5C' }}>Describe your innovative idea clearly and concisely</Typography>
-          </Box>
-        </Box>
+    <Box key="idea">
+      <SectionBlock>
+        <SectionHeader number={1} title="Idea Details" description="Describe your innovative idea clearly and concisely." />
 
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <FieldLabel required>Project Title</FieldLabel>
-            <MsTextField
-              fullWidth
-              placeholder="Enter a clear and descriptive title for your idea"
-              value={formData.projectTitle}
-              onChange={e => handleChange('projectTitle', e.target.value)}
-              error={!!errors.projectTitle}
-              helperText={errors.projectTitle}
+        <FieldGroup>
+          <FieldLabel required>Idea / Project Title</FieldLabel>
+          <FormField
+            fullWidth placeholder="Enter a clear and descriptive title for your idea"
+            value={formData.projectTitle}
+            onChange={e => handleChange('projectTitle', e.target.value)}
+            error={!!errors.projectTitle} helperText={errors.projectTitle}
+          />
+        </FieldGroup>
+
+        <FieldGroup sx={{ mb: 0 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0.75 }}>
+            <FieldLabel required>Abstract</FieldLabel>
+            <Chip
+              label={`${abstractWordCount} / 200 words`}
+              size="small"
+              sx={{
+                fontWeight: 700, fontSize: '0.72rem', height: 24,
+                bgcolor: abstractWordCount > 200 ? '#FEF3F2' : abstractWordCount > 150 ? '#FFFAEB' : '#ECFDF3',
+                color: abstractWordCount > 200 ? '#F04438' : abstractWordCount > 150 ? '#B54708' : '#027A48',
+                border: `1px solid ${abstractWordCount > 200 ? '#FECDCA' : abstractWordCount > 150 ? '#FEC84B' : '#A9EFC5'}`,
+              }}
             />
-          </Grid>
-          <Grid item xs={12}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0.75 }}>
-              <Box>
-                <FieldLabel required>Abstract</FieldLabel>
-                <Typography variant="caption" sx={{ color: '#605E5C', display: 'block', mt: -0.5 }}>
-                  Clearly describe the Introduction, Proposed Idea, and Expected Benefits.
-                </Typography>
-              </Box>
-              <Chip
-                label={`${abstractWordCount} / 200 words`}
-                size="small"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '0.7rem',
-                  bgcolor: abstractWordCount > 200 ? '#FDE7E9' : abstractWordCount > 150 ? '#FFF4CE' : '#DFF6DD',
-                  color: abstractWordCount > 200 ? '#d13438' : abstractWordCount > 150 ? '#6B5900' : '#107C10',
-                }}
-              />
-            </Box>
-            <MsTextField
-              fullWidth
-              multiline
-              rows={8}
-              placeholder={`Introduction:\nDescribe the background and context of your idea...\n\nProposed Idea:\nExplain what you are proposing...\n\nExpected Benefits:\nList the anticipated outcomes and benefits...`}
-              value={formData.abstract}
-              onChange={e => handleChange('abstract', e.target.value)}
-              error={!!errors.abstract}
-              helperText={errors.abstract}
-            />
-          </Grid>
-        </Grid>
-      </Box>
-    </Fade>
+          </Box>
+          <Typography sx={{ color: '#667085', fontSize: '0.8rem', mb: 1 }}>
+            Include: Introduction · Proposed Idea · Expected Benefits
+          </Typography>
+          <FormField
+            fullWidth multiline rows={8}
+            placeholder={`Introduction:\nDescribe the background and context of your idea...\n\nProposed Idea:\nExplain what you are proposing...\n\nExpected Benefits:\nList the anticipated outcomes and benefits...`}
+            value={formData.abstract}
+            onChange={e => handleChange('abstract', e.target.value)}
+            error={!!errors.abstract} helperText={errors.abstract}
+          />
+        </FieldGroup>
+      </SectionBlock>
+    </Box>
   );
 
   const renderProjectOverview = () => (
-    <Fade in timeout={300}>
-      <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box sx={{ bgcolor: '#E8F0FE', p: 1, borderRadius: 1.5, display: 'flex' }}>
-            <ProposalIcon sx={{ color: '#0078D4', fontSize: 22 }} />
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#323130' }}>Project Overview</Typography>
-            <Typography variant="caption" sx={{ color: '#605E5C' }}>Provide a comprehensive overview of your proposed project</Typography>
-          </Box>
-        </Box>
+    <Box key="proposal">
+      <SectionBlock>
+        <SectionHeader number={1} title="Project Overview" description="Provide a comprehensive overview of your proposed project." />
 
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <FieldLabel required>Project Title</FieldLabel>
-            <MsTextField
-              fullWidth
-              placeholder="Enter the project title"
-              value={formData.proposalTitle}
-              onChange={e => handleChange('proposalTitle', e.target.value)}
-              error={!!errors.proposalTitle}
-              helperText={errors.proposalTitle}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <FieldLabel required>Executive Summary</FieldLabel>
-            <MsTextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Provide a brief executive summary of the project..."
-              value={formData.executiveSummary}
-              onChange={e => handleChange('executiveSummary', e.target.value)}
-              error={!!errors.executiveSummary}
-              helperText={errors.executiveSummary}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <FieldLabel required>Problem Statement</FieldLabel>
-            <MsTextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Clearly define the problem this project aims to solve..."
-              value={formData.problemStatement}
-              onChange={e => handleChange('problemStatement', e.target.value)}
-              error={!!errors.problemStatement}
-              helperText={errors.problemStatement}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <FieldLabel required>Objectives</FieldLabel>
-            <MsTextField
-              fullWidth
-              multiline
-              rows={3}
-              placeholder="List the key objectives of this project..."
-              value={formData.objectives}
-              onChange={e => handleChange('objectives', e.target.value)}
-              error={!!errors.objectives}
-              helperText={errors.objectives}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <FieldLabel required>Scope of Work</FieldLabel>
-            <MsTextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Define the scope, deliverables, and boundaries of this project..."
-              value={formData.scopeOfWork}
-              onChange={e => handleChange('scopeOfWork', e.target.value)}
-              error={!!errors.scopeOfWork}
-              helperText={errors.scopeOfWork}
-            />
-          </Grid>
-        </Grid>
-      </Box>
-    </Fade>
+        <FieldGroup>
+          <FieldLabel required>Project Title</FieldLabel>
+          <FormField fullWidth placeholder="Enter the project title" value={formData.proposalTitle} onChange={e => handleChange('proposalTitle', e.target.value)} error={!!errors.proposalTitle} helperText={errors.proposalTitle} />
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Executive Summary</FieldLabel>
+          <FormField fullWidth multiline rows={4} placeholder="Provide a brief executive summary of the project..." value={formData.executiveSummary} onChange={e => handleChange('executiveSummary', e.target.value)} error={!!errors.executiveSummary} helperText={errors.executiveSummary} />
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Problem Statement</FieldLabel>
+          <FormField fullWidth multiline rows={4} placeholder="Clearly define the problem this project aims to solve..." value={formData.problemStatement} onChange={e => handleChange('problemStatement', e.target.value)} error={!!errors.problemStatement} helperText={errors.problemStatement} />
+        </FieldGroup>
+
+        <FieldGroup>
+          <FieldLabel required>Objectives</FieldLabel>
+          <FormField fullWidth multiline rows={3} placeholder="List the key objectives of this project..." value={formData.objectives} onChange={e => handleChange('objectives', e.target.value)} error={!!errors.objectives} helperText={errors.objectives} />
+        </FieldGroup>
+
+        <FieldGroup sx={{ mb: 0 }}>
+          <FieldLabel required>Scope of Work</FieldLabel>
+          <FormField fullWidth multiline rows={4} placeholder="Define the scope, deliverables, and boundaries of this project..." value={formData.scopeOfWork} onChange={e => handleChange('scopeOfWork', e.target.value)} error={!!errors.scopeOfWork} helperText={errors.scopeOfWork} />
+        </FieldGroup>
+      </SectionBlock>
+    </Box>
   );
 
   const renderAttachments = () => (
-    <Fade in timeout={300}>
-      <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Box sx={{ bgcolor: '#E8F0FE', p: 1, borderRadius: 1.5, display: 'flex' }}>
-            <AttachIcon sx={{ color: '#0078D4', fontSize: 20 }} />
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#323130' }}>Supporting Documents</Typography>
-            <Typography variant="caption" sx={{ color: '#605E5C' }}>Upload any documents that support your submission (optional)</Typography>
-          </Box>
-        </Box>
+    <Box key="attachments">
+      <SectionBlock>
+        <SectionHeader number={1} title="Supporting Documents" description="Upload any files that support your submission. This step is optional." />
         <FileZone files={files} setFiles={setFiles} />
-      </Box>
-    </Fade>
+      </SectionBlock>
+    </Box>
   );
 
   const renderStepContent = () => {
     switch (currentStepKey) {
-      case 'employee': return renderEmployeeInfo();
-      case 'submission': return renderSubmissionDetails();
-      case 'idea': return renderIdeaDetails();
-      case 'proposal': return renderProjectOverview();
+      case 'employee':    return renderEmployeeInfo();
+      case 'submission':  return renderSubmissionDetails();
+      case 'idea':        return renderIdeaDetails();
+      case 'proposal':    return renderProjectOverview();
       case 'attachments': return renderAttachments();
-      default: return null;
+      default:            return null;
     }
   };
 
-  // ─── Preview ─────────────────────────────────────────────────────────────
+  const isLastStep = activeStep === visibleSteps.length - 1;
 
-  const renderPreviewSection = (title, icon, children) => (
-    <Box sx={{ mb: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        {icon}
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#323130' }}>{title}</Typography>
-      </Box>
-      {children}
-      <Divider sx={{ mt: 2 }} />
+  // ─── Preview Dialog ──────────────────────────────────────────────────────────
+
+  const PreviewRow = ({ label, value }) => (
+    <Box sx={{ display: 'flex', py: 1.5, borderBottom: '1px solid #F2F4F7' }}>
+      <Typography sx={{ width: 180, flexShrink: 0, fontSize: '0.82rem', color: '#667085', fontWeight: 600 }}>{label}</Typography>
+      <Typography sx={{ fontSize: '0.85rem', color: '#101828', fontWeight: 500, flex: 1 }}>{value || '—'}</Typography>
     </Box>
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F3F2F1', pb: 10 }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: '#0078D4', color: '#fff', height: 52, display: 'flex', alignItems: 'center', px: 3, boxShadow: '0 2px 8px rgba(0,120,212,0.25)' }}>
-        <IdeaIcon sx={{ mr: 1.5, fontSize: 24 }} />
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: 0.3 }}>Innovation Portal — Idea / Proposal Submission</Typography>
+    <PageWrapper>
+      {/* ── Top Header Bar ─────────────────────────────────────────── */}
+      <Box sx={{
+        bgcolor: '#fff',
+        borderBottom: '1px solid #EAECF0',
+        px: { xs: 3, md: 6 }, py: 2.5,
+        display: 'flex', alignItems: 'center', gap: 2.5,
+      }}>
+        <Box sx={{
+          width: 40, height: 40, borderRadius: 2,
+          background: 'linear-gradient(135deg, #12B76A 0%, #039855 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <ProposalIcon sx={{ color: '#fff', fontSize: 22 }} />
+        </Box>
+        <Box>
+          <Typography sx={{ fontWeight: 800, color: '#101828', fontSize: '1rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            MINDS Innovation Portal
+          </Typography>
+          <Typography sx={{ color: '#667085', fontSize: '0.78rem' }}>
+            Enterprise Innovation Management Platform
+          </Typography>
+        </Box>
       </Box>
 
-      {/* Main Container */}
-      <Container maxWidth="lg" sx={{ pt: 4, px: { xs: 2, md: 4 } }}>
-        <Grid container spacing={4} sx={{ flexWrap: { md: 'nowrap', xs: 'wrap' } }}>
-          {/* Left Column: Form Content */}
-          <Grid item xs={12} md={8} sx={{ minWidth: 0 }}>
-            <Card sx={{ borderRadius: 2, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', mb: 4, overflow: 'visible' }}>
+      {/* ── Page Content ─────────────────────────────────────────────── */}
+      <Box sx={{ maxWidth: 860, mx: 'auto', px: { xs: 2, md: 3 }, pt: 5 }}>
 
-              {/* Form Header with Stepper */}
-              <Box sx={{ p: { xs: 3, md: 4 }, borderBottom: '1px solid #EDEBE9', bgcolor: '#ffffff' }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#323130', mb: 0.5 }}>
-                  {visibleSteps[activeStep]?.label}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#605E5C', mb: 3 }}>
-                  {visibleSteps[activeStep]?.description}
-                </Typography>
+        {/* Page Title */}
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
+          <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '1.9rem' }, color: '#101828', letterSpacing: '-0.03em', mb: 1 }}>
+            Idea &amp; Proposal Submission Form
+          </Typography>
+          <Typography sx={{ color: '#667085', fontSize: '0.95rem', maxWidth: 560, mx: 'auto', lineHeight: 1.6 }}>
+            Submit your innovative ideas or formal project proposals for review by the R&amp;D and Innovation team.
+          </Typography>
+        </Box>
 
-                <Stepper
-                  activeStep={activeStep}
-                  alternativeLabel
-                  sx={{
-                    '& .MuiStepLabel-label': { fontSize: '0.72rem', mt: 0.5, color: '#605E5C', fontWeight: 500 },
-                    '& .Mui-active': { color: '#323130 !important', fontWeight: '700 !important' },
-                    '& .Mui-completed': { color: '#323130 !important' },
-                    '& .MuiStepIcon-root': {
-                      color: '#E1DFDD',
-                      '&.Mui-active': { color: '#0078D4' },
-                      '&.Mui-completed': { color: '#0078D4' }
-                    }
-                  }}
+        {/* ── Progress Bar ─────────────────────────────────────────────── */}
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#344054' }}>
+              Section {activeStep + 1} of {visibleSteps.length} — {visibleSteps[activeStep]?.label}
+            </Typography>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#12B76A' }}>
+              {progressPct}% Completed
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate" value={progressPct}
+            sx={{
+              height: 8, borderRadius: 4, bgcolor: '#EAECF0',
+              '& .MuiLinearProgress-bar': { borderRadius: 4, bgcolor: '#12B76A' },
+            }}
+          />
+          {/* Step Dots */}
+          <Box sx={{ display: 'flex', gap: 1, mt: 1.5, justifyContent: 'center' }}>
+            {visibleSteps.map((step, idx) => (
+              <Box
+                key={step.key}
+                sx={{
+                  height: 6, borderRadius: 3, transition: 'all 0.3s ease',
+                  width: idx === activeStep ? 24 : 6,
+                  bgcolor: idx < activeStep ? '#12B76A' : idx === activeStep ? '#039855' : '#EAECF0',
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+
+        {/* ── Form Card ─────────────────────────────────────────────────── */}
+        <FormCard>
+          {/* Section Content */}
+          {renderStepContent()}
+
+          {/* ── Action Footer ────────────────────────────────────────────── */}
+          <Box sx={{
+            px: { xs: 3, md: 6 }, py: 3,
+            borderTop: '1px solid #EAECF0',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            bgcolor: '#FAFBFC',
+            flexWrap: 'wrap', gap: 2,
+          }}>
+            <SecondaryBtn
+              variant="outlined"
+              startIcon={<SaveIcon />}
+              onClick={() => setSnack({ open: true, msg: 'Draft saved successfully.', type: 'success' })}
+            >
+              Save Draft
+            </SecondaryBtn>
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              {activeStep > 0 && (
+                <SecondaryBtn variant="outlined" startIcon={<ArrowBackIcon />} onClick={handleBack}>
+                  Back
+                </SecondaryBtn>
+              )}
+              {!isLastStep ? (
+                <SubmitBtn
+                  variant="contained"
+                  endIcon={<ArrowForwardIcon />}
+                  onClick={handleNext}
+                  sx={{ bgcolor: '#12B76A', '&:hover': { bgcolor: '#039855' } }}
                 >
-                  {visibleSteps.map((step) => (
-                    <Step key={step.key}>
-                      <StepLabel>{step.label}</StepLabel>
-                    </Step>
-                  ))}
-                </Stepper>
-              </Box>
-
-              <CardContent sx={{ p: { xs: 3, md: 4 }, minHeight: 400, bgcolor: '#ffffff' }}>
-                {renderStepContent()}
-              </CardContent>
-
-              {/* Footer Actions */}
-              <Box sx={{ p: 3, bgcolor: '#F8F8F8', borderTop: '1px solid #EDEBE9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Button
-                  startIcon={<SaveIcon />}
-                  sx={{ color: '#605E5C', fontWeight: 600, textTransform: 'none' }}
-                  onClick={() => setSnack({ open: true, msg: 'Draft saved successfully.', type: 'success' })}
-                >
-                  Save Draft
-                </Button>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  {activeStep > 0 && (
-                    <MsButton
-                      variant="outlined"
-                      onClick={handleBack}
-                      sx={{ color: '#323130', borderColor: '#8A8886', '&:hover': { bgcolor: '#F3F2F1', borderColor: '#323130' } }}
-                    >
-                      Back
-                    </MsButton>
-                  )}
-                  {activeStep < visibleSteps.length - 1 ? (
-                    <MsButton
-                      variant="contained"
-                      onClick={handleNext}
-                      sx={{ bgcolor: '#0078D4', '&:hover': { bgcolor: '#106EBE' } }}
-                    >
-                      Next
-                    </MsButton>
-                  ) : (
-                    <>
-                      <MsButton
-                        variant="outlined"
-                        startIcon={<ViewIcon />}
-                        onClick={() => setPreviewOpen(true)}
-                        sx={{ borderColor: '#0078D4', color: '#0078D4', '&:hover': { bgcolor: '#F3F9FD', borderColor: '#0078D4' } }}
-                      >
-                        Preview
-                      </MsButton>
-                      <MsButton
-                        variant="contained"
-                        startIcon={<SendIcon />}
-                        onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        sx={{ bgcolor: '#0078D4', '&:hover': { bgcolor: '#106EBE' } }}
-                      >
-                        {isSubmitting ? 'Submitting...' : 'Submit'}
-                      </MsButton>
-                    </>
-                  )}
-                </Box>
-              </Box>
-            </Card>
-          </Grid>
-
-          {/* Right Column: Review Summary */}
-          <Grid item xs={12} md={4} sx={{ display: { xs: 'none', md: 'block' }, minWidth: 300, maxWidth: 340 }}>
-            <Box sx={{ position: 'sticky', top: 20 }}>
-              <Card sx={{
-                borderRadius: 3,
-                border: '1px solid #E1DFDD',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                overflow: 'hidden',
-              }}>
-                {/* Header */}
-                <Box sx={{
-                  p: 2.5,
-                  background: 'linear-gradient(135deg, #0078D4 0%, #106EBE 100%)',
-                  color: '#fff',
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ViewIcon sx={{ fontSize: 18, opacity: 0.9 }} />
-                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, letterSpacing: 0.3 }}>Review Summary</Typography>
-                    </Box>
-                    <Chip
-                      label={`Step ${activeStep + 1}/${visibleSteps.length}`}
-                      size="small"
-                      sx={{
-                        bgcolor: 'rgba(255,255,255,0.2)',
-                        color: '#fff',
-                        fontWeight: 700,
-                        fontSize: '0.65rem',
-                        height: 22,
-                        backdropFilter: 'blur(4px)',
-                      }}
-                    />
-                  </Box>
-                  {/* Progress bar */}
-                  <Box sx={{ mt: 1.5, bgcolor: 'rgba(255,255,255,0.15)', borderRadius: 4, height: 4, overflow: 'hidden' }}>
-                    <Box sx={{
-                      height: '100%',
-                      bgcolor: '#fff',
-                      borderRadius: 4,
-                      width: `${((activeStep + 1) / visibleSteps.length) * 100}%`,
-                      transition: 'width 0.4s ease',
-                    }} />
-                  </Box>
-                </Box>
-
-                {/* Content */}
-                <CardContent sx={{
-                  p: 2.5,
-                  maxHeight: 'calc(100vh - 200px)',
-                  overflowY: 'auto',
-                  '&::-webkit-scrollbar': { width: 4 },
-                  '&::-webkit-scrollbar-thumb': { bgcolor: '#C8C6C4', borderRadius: 2 },
-                }}>
-                  {/* Employee Section */}
-                  <SummarySection icon={<PersonIcon />} title="Employee" color="#0078D4">
-                    {renderSummaryItem('Name', formData.employeeName)}
-                    {renderSummaryItem('Employee ID', formData.employeeId)}
-                    {renderSummaryItem('Department', formData.department)}
-                    {renderSummaryItem('Designation', formData.designation)}
-                    {renderSummaryItem('Location', formData.location)}
-                    {renderSummaryItem('Email', formData.officialEmail)}
-                  </SummarySection>
-
-                  {/* Submission Section */}
-                  <SummarySection icon={<CategoryIcon />} title="Submission" color="#8764B8">
-                    {renderSummaryItem('Type', formData.submissionType)}
-                    {renderSummaryItem('Category', formData.category)}
-                    {renderSummaryItem('Sub-Category', formData.subCategory)}
-                    {renderSummaryItem('Innovation Type', formData.innovationType)}
-                  </SummarySection>
-
-                  {/* Details Section — conditional */}
-                  <SummarySection
-                    icon={formData.submissionType === 'Proposal' ? <ProposalIcon /> : <IdeaIcon />}
-                    title={formData.submissionType === 'Proposal' ? 'Project Overview' : 'Idea Details'}
-                    color={formData.submissionType === 'Proposal' ? '#0078D4' : '#C19C00'}
+                  Continue
+                </SubmitBtn>
+              ) : (
+                <>
+                  <SecondaryBtn variant="outlined" startIcon={<ViewIcon />} onClick={() => setPreviewOpen(true)}>
+                    Preview
+                  </SecondaryBtn>
+                  <SubmitBtn
+                    variant="contained"
+                    endIcon={<SendIcon />}
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    sx={{ bgcolor: '#12B76A', '&:hover': { bgcolor: '#039855' } }}
                   >
-                    {formData.submissionType === 'Proposal' ? (
-                      <>
-                        {renderSummaryItem('Project Title', formData.proposalTitle)}
-                        {renderSummaryItem('Executive Summary', formData.executiveSummary ? (formData.executiveSummary.length > 100 ? formData.executiveSummary.slice(0, 100) + '…' : formData.executiveSummary) : '')}
-                        {renderSummaryItem('Problem Statement', formData.problemStatement ? (formData.problemStatement.length > 100 ? formData.problemStatement.slice(0, 100) + '…' : formData.problemStatement) : '')}
-                      </>
-                    ) : (
-                      <>
-                        {renderSummaryItem('Project Title', formData.projectTitle)}
-                        {renderSummaryItem('Abstract', formData.abstract ? (formData.abstract.length > 100 ? formData.abstract.slice(0, 100) + '…' : formData.abstract) : '')}
-                      </>
-                    )}
-                  </SummarySection>
-
-                  {/* Management Section */}
-                  <SummarySection icon={<BusinessIcon />} title="Management" color="#107C10">
-                    {renderSummaryItem('Reporting Manager', formData.rmName)}
-                    {renderSummaryItem('RM Email', formData.rmEmail)}
-                    {renderSummaryItem('HOD', formData.hodName)}
-                    {renderSummaryItem('HOD Email', formData.hodEmail)}
-                  </SummarySection>
-
-                  {/* Attachments Section */}
-                  <SummarySection icon={<AttachIcon />} title="Attachments" color="#605E5C">
-                    {files.length > 0 ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5 }}>
-                        {files.map((f, i) => (
-                          <Box key={i} sx={{
-                            display: 'flex', alignItems: 'center', gap: 1,
-                            py: 0.5, px: 1, bgcolor: '#F8F8F8', borderRadius: 1,
-                            border: '1px solid #EDEBE9',
-                          }}>
-                            {getFileIcon(f.name)}
-                            <Typography sx={{
-                              fontSize: '0.72rem', fontWeight: 500, color: '#323130',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-                            }}>{f.name}</Typography>
-                            <Typography sx={{ fontSize: '0.6rem', color: '#8A8886', flexShrink: 0 }}>{formatSize(f.size)}</Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    ) : (
-                      <Typography sx={{ fontSize: '0.78rem', color: '#C8C6C4', py: 1, pl: 0.5, fontStyle: 'italic' }}>No files uploaded</Typography>
-                    )}
-                  </SummarySection>
-                </CardContent>
-              </Card>
+                    {isSubmitting ? 'Submitting…' : 'Submit Proposal'}
+                  </SubmitBtn>
+                </>
+              )}
             </Box>
-          </Grid>
-        </Grid>
-      </Container>
+          </Box>
+        </FormCard>
 
-      {/* Preview Dialog */}
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2, bgcolor: '#ffffff' } }}>
-        <DialogTitle sx={{ borderBottom: '1px solid #EDEBE9', bgcolor: '#F8FAFC', py: 2.5 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#323130' }}>Submission Preview</Typography>
-          <Typography variant="caption" sx={{ color: '#605E5C' }}>Review all details before submitting</Typography>
+        <Typography sx={{ textAlign: 'center', color: '#98A2B3', fontSize: '0.78rem', mt: 4 }}>
+          © MINDS Innovation Management Platform · All submissions are confidential
+        </Typography>
+      </Box>
+
+      {/* ── Preview Dialog ──────────────────────────────────────────────── */}
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3, bgcolor: '#fff' } }}>
+        <DialogTitle sx={{ borderBottom: '1px solid #EAECF0', p: 3 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#101828' }}>Submission Preview</Typography>
+          <Typography sx={{ color: '#667085', fontSize: '0.82rem', mt: 0.25 }}>Review all details before submitting</Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 4 }}>
-          {/* Employee Info */}
-          {renderPreviewSection('Employee Information', <PersonIcon sx={{ color: '#0078D4' }} />, (
-            <Grid container spacing={2}>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Name</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.employeeName || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Employee ID</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.employeeId || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Designation</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.designation || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Department</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.department || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Sub-Department</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.subDepartment || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Area of Work</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.areaOfWork || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Location</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.location || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Email</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.officialEmail || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>Contact</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.contactNumber || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>RM Name</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.rmName || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>RM Email</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.rmEmail || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>HOD Name</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.hodName || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={4}><Typography variant="caption" sx={{ color: '#605E5C' }}>HOD Email</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.hodEmail || '—'}</Typography></Grid>
-            </Grid>
-          ))}
+          <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>Employee Information</Typography>
+          <PreviewRow label="Name" value={formData.employeeName} />
+          <PreviewRow label="Employee ID" value={formData.employeeId} />
+          <PreviewRow label="Designation" value={formData.designation} />
+          <PreviewRow label="Department" value={formData.department} />
+          <PreviewRow label="Email" value={formData.officialEmail} />
+          <PreviewRow label="Contact" value={formData.contactNumber} />
+          <PreviewRow label="RM Name" value={formData.rmName} />
+          <PreviewRow label="RM Email" value={formData.rmEmail} />
+          <PreviewRow label="HOD Name" value={formData.hodName} />
+          <PreviewRow label="HOD Email" value={formData.hodEmail} />
 
-          {/* Submission Details */}
-          {renderPreviewSection('Submission Details', <CategoryIcon sx={{ color: '#0078D4' }} />, (
-            <Grid container spacing={2}>
-              <Grid item xs={6} sm={3}><Typography variant="caption" sx={{ color: '#605E5C' }}>Type</Typography><Chip label={formData.submissionType || '—'} size="small" color={formData.submissionType === 'Idea' ? 'warning' : 'primary'} sx={{ fontWeight: 600 }} /></Grid>
-              <Grid item xs={6} sm={3}><Typography variant="caption" sx={{ color: '#605E5C' }}>Category</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.category || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={3}><Typography variant="caption" sx={{ color: '#605E5C' }}>Sub-Category</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.subCategory || '—'}</Typography></Grid>
-              <Grid item xs={6} sm={3}><Typography variant="caption" sx={{ color: '#605E5C' }}>Innovation Type</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{formData.innovationType || '—'}</Typography></Grid>
-            </Grid>
-          ))}
+          <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Submission Details</Typography>
+          <PreviewRow label="Type" value={formData.submissionType} />
+          <PreviewRow label="Category" value={formData.category} />
+          <PreviewRow label="Sub-Category" value={formData.subCategory} />
+          <PreviewRow label="Innovation Type" value={formData.innovationType} />
 
-          {/* Idea or Proposal Details */}
-          {formData.submissionType === 'Idea' && renderPreviewSection('Idea Details', <IdeaIcon sx={{ color: '#C19C00' }} />, (
-            <Box>
-              <Typography variant="caption" sx={{ color: '#605E5C' }}>Project Title</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600, mb: 2 }}>{formData.projectTitle || '—'}</Typography>
-              <Typography variant="caption" sx={{ color: '#605E5C' }}>Abstract</Typography>
-              <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap', color: '#323130', lineHeight: 1.6 }}>{formData.abstract || '—'}</Typography>
-            </Box>
-          ))}
+          {formData.submissionType === 'Idea' && (
+            <>
+              <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Idea Details</Typography>
+              <PreviewRow label="Project Title" value={formData.projectTitle} />
+              <PreviewRow label="Abstract" value={formData.abstract?.slice(0, 200) + (formData.abstract?.length > 200 ? '…' : '')} />
+            </>
+          )}
+          {formData.submissionType === 'Proposal' && (
+            <>
+              <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Project Overview</Typography>
+              <PreviewRow label="Project Title" value={formData.proposalTitle} />
+              <PreviewRow label="Executive Summary" value={formData.executiveSummary?.slice(0, 150) + (formData.executiveSummary?.length > 150 ? '…' : '')} />
+              <PreviewRow label="Problem Statement" value={formData.problemStatement?.slice(0, 150) + (formData.problemStatement?.length > 150 ? '…' : '')} />
+            </>
+          )}
 
-          {formData.submissionType === 'Proposal' && renderPreviewSection('Project Overview', <ProposalIcon sx={{ color: '#0078D4' }} />, (
-            <Box>
-              <Typography variant="caption" sx={{ color: '#605E5C' }}>Project Title</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600, mb: 2 }}>{formData.proposalTitle || '—'}</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12}><Typography variant="caption" sx={{ color: '#605E5C' }}>Executive Summary</Typography><Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{formData.executiveSummary || '—'}</Typography></Grid>
-                <Grid item xs={12}><Typography variant="caption" sx={{ color: '#605E5C' }}>Problem Statement</Typography><Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{formData.problemStatement || '—'}</Typography></Grid>
-                <Grid item xs={12}><Typography variant="caption" sx={{ color: '#605E5C' }}>Objectives</Typography><Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{formData.objectives || '—'}</Typography></Grid>
-                <Grid item xs={12}><Typography variant="caption" sx={{ color: '#605E5C' }}>Scope of Work</Typography><Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{formData.scopeOfWork || '—'}</Typography></Grid>
-              </Grid>
-            </Box>
-          ))}
-
-          {/* Attachments */}
-          {files.length > 0 && renderPreviewSection('Attachments', <AttachIcon sx={{ color: '#0078D4' }} />, (
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {files.map((f, i) => (
-                <Chip key={i} icon={getFileIcon(f.name)} label={f.name} variant="outlined" sx={{ borderColor: '#EDEBE9' }} />
-              ))}
-            </Box>
-          ))}
+          <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Attachments</Typography>
+          <PreviewRow label="Files" value={files.length > 0 ? files.map(f => f.name).join(', ') : 'None'} />
         </DialogContent>
-        <DialogActions sx={{ p: 3, borderTop: '1px solid #EDEBE9', bgcolor: '#F8FAFC' }}>
-          <MsButton onClick={() => setPreviewOpen(false)} sx={{ color: '#323130', fontWeight: 600 }}>Edit Details</MsButton>
-          <MsButton variant="contained" startIcon={<SendIcon />} onClick={handleSubmit} disabled={isSubmitting} sx={{ bgcolor: '#0078D4', fontWeight: 600, '&:hover': { bgcolor: '#106EBE' } }}>{isSubmitting ? 'Submitting...' : 'Confirm & Submit'}</MsButton>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid #EAECF0', gap: 2 }}>
+          <SecondaryBtn variant="outlined" onClick={() => setPreviewOpen(false)}>Edit</SecondaryBtn>
+          <SubmitBtn
+            variant="contained"
+            endIcon={<SendIcon />}
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            sx={{ bgcolor: '#12B76A', '&:hover': { bgcolor: '#039855' } }}
+          >
+            {isSubmitting ? 'Submitting…' : 'Confirm & Submit'}
+          </SubmitBtn>
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity={snack.type} variant="filled" sx={{ borderRadius: 1, fontWeight: 600 }}>{snack.msg}</Alert>
+      {/* ── Snackbar ───────────────────────────────────────────────────── */}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4000}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnack(s => ({ ...s, open: false }))}
+          severity={snack.type}
+          sx={{ borderRadius: 2, fontWeight: 600 }}
+        >
+          {snack.msg}
+        </Alert>
       </Snackbar>
-    </Box>
+    </PageWrapper>
   );
 };
 

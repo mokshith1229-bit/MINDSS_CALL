@@ -17,6 +17,7 @@ import {
 import DashboardCards from '../components/DashboardCards';
 import DataTable, { StatusChip, UserCell, TypeBadge } from '../components/DataTable';
 import api from '../utils/api';
+import { useVisibility } from '../context/VisibilityContext';
 
 const recentColumns = [
   {
@@ -68,6 +69,7 @@ const SectionHeader = ({ title, subtitle, action }) => (
 );
 
 const Dashboard = () => {
+  const { isVisible } = useVisibility();
   const [submissions, setSubmissions] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [lastRefresh, setLastRefresh] = React.useState(new Date());
@@ -210,14 +212,14 @@ const Dashboard = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', minWidth: 0 }}>
       {/* ── Executive Summary Bar ── */}
       <Card
         sx={{
-          mb: 3,
-          borderRadius: 2,
+          mb: 4,
+          borderRadius: 3,
           border: '1px solid #E5E7EB',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
         }}
         elevation={0}
       >
@@ -264,135 +266,88 @@ const Dashboard = () => {
       </Card>
 
       {/* ── KPI Cards ── */}
-      <DashboardCards dynamicStats={dynamicStats} />
+      {isVisible('section.dashboard.kpi_cards') && <DashboardCards dynamicStats={dynamicStats} />}
 
-      <Grid container spacing={3} sx={{ mt: 0.5 }}>
+      <Grid container spacing={3} disableEqualOverflow sx={{ mt: 1, width: '100%', mx: 0 }}>
         {/* ── Activity Chart ── */}
-        <Grid item xs={12} lg={8}>
-          <Card elevation={0} sx={{ borderRadius: 2 }}>
-            <CardContent sx={{ p: 3 }}>
-              <SectionHeader
-                title="Innovation Activity Overview"
-                subtitle="Monthly submissions, evaluations & approvals"
-                action={
-                  <Tooltip title="More options">
-                    <IconButton size="small" sx={{ color: '#9CA3AF' }}>
-                      <MoreIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                }
-              />
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={dynamicMonthlyData} barGap={3} barSize={12}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: '#9CA3AF', fontFamily: 'Inter' }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: '#9CA3AF', fontFamily: 'Inter' }}
-                  />
-                  <ReTooltip contentStyle={customTooltipStyle} cursor={{ fill: '#F9FAFB' }} />
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, paddingTop: 16, fontFamily: 'Inter' }}
-                  />
-                  <Bar dataKey="submissions" name="Submissions" fill="#4CAF50" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="evaluations" name="Evaluations" fill="#60A5FA" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="approvals" name="Approvals" fill="#FBBF24" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* ── Pipeline Progress ── */}
-        <Grid item xs={12} lg={4}>
-          <Card elevation={0} sx={{ borderRadius: 2, height: '100%' }}>
-            <CardContent sx={{ p: 3 }}>
-              <SectionHeader
-                title="Pipeline Health"
-                subtitle="Current quarter performance"
-              />
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 0.5 }}>
-                {progressItems.map((item) => (
-                  <Box key={item.label}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151' }}>
-                        {item.label}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.84rem', fontWeight: 700, color: item.color }}>
-                        {item.value}%
-                      </Typography>
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={item.value}
-                      sx={{
-                        bgcolor: `${item.color}18`,
-                        '& .MuiLinearProgress-bar': { bgcolor: item.color },
-                      }}
+        {isVisible('section.dashboard.charts') && (
+          <Grid item xs={12} lg={12}>
+            <Card elevation={0} sx={{ 
+              borderRadius: 3, 
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <SectionHeader
+                  title="Innovation Activity Overview"
+                  subtitle="Monthly submissions, evaluations & approvals"
+                  action={
+                    <Tooltip title="More options">
+                      <IconButton size="small" sx={{ color: '#9CA3AF' }}>
+                        <MoreIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  }
+                />
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={dynamicMonthlyData} barGap={3} barSize={12}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#9CA3AF', fontFamily: 'Inter' }}
                     />
-                  </Box>
-                ))}
-              </Box>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#2E7D32', lineHeight: 1 }}>
-                    {onTrackRate}%
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', mt: 0.4 }}>On Track</Typography>
-                </Box>
-                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#D97706', lineHeight: 1 }}>
-                    {atRiskRate}%
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', mt: 0.4 }}>At Risk</Typography>
-                </Box>
-                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#1D4ED8', lineHeight: 1 }}>
-                    Q{Math.ceil((now.getMonth() + 1) / 3)}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', mt: 0.4 }}>Quarter</Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#9CA3AF', fontFamily: 'Inter' }}
+                    />
+                    <ReTooltip contentStyle={customTooltipStyle} cursor={{ fill: '#F9FAFB' }} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 12, paddingTop: 16, fontFamily: 'Inter' }}
+                    />
+                    <Bar dataKey="submissions" name="Submissions" fill="#4CAF50" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="evaluations" name="Evaluations" fill="#60A5FA" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="approvals" name="Approvals" fill="#FBBF24" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
         {/* ── Recent Activities Table ── */}
-        <Grid item xs={12}>
-          <Card elevation={0} sx={{ borderRadius: 2 }}>
-            <CardContent sx={{ p: 3 }}>
-              <SectionHeader
-                title="Recent Activities"
-                subtitle="Latest innovation submissions and workflow updates"
-                action={
-                  <Chip
-                    label="Live"
-                    size="small"
-                    sx={{
-                      bgcolor: '#F0FDF4',
-                      color: '#2E7D32',
-                      fontWeight: 700,
-                      fontSize: '0.72rem',
-                      border: '1px solid #BBF7D0',
-                    }}
-                  />
-                }
-              />
-              <DataTable columns={recentColumns} rows={recent} />
-            </CardContent>
-          </Card>
-        </Grid>
+        {isVisible('section.dashboard.recent_activity') && (
+          <Grid item xs={12}>
+            <Card elevation={0} sx={{ 
+              borderRadius: 3,
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <SectionHeader
+                  title="Recent Activities"
+                  subtitle="Latest innovation submissions and workflow updates"
+                  action={
+                    <Chip
+                      label="Live"
+                      size="small"
+                      sx={{
+                        bgcolor: '#F0FDF4',
+                        color: '#2E7D32',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        border: '1px solid #BBF7D0',
+                      }}
+                    />
+                  }
+                />
+                <DataTable columns={recentColumns} rows={recent} />
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
     </Box>
   );

@@ -13,7 +13,7 @@ router.use(protect);
 router.get('/me', userController.getMe);
 
 // Restrict following routes to SUPER_ADMIN and ADMIN
-router.use(authorize('SUPER_ADMIN', 'ADMIN'));
+router.use(authorize('SUPER_ADMIN'));
 
 router.route('/')
   .get(userController.getUsers)

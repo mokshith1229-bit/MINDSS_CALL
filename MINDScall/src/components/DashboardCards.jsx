@@ -23,23 +23,24 @@ const iconMap = {
 
 const DashboardCards = ({ dynamicStats = [] }) => {
   return (
-    <Grid container spacing={2.5}>
+    <Grid container spacing={2.5} disableEqualOverflow sx={{ width: '100%', mx: 0, mb: 3 }}>
       {dynamicStats.map((stat) => {
         const IconComponent = iconMap[stat.icon] || LightbulbIcon;
         const isUp = stat.trend === 'up';
         return (
-          <Grid xs={12} sm={6} lg={3} key={stat.id}>
+          <Grid item xs={12} sm={6} lg={3} key={stat.id}>
             <Card
               elevation={0}
               sx={{
-                borderRadius: 2,
+                borderRadius: 3,
                 border: '1px solid #E5E7EB',
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
                 position: 'relative',
                 overflow: 'hidden',
                 cursor: 'default',
                 transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
                 '&:hover': {
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
                   borderColor: '#D1D5DB',
                 },
                 // Colored top accent bar

@@ -3,13 +3,16 @@ import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from './theme/theme';
 import AppRoutes from './routes/AppRoutes';
+import { VisibilityProvider } from './context/VisibilityContext';
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        <AppRoutes />
+        <VisibilityProvider>
+          <AppRoutes />
+        </VisibilityProvider>
       </BrowserRouter>
     </ThemeProvider>
   );

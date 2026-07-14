@@ -27,8 +27,10 @@ const MainLayout = () => {
         <Box
           sx={{
             flex: 1,
-            p: { xs: 2, md: 3 },
-            maxWidth: '100%',
+            p: { xs: 2, md: 4 },
+            width: '100%',
+            boxSizing: 'border-box',
+            minWidth: 0,
           }}
           className="page-fade-in"
         >

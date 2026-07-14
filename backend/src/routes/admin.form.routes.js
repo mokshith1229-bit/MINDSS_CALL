@@ -7,7 +7,7 @@ const router = express.Router();
 
 // All routes are protected and restricted to Admins
 router.use(protect);
-router.use(authorize('SUPER_ADMIN', 'ADMIN'));
+router.use(authorize('SUPER_ADMIN'));
 
 router.route('/')
   .post(auditLog('CREATE_FORM', 'Form'), createForm)

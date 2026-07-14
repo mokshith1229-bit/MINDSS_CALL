@@ -22,19 +22,26 @@ import RDOngoingProjects from '../pages/RDOngoingProjects';
 import PublicEvaluatorReview from '../pages/PublicEvaluatorReview';
 import { authStore } from '../store/authStore';
 import UserManagement from '../pages/UserManagement';
+import FeatureManagement from '../pages/FeatureManagement';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(authStore.getState().isAuthenticated);
+  const [user, setUser] = useState(authStore.getState().user);
   const location = useLocation();
 
   useEffect(() => {
     return authStore.subscribe((state) => {
       setIsAuthenticated(state.isAuthenticated);
+      setUser(state.user);
     });
   }, []);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && (!user || (!allowedRoles.includes(user.role) && user.role !== 'DEVELOPER'))) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -59,7 +66,7 @@ const AppRoutes = () => {
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="form-upload" element={<FormUpload />} />
+        <Route path="form-upload" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><FormUpload /></ProtectedRoute>} />
         <Route path="rd-review" element={<RDReview />} />
         <Route path="auto-assign-email" element={<AutoAssignEmail />} />
         <Route path="evaluation" element={<Evaluation />} />
@@ -69,7 +76,8 @@ const AppRoutes = () => {
         <Route path="finance-approval" element={<FinanceApproval />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="user-management" element={<UserManagement />} />
+        <Route path="user-management" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><UserManagement /></ProtectedRoute>} />
+        <Route path="feature-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><FeatureManagement /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
