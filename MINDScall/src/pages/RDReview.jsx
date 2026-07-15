@@ -3,7 +3,8 @@ import {
   Box, Grid, Card, CardContent, Typography, TextField, InputAdornment,
   Button, Drawer, IconButton, Chip, Tabs, Tab, Divider, CircularProgress,
   List, ListItem, ListItemButton, ListItemText, Tooltip, Avatar, Fade,
-  FormControl, InputLabel, Select, MenuItem
+  FormControl, InputLabel, Select, MenuItem,
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -15,7 +16,9 @@ import {
   PictureAsPdf as PdfIcon,
   CalendarToday as DateIcon,
   Person as PersonIcon,
-  Science as ScienceIcon
+  Science as ScienceIcon,
+  Delete as DeleteIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import api from '../utils/api';
 import DataTable, { StatusChip } from '../components/DataTable';
@@ -34,6 +37,10 @@ const RDReview = () => {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSub, setSelectedSub] = useState(null);
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [subToDelete, setSubToDelete] = useState(null);
+  const [snack, setSnack] = useState({ open: false, msg: '', type: 'info' });
 
   const submissionBrowserRef = useRef(null);
   const drawerContentRef = useRef(null);
@@ -114,6 +121,30 @@ const RDReview = () => {
     setTimeout(() => submissionBrowserRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   };
 
+  const handleDeleteClick = (sub) => {
+    setSubToDelete(sub);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!subToDelete) return;
+    try {
+      const res = await api.delete(`/admin/submissions/${subToDelete._id}`);
+      if (res.status === 200) {
+        setSnack({ open: true, msg: 'Submission deleted successfully from database', type: 'success' });
+        setDrawerOpen(false);
+        setDeleteConfirmOpen(false);
+        setSubToDelete(null);
+        fetchData();
+      } else {
+        setSnack({ open: true, msg: 'Failed to delete submission', type: 'error' });
+      }
+    } catch (err) {
+      console.error('Failed to delete submission', err);
+      setSnack({ open: true, msg: 'Failed to delete submission from database', type: 'error' });
+    }
+  };
+
   const filteredSubs = submissions.filter(s => {
     // Filter by Form
     if (selectedFormId !== 'ALL' && s.formId !== selectedFormId) return false;
@@ -150,8 +181,11 @@ const RDReview = () => {
     )},
     { field: 'submissionDate', headerName: 'Date' },
     { field: 'status', headerName: 'Status', renderCell: (row) => <StatusChip status={row.status === 'NEW' ? 'Pending' : row.status} /> },
-    { field: 'actions', headerName: 'View', renderCell: (row) => (
-        <Button size="small" variant="outlined" onClick={() => handleOpenDetails(row)} sx={{ fontSize: '0.7rem' }}>Inspect</Button>
+    { field: 'actions', headerName: 'Actions', width: 170, renderCell: (row) => (
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button size="small" variant="outlined" onClick={() => handleOpenDetails(row)} sx={{ fontSize: '0.7rem' }}>Inspect</Button>
+          <Button size="small" variant="outlined" color="error" onClick={() => handleDeleteClick(row)} sx={{ fontSize: '0.7rem', borderColor: '#EF4444', color: '#EF4444', '&:hover': { bgcolor: '#FEF2F2', borderColor: '#DC2626' } }}>Delete</Button>
+        </Box>
       )
     },
   ];
@@ -296,11 +330,14 @@ const RDReview = () => {
       </Grid>
 
       {/* Details Drawer */}
-      <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 600 }, bgcolor: '#F8FAFC' } }}>
+      <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 850 }, bgcolor: '#F8FAFC' } }}>
         {selectedSub && (
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{ p: 3, bgcolor: '#FFFFFF', borderBottom: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
+            <Box sx={{ p: 3, bgcolor: '#FFFFFF', borderBottom: '1px solid #E0E0E0', display: 'flex', alignItems: 'center', gap: 2 }}>
+              <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: '#546E7A' }}>
+                <ArrowBackIcon />
+              </IconButton>
+              <Box sx={{ flexGrow: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>R&D Inspection</Typography>
                   <Chip size="small" label="READ ONLY" color="error" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }} />
@@ -419,9 +456,45 @@ const RDReview = () => {
                 </Grid>
               </Grid>
             </Box>
+
+            {/* Drawer Footer with Actions */}
+            <Box sx={{ p: 2.5, bgcolor: '#FFFFFF', borderTop: '1px solid #E0E0E0', display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Button variant="outlined" color="inherit" onClick={() => setDrawerOpen(false)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>Close</Button>
+              <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => handleDeleteClick(selectedSub)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}>Delete Submission</Button>
+            </Box>
           </Box>
         )}
       </Drawer>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Delete Submission?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: '#546E7A', lineHeight: 1.6 }}>
+            Are you sure you want to delete this submission? This action is permanent and will delete the proposal/idea, its attachments, and all associated workflow traces from the database.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1.5 }}>
+          <Button variant="outlined" onClick={() => setDeleteConfirmOpen(false)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}>Delete Permanently</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Toast Notification */}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4000}
+        onClose={() => setSnack(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snack.type} variant="filled" sx={{ borderRadius: 1, fontWeight: 600 }}>
+          {snack.msg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

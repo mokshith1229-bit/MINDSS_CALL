@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   AppBar, Toolbar, Typography, IconButton, Badge, Avatar, Box,
   Menu, MenuItem, Divider, Tooltip, Chip, Popover, List,
-  ListItem, ListItemText, ListItemAvatar, Breadcrumbs,
+  ListItem, ListItemText, ListItemAvatar, Breadcrumbs, Link,
 } from '@mui/material';
 import {
   NotificationsOutlined as NotifIcon,
@@ -31,6 +31,14 @@ const routeMeta = {
   '/settings':           { title: 'Settings',                section: 'Administration' },
   '/meeting':            { title: 'Meetings',                section: 'Workflow' },
   '/user-management':    { title: 'User Management',         section: 'Administration' },
+};
+
+const sectionDefaults = {
+  'Innovation': '/form-upload',
+  'Workflow': '/auto-assign-email',
+  'Projects': '/rd-ongoing-projects',
+  'Analytics': '/reports',
+  'Administration': '/user-management'
 };
 
 const Header = ({ sidebarOpen }) => {
@@ -123,7 +131,10 @@ const Header = ({ sidebarOpen }) => {
             sx={{ mb: 0.25 }}
             aria-label="breadcrumb"
           >
-            <Typography
+            <Link
+              component="button"
+              onClick={() => navigate('/dashboard')}
+              underline="hover"
               sx={{
                 fontSize: '0.72rem',
                 color: '#9CA3AF',
@@ -131,15 +142,38 @@ const Header = ({ sidebarOpen }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.3,
+                textDecoration: 'none',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                '&:hover': { color: '#2E7D32' }
               }}
             >
               <HomeIcon sx={{ fontSize: 11 }} />
               MINDS
-            </Typography>
+            </Link>
             {section && (
-              <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', fontWeight: 500 }}>
+              <Link
+                component="button"
+                onClick={() => navigate(sectionDefaults[section] || '/dashboard')}
+                underline="hover"
+                sx={{
+                  fontSize: '0.72rem',
+                  color: '#9CA3AF',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  '&:hover': { color: '#2E7D32' }
+                }}
+              >
                 {section}
-              </Typography>
+              </Link>
             )}
             <Typography
               sx={{ fontSize: '0.72rem', color: '#2E7D32', fontWeight: 600 }}
@@ -147,18 +181,6 @@ const Header = ({ sidebarOpen }) => {
               {pageTitle}
             </Typography>
           </Breadcrumbs>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              color: '#111827',
-              fontSize: '1rem',
-              lineHeight: 1,
-              letterSpacing: '-0.1px',
-            }}
-          >
-            {pageTitle}
-          </Typography>
         </Box>
 
         {/* ── Right: Company badge, department, notifications, avatar ── */}
