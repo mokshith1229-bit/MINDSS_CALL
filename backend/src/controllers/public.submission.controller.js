@@ -33,7 +33,7 @@ const sendHodEmail = (submission) => {
   
   sendEmail({
     email: hodEmail,
-    subject: \`MINDScall: Action Required - Proposal Needs HOD Approval\`,
+    subject: `MINDScall: Action Required - Proposal Needs HOD Approval`,
     html: hodEmailHtml
   }).catch(err => console.error('Failed to send HOD auto-assign email:', err));
 };
