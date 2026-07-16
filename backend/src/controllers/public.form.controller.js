@@ -120,28 +120,30 @@ exports.submitForm = async (req, res, next) => {
     };
 
     // Generate WBS Code
-    const category = getAnswerValue(parsedAnswers, ['category', 'Category', 'subSubDepartment', 'Sub Sub Department']);
-    const subCategory = getAnswerValue(parsedAnswers, ['subCategory', 'Sub Category', 'SubCategory', 'subDepartment', 'Sub Department']);
-    const innovationType = getAnswerValue(parsedAnswers, ['innovationType', 'Innovation Type', 'InnovationType']);
+    let wbsCode = 'N/A';
+    if (submissionType === 'Proposal') {
+      const category = getAnswerValue(parsedAnswers, ['category', 'Category', 'subSubDepartment', 'Sub Sub Department']);
+      const subCategory = getAnswerValue(parsedAnswers, ['subCategory', 'Sub Category', 'SubCategory', 'subDepartment', 'Sub Department']);
+      const innovationType = getAnswerValue(parsedAnswers, ['innovationType', 'Innovation Type', 'InnovationType']);
 
-    let typeInitial = 'X';
-    if (innovationType) {
-      const tLow = innovationType.toLowerCase();
-      if (tLow.includes('process')) typeInitial = 'C';
-      else if (tLow.includes('product')) typeInitial = 'D';
-      else typeInitial = getInitial(innovationType);
+      let typeInitial = 'X';
+      if (innovationType) {
+        const tLow = innovationType.toLowerCase();
+        if (tLow.includes('process')) typeInitial = 'C';
+        else if (tLow.includes('product')) typeInitial = 'D';
+        else typeInitial = getInitial(innovationType);
+      }
+
+      let wbsPrefix = `${getInitial(category)}${getInitial(subCategory)}${typeInitial}`;
+      if (wbsPrefix === 'XXX') wbsPrefix = 'MCP';
+
+      const wbsCounter = await Counter.findByIdAndUpdate(
+        { _id: `WBS-${wbsPrefix}` },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      wbsCode = `${wbsPrefix}-${String(wbsCounter.seq).padStart(3, '0')}`;
     }
-
-    let wbsPrefix = `${getInitial(category)}${getInitial(subCategory)}${typeInitial}`;
-    // Fallback if none provided
-    if (wbsPrefix === 'XXX') wbsPrefix = submissionType === 'Proposal' ? 'MCP' : 'MCI';
-
-    const wbsCounter = await Counter.findByIdAndUpdate(
-      { _id: `WBS-${wbsPrefix}` },
-      { $inc: { seq: 1 } },
-      { new: true, upsert: true }
-    );
-    const wbsCode = `${wbsPrefix}-${String(wbsCounter.seq).padStart(3, '0')}`;
 
     // Build formData with labels from schema for downstream modules
     const formData = {};
