@@ -68,7 +68,7 @@ const PublicTracking = () => {
         setResult(res.data.data.tracking);
         // Fetch parallel meeting request info
         try {
-          const meetingRes = await axios.get(`${API_BASE}/public/meeting-requests/public/${queryId.trim().toUpperCase()}`);
+          const meetingRes = await axios.get(`${API_BASE}/meeting-requests/public/${queryId.trim().toUpperCase()}`);
           if (meetingRes.data && meetingRes.data.success) {
             setMeetingRequestStatus(meetingRes.data.data.meetingRequest);
           }
@@ -105,7 +105,7 @@ const PublicTracking = () => {
     }
 
     try {
-      await axios.post(`${API_BASE}/public/meeting-requests/public`, formData, {
+      await axios.post(`${API_BASE}/meeting-requests/public`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setSnackbar({ open: true, message: 'Meeting Request Submitted Successfully', severity: 'success' });
@@ -227,7 +227,14 @@ const PublicTracking = () => {
                 <Button 
                   variant="outlined" 
                   disabled={!result}
-                  onClick={() => setMeetingModalOpen(true)}
+                  onClick={() => {
+                    setMeetingForm(prev => ({
+                      ...prev,
+                      requestedBy: result.submitterName || '',
+                      email: result.submitterEmail || ''
+                    }));
+                    setMeetingModalOpen(true);
+                  }}
                   sx={{ 
                     borderColor: '#2E7D32', 
                     color: '#2E7D32',
@@ -459,7 +466,8 @@ const PublicTracking = () => {
                 required 
                 fullWidth 
                 value={meetingForm.requestedBy}
-                onChange={(e) => setMeetingForm({ ...meetingForm, requestedBy: e.target.value })}
+                InputProps={{ readOnly: true, sx: { bgcolor: '#F8FAFC' } }} 
+                variant="filled"
               />
               <TextField 
                 label="Email" 
@@ -467,7 +475,8 @@ const PublicTracking = () => {
                 required 
                 fullWidth 
                 value={meetingForm.email}
-                onChange={(e) => setMeetingForm({ ...meetingForm, email: e.target.value })}
+                InputProps={{ readOnly: true, sx: { bgcolor: '#F8FAFC' } }} 
+                variant="filled"
               />
             </Box>
 

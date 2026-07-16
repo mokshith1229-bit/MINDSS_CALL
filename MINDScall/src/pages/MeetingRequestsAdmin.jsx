@@ -29,7 +29,7 @@ const MeetingRequestsAdmin = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/admin/meeting-requests');
+      const res = await api.get('/meeting-requests/admin');
       if (res.data.success) {
         setRequests(res.data.data.meetingRequests);
       }
@@ -69,7 +69,7 @@ const MeetingRequestsAdmin = () => {
     }
 
     try {
-      await api.patch(`/admin/meeting-requests/${request._id}/status`, payload);
+      await api.patch(`/meeting-requests/admin/${request._id}/status`, payload);
       setSnackbar({ open: true, message: `Meeting request ${type}d successfully!`, severity: 'success' });
       setActionDialog({ open: false, type: '', request: null });
       fetchRequests();

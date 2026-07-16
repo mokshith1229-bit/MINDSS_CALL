@@ -239,6 +239,8 @@ exports.trackSubmission = async (req, res, next) => {
     const safeData = {
       trackingId: submission.trackingId,
       title: submission.answers?.title || submission.answers?.projectTitle || submission.answers?.proposalTitle || submission.answers?.proposaltitle || submission.answers?.IdeaTitle || 'Untitled',
+      submitterName: submission.answers?.name || submission.answers?.employeeName || submission.answers?.submitterName || 'Unknown',
+      submitterEmail: submission.submitterEmail || submission.answers?.email || submission.answers?.officialEmail || '',
       submissionType: submission.submissionType,
       status: submission.status,
       createdAt: submission.createdAt,

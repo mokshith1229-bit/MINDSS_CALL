@@ -562,7 +562,29 @@ exports.autoAssignRM = async (req, res, next) => {
 
       await sub.save();
       
-      // HOD email will be sent sequentially AFTER RM approves.
+      // Dispatch HOD email immediately (as requested by user)
+      if (hodEmail) {
+        const hodReviewLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/review/${hodToken}`;
+        const hodEmailHtml = `
+          <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+            <h3 style="color: #1976D2;">MINDScall Proposal Review</h3>
+            <p>Dear ${hodName},</p>
+            <p>A new proposal <b>${sub.answers?.title || sub.answers?.proposaltitle || 'Untitled'}</b> has been submitted and requires your review.</p>
+            <div style="margin: 25px 0;">
+              <a href="${hodReviewLink}" style="padding: 12px 24px; background-color: #F57C00; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Review Proposal</a>
+            </div>
+            <p>Please note that this proposal was auto-assigned.</p>
+            <hr style="border: 0; border-top: 1px solid #eee;" />
+            <p style="color: #888;"><small>Best regards,<br>CubeTech Innovation Team</small></p>
+          </div>
+        `;
+        
+        sendEmail({
+          email: hodEmail,
+          subject: `MINDScall: Action Required - Proposal Needs HOD Approval`,
+          html: hodEmailHtml
+        }).catch(err => console.error('Failed to send HOD auto-assign email:', err));
+      }
       
       links.push(`<li style="margin-bottom: 5px;">
         <b>${sub.businessId || 'Proposal'}</b> - ${sub.answers?.title || sub.answers?.proposaltitle || 'Untitled'}
