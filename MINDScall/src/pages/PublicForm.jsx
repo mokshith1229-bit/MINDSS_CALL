@@ -390,6 +390,11 @@ const PublicForm = () => {
     return field ? field.helpText : null;
   };
 
+  const getPlaceholder = (label, defaultPlaceholder) => {
+    const field = schemaConfigs[label.toLowerCase().trim()];
+    return (field && field.placeholder) ? field.placeholder : defaultPlaceholder;
+  };
+
   React.useEffect(() => {
     if (formData.category && formData.subCategory && formData.innovationType) {
       const fetchWbs = async () => {
@@ -581,7 +586,7 @@ const PublicForm = () => {
         <FieldGroup>
           <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
           <FormField
-            fullWidth placeholder="e.g. Rajesh Kumar"
+            fullWidth placeholder={getPlaceholder('Full Name', "e.g. Rajesh Kumar")}
             value={formData.employeeName}
             onChange={e => handleChange('employeeName', e.target.value)}
             error={!!errors.employeeName} helperText={errors.employeeName}
@@ -591,7 +596,7 @@ const PublicForm = () => {
         <FieldGroup>
           <FieldLabel required description={getHelpText('Employee ID')}>Employee ID</FieldLabel>
           <FormField
-            fullWidth placeholder="e.g. EMP-1029"
+            fullWidth placeholder={getPlaceholder('Employee ID', "e.g. EMP-1029")}
             value={formData.employeeId}
             onChange={e => handleChange('employeeId', e.target.value)}
             error={!!errors.employeeId} helperText={errors.employeeId}
@@ -602,7 +607,7 @@ const PublicForm = () => {
         <FieldGroup>
           <FieldLabel required description={getHelpText('Designation')}>Designation</FieldLabel>
           <FormField
-            fullWidth placeholder="e.g. Senior Engineer"
+            fullWidth placeholder={getPlaceholder('Designation', "e.g. Senior Engineer")}
             value={formData.designation}
             onChange={e => handleChange('designation', e.target.value)}
             error={!!errors.designation} helperText={errors.designation}
@@ -612,7 +617,7 @@ const PublicForm = () => {
         <FieldGroup>
           <FieldLabel required description={getHelpText('Department')}>Department</FieldLabel>
           <FormField
-            fullWidth placeholder="e.g. Engineering & Infrastructure"
+            fullWidth placeholder={getPlaceholder('Department', "e.g. Engineering & Infrastructure")}
             value={formData.department}
             onChange={e => handleChange('department', e.target.value)}
             error={!!errors.department} helperText={errors.department}
@@ -622,7 +627,7 @@ const PublicForm = () => {
         <FieldGroup>
           <FieldLabel required description={getHelpText('Official Email ID')}>Official Email ID</FieldLabel>
           <FormField
-            fullWidth placeholder="name@company.com" type="email"
+            fullWidth placeholder={getPlaceholder('Official Email ID', "name@company.com")} type="email"
             value={formData.officialEmail}
             onChange={e => handleChange('officialEmail', e.target.value)}
             error={!!errors.officialEmail} helperText={errors.officialEmail}
@@ -633,7 +638,7 @@ const PublicForm = () => {
         <FieldGroup sx={{ mb: 0 }}>
           <FieldLabel required description={getHelpText('Contact Number')}>Contact Number</FieldLabel>
           <FormField
-            fullWidth placeholder="+91 98765 43210"
+            fullWidth placeholder={getPlaceholder('Contact Number', "+91 98765 43210")}
             value={formData.contactNumber}
             onChange={e => handleChange('contactNumber', e.target.value)}
             error={!!errors.contactNumber} helperText={errors.contactNumber}
@@ -657,11 +662,11 @@ const PublicForm = () => {
               </Typography>
               <FieldGroup>
                 <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
-                <FormField fullWidth placeholder="Manager's full name" value={formData.rmName} onChange={e => handleChange('rmName', e.target.value)} error={!!errors.rmName} helperText={errors.rmName} />
+                <FormField fullWidth placeholder={getPlaceholder('Full Name', "Manager's full name")} value={formData.rmName} onChange={e => handleChange('rmName', e.target.value)} error={!!errors.rmName} helperText={errors.rmName} />
               </FieldGroup>
               <FieldGroup sx={{ mb: 0 }}>
                 <FieldLabel required description={getHelpText('Email ID')}>Email ID</FieldLabel>
-                <FormField fullWidth placeholder="manager@company.com" type="email" value={formData.rmEmail} onChange={e => handleChange('rmEmail', e.target.value)} error={!!errors.rmEmail} helperText={errors.rmEmail} />
+                <FormField fullWidth placeholder={getPlaceholder('Email ID', "manager@company.com")} type="email" value={formData.rmEmail} onChange={e => handleChange('rmEmail', e.target.value)} error={!!errors.rmEmail} helperText={errors.rmEmail} />
               </FieldGroup>
             </Box>
           </Grid>
@@ -673,11 +678,11 @@ const PublicForm = () => {
               </Typography>
               <FieldGroup>
                 <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
-                <FormField fullWidth placeholder="HOD's full name" value={formData.hodName} onChange={e => handleChange('hodName', e.target.value)} error={!!errors.hodName} helperText={errors.hodName} />
+                <FormField fullWidth placeholder={getPlaceholder('Full Name', "HOD's full name")} value={formData.hodName} onChange={e => handleChange('hodName', e.target.value)} error={!!errors.hodName} helperText={errors.hodName} />
               </FieldGroup>
               <FieldGroup sx={{ mb: 0 }}>
                 <FieldLabel required description={getHelpText('Email ID')}>Email ID</FieldLabel>
-                <FormField fullWidth placeholder="hod@company.com" type="email" value={formData.hodEmail} onChange={e => handleChange('hodEmail', e.target.value)} error={!!errors.hodEmail} helperText={errors.hodEmail} />
+                <FormField fullWidth placeholder={getPlaceholder('Email ID', "hod@company.com")} type="email" value={formData.hodEmail} onChange={e => handleChange('hodEmail', e.target.value)} error={!!errors.hodEmail} helperText={errors.hodEmail} />
               </FieldGroup>
             </Box>
           </Grid>
@@ -767,7 +772,7 @@ const PublicForm = () => {
         <FieldGroup>
           <FieldLabel required description={getHelpText('Idea / Project Title')}>Idea / Project Title</FieldLabel>
           <FormField
-            fullWidth placeholder="Enter a clear and descriptive title for your idea"
+            fullWidth placeholder={getPlaceholder('Idea / Project Title', "Enter a clear and descriptive title for your idea")}
             value={formData.projectTitle}
             onChange={e => handleChange('projectTitle', e.target.value)}
             error={!!errors.projectTitle} helperText={errors.projectTitle}
@@ -810,27 +815,27 @@ const PublicForm = () => {
 
         <FieldGroup>
           <FieldLabel required description={getHelpText('Project Title')}>Project Title</FieldLabel>
-          <FormField fullWidth placeholder="Enter the project title" value={formData.proposalTitle} onChange={e => handleChange('proposalTitle', e.target.value)} error={!!errors.proposalTitle} helperText={errors.proposalTitle} />
+          <FormField fullWidth placeholder={getPlaceholder('Project Title', "Enter the project title")} value={formData.proposalTitle} onChange={e => handleChange('proposalTitle', e.target.value)} error={!!errors.proposalTitle} helperText={errors.proposalTitle} />
         </FieldGroup>
 
         <FieldGroup>
           <FieldLabel required description={getHelpText('Executive Summary')}>Executive Summary</FieldLabel>
-          <FormField fullWidth multiline rows={4} placeholder="Provide a brief executive summary of the project..." value={formData.executiveSummary} onChange={e => handleChange('executiveSummary', e.target.value)} error={!!errors.executiveSummary} helperText={errors.executiveSummary} />
+          <FormField fullWidth multiline rows={4} placeholder={getPlaceholder('Executive Summary', "Provide a brief executive summary of the project...")} value={formData.executiveSummary} onChange={e => handleChange('executiveSummary', e.target.value)} error={!!errors.executiveSummary} helperText={errors.executiveSummary} />
         </FieldGroup>
 
         <FieldGroup>
           <FieldLabel required description={getHelpText('Problem Statement')}>Problem Statement</FieldLabel>
-          <FormField fullWidth multiline rows={4} placeholder="Clearly define the problem this project aims to solve..." value={formData.problemStatement} onChange={e => handleChange('problemStatement', e.target.value)} error={!!errors.problemStatement} helperText={errors.problemStatement} />
+          <FormField fullWidth multiline rows={4} placeholder={getPlaceholder('Problem Statement', "Clearly define the problem this project aims to solve...")} value={formData.problemStatement} onChange={e => handleChange('problemStatement', e.target.value)} error={!!errors.problemStatement} helperText={errors.problemStatement} />
         </FieldGroup>
 
         <FieldGroup>
           <FieldLabel required description={getHelpText('Objectives')}>Objectives</FieldLabel>
-          <FormField fullWidth multiline rows={3} placeholder="List the key objectives of this project..." value={formData.objectives} onChange={e => handleChange('objectives', e.target.value)} error={!!errors.objectives} helperText={errors.objectives} />
+          <FormField fullWidth multiline rows={3} placeholder={getPlaceholder('Objectives', "List the key objectives of this project...")} value={formData.objectives} onChange={e => handleChange('objectives', e.target.value)} error={!!errors.objectives} helperText={errors.objectives} />
         </FieldGroup>
 
         <FieldGroup sx={{ mb: 0 }}>
           <FieldLabel required description={getHelpText('Scope of Work')}>Scope of Work</FieldLabel>
-          <FormField fullWidth multiline rows={4} placeholder="Define the scope, deliverables, and boundaries of this project..." value={formData.scopeOfWork} onChange={e => handleChange('scopeOfWork', e.target.value)} error={!!errors.scopeOfWork} helperText={errors.scopeOfWork} />
+          <FormField fullWidth multiline rows={4} placeholder={getPlaceholder('Scope of Work', "Define the scope, deliverables, and boundaries of this project...")} value={formData.scopeOfWork} onChange={e => handleChange('scopeOfWork', e.target.value)} error={!!errors.scopeOfWork} helperText={errors.scopeOfWork} />
         </FieldGroup>
       </SectionBlock>
     </Box>
