@@ -17,6 +17,7 @@ import {
   Assignment as RDReviewIcon,
   FolderOpen as ProjectsIcon,
   ManageAccounts as ManageAccountsIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
@@ -64,6 +65,7 @@ const navSections = [
     sectionLabel: 'Projects',
     items: [
       { label: 'R&D Ongoing Projects', icon: <ProjectsIcon fontSize="small" />, path: '/rd-ongoing-projects', featureKey: 'module.rd_ongoing_projects' },
+      { label: 'Meeting Requests', icon: <EmailIcon fontSize="small" />, path: '/meeting-requests', featureKey: 'module.meeting_requests' },
     ],
   },
   {
@@ -78,6 +80,7 @@ const navSections = [
       { label: 'User Management', icon: <ManageAccountsIcon fontSize="small" />, path: '/user-management', featureKey: 'module.user_management' },
       { label: 'Settings', icon: <SettingsIcon fontSize="small" />, path: '/settings', featureKey: 'module.settings' },
       { label: 'Feature Management', icon: <SettingsIcon fontSize="small" />, path: '/feature-management', featureKey: 'module.feature_management' },
+      { label: 'Tracking Management', icon: <TimelineIcon fontSize="small" />, path: '/tracking-management', featureKey: 'module.feature_management' },
     ],
   },
 ];

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box, Typography, Card, TextField, Button, CircularProgress,
-  Chip, Grid, Paper, Container, IconButton, Fade, Divider, Avatar
+  Chip, Grid, Container, Fade, Divider, Avatar, Dialog, DialogTitle,
+  DialogContent, DialogActions, MenuItem, Snackbar, Alert, IconButton
 } from '@mui/material';
 import {
   Search as SearchIcon, 
@@ -11,12 +12,15 @@ import {
   Lightbulb as LightbulbIcon,
   CalendarToday as CalendarIcon,
   FactCheck as FactCheckIcon,
-  VerifiedUser as VerifiedUserIcon,
   AccountBalance as AccountBalanceIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  EventAvailable as EventAvailableIcon,
+  CloudUpload as CloudUploadIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import Timeline from '../components/Timeline';
+import logo from '../assets/tracking_logo.png';
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
@@ -26,6 +30,21 @@ const PublicTracking = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  
+  // Meeting Request States
+  const [meetingRequestStatus, setMeetingRequestStatus] = useState(null);
+  const [meetingModalOpen, setMeetingModalOpen] = useState(false);
+  const [meetingSubmitting, setMeetingSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [meetingForm, setMeetingForm] = useState({
+    requestedBy: '',
+    email: '',
+    purpose: '',
+    date: '',
+    time: '',
+    description: '',
+    attachment: null,
+  });
 
   useEffect(() => {
     if (searchParams.get('id')) {
@@ -41,11 +60,21 @@ const PublicTracking = () => {
     setLoading(true);
     setError('');
     setResult(null);
+    setMeetingRequestStatus(null);
 
     try {
       const res = await axios.get(`${API_BASE}/public/forms/track/${queryId.trim().toUpperCase()}`);
       if (res.data && res.data.success) {
         setResult(res.data.data.tracking);
+        // Fetch parallel meeting request info
+        try {
+          const meetingRes = await axios.get(`${API_BASE}/public/meeting-requests/public/${queryId.trim().toUpperCase()}`);
+          if (meetingRes.data && meetingRes.data.success) {
+            setMeetingRequestStatus(meetingRes.data.data.meetingRequest);
+          }
+        } catch (mErr) {
+          console.error("Meeting request fetch error", mErr);
+        }
       }
     } catch (err) {
       if (err.response && err.response.status === 404) {
@@ -55,6 +84,38 @@ const PublicTracking = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMeetingSubmit = async (e) => {
+    e.preventDefault();
+    setMeetingSubmitting(true);
+    
+    const formData = new FormData();
+    formData.append('trackingId', result.trackingId);
+    formData.append('submissionTitle', result.title);
+    formData.append('requestedBy', meetingForm.requestedBy);
+    formData.append('email', meetingForm.email);
+    formData.append('meetingPurpose', meetingForm.purpose);
+    formData.append('preferredDate', meetingForm.date);
+    formData.append('preferredTime', meetingForm.time);
+    formData.append('description', meetingForm.description);
+    if (meetingForm.attachment) {
+      formData.append('attachment', meetingForm.attachment);
+    }
+
+    try {
+      await axios.post(`${API_BASE}/public/meeting-requests/public`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setSnackbar({ open: true, message: 'Meeting Request Submitted Successfully', severity: 'success' });
+      setMeetingModalOpen(false);
+      // Re-fetch tracking to get updated meeting request status
+      handleSearch();
+    } catch (err) {
+      setSnackbar({ open: true, message: 'Failed to submit meeting request.', severity: 'error' });
+    } finally {
+      setMeetingSubmitting(false);
     }
   };
 
@@ -90,81 +151,98 @@ const PublicTracking = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', pb: 10 }}>
-      {/* Header with Premium Gradient */}
+      {/* Enterprise Header Redesign */}
       <Box sx={{ 
-        background: 'linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%)', 
-        color: '#fff', 
+        bgcolor: '#FFFFFF', 
+        color: '#0F172A', 
         pt: 8, 
         pb: 12, 
         px: 3, 
         textAlign: 'center',
+        borderBottom: '1px solid #E2E8F0',
         position: 'relative',
-        overflow: 'hidden'
+        boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
       }}>
-        {/* Abstract Background Shapes */}
-        <Box sx={{ position: 'absolute', top: '-20%', left: '-10%', width: '40%', height: '150%', background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)', transform: 'rotate(15deg)' }} />
-        <Box sx={{ position: 'absolute', bottom: '-20%', right: '-5%', width: '30%', height: '100%', background: 'radial-gradient(circle, rgba(56,189,248,0.1) 0%, transparent 70%)', transform: 'rotate(-15deg)' }} />
-
         <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, letterSpacing: '-0.02em' }}>Track Your Submission</Typography>
-          <Typography variant="h6" sx={{ fontWeight: 400, opacity: 0.8, maxWidth: '600px', mx: 'auto' }}>Enter your Tracking ID below to view the real-time status and workflow timeline of your Idea or Proposal.</Typography>
+          <Box component="img" src={logo} alt="MINDS Logo" sx={{ height: 64, mb: 3, objectFit: 'contain' }} />
+          <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, letterSpacing: '-0.02em', color: '#1E293B' }}>
+            Track Your Submission
+          </Typography>
+          <Typography variant="h6" sx={{ fontWeight: 400, color: '#64748B', maxWidth: '650px', mx: 'auto' }}>
+            Track your Idea or Proposal using the Tracking ID and monitor its progress throughout the innovation workflow.
+          </Typography>
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ mt: -6, position: 'relative', zIndex: 2 }}>
+      <Container maxWidth="lg" sx={{ mt: -6, position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* Search Box - Elevated */}
         <Card sx={{ 
-          p: 1.5, 
-          borderRadius: 4, 
-          boxShadow: '0 20px 40px rgba(0,0,0,0.08)', 
+          p: { xs: 2, md: 3 }, 
+          borderRadius: 3, 
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)', 
           mb: 6,
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.5)',
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          width: '100%',
           maxWidth: '800px',
-          mx: 'auto'
         }}>
           <form onSubmit={handleSearch}>
-            <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <TextField
                 fullWidth
                 variant="outlined"
-                placeholder="e.g. MCI-A8F4K92 or MCP-P4H8Q92"
+                placeholder="Tracking ID __________________________"
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                    bgcolor: '#F1F5F9',
-                    '& fieldset': { border: 'none' },
-                    '&:hover fieldset': { border: 'none' },
-                    '&.Mui-focused fieldset': { border: '1px solid #38BDF8' },
+                    borderRadius: 2,
+                    bgcolor: '#F8FAFC',
+                    height: 56,
+                    '&.Mui-focused fieldset': { border: '2px solid #2E7D32' },
                   }
                 }}
-                slotProps={{
-                  input: {
-                    startAdornment: <SearchIcon sx={{ color: '#94A3B8', mr: 1.5 }} />
-                  }
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ color: '#94A3B8', mr: 1.5 }} />
                 }}
               />
-              <Button 
-                type="submit" 
-                variant="contained" 
-                disabled={loading || !trackingId.trim()}
-                sx={{ 
-                  bgcolor: '#2563EB', 
-                  '&:hover': { bgcolor: '#1D4ED8', transform: 'translateY(-1px)', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' }, 
-                  minWidth: '160px', 
-                  height: '56px',
-                  borderRadius: 3,
-                  fontWeight: 600, 
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  transition: 'all 0.2s ease-in-out'
-                }}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Check Status'}
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                <Button 
+                  type="submit" 
+                  variant="contained" 
+                  disabled={loading || !trackingId.trim()}
+                  sx={{ 
+                    bgcolor: '#2E7D32', 
+                    '&:hover': { bgcolor: '#1B5E20' }, 
+                    minWidth: '160px', 
+                    height: '48px',
+                    borderRadius: 2,
+                    fontWeight: 600, 
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                  }}
+                >
+                  {loading ? <CircularProgress size={24} color="inherit" /> : 'Track Status'}
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  disabled={!result}
+                  onClick={() => setMeetingModalOpen(true)}
+                  sx={{ 
+                    borderColor: '#2E7D32', 
+                    color: '#2E7D32',
+                    '&:hover': { borderColor: '#1B5E20', bgcolor: 'rgba(46, 125, 50, 0.04)' }, 
+                    minWidth: '160px', 
+                    height: '48px',
+                    borderRadius: 2,
+                    fontWeight: 600, 
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                  }}
+                >
+                  Request Meeting
+                </Button>
+              </Box>
             </Box>
           </form>
         </Card>
@@ -173,32 +251,14 @@ const PublicTracking = () => {
         {error && (
           <Fade in={Boolean(error)}>
             <Card sx={{ 
-              p: 6, 
-              borderRadius: 4, 
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.04)', 
-              textAlign: 'center',
-              maxWidth: '600px', 
-              mx: 'auto',
-              border: '1px solid #E2E8F0',
-              bgcolor: '#FFFFFF',
-              mb: 4
+              p: 6, borderRadius: 3, textAlign: 'center', width: '100%', maxWidth: '600px', border: '1px solid #E2E8F0', mb: 4
             }}>
-              <Box sx={{ 
-                width: 72, height: 72, 
-                bgcolor: '#FEF2F2', 
-                borderRadius: '50%', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                mx: 'auto', mb: 3 
-              }}>
+              <Box sx={{ width: 72, height: 72, bgcolor: '#FEF2F2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 3 }}>
                 <CancelIcon sx={{ fontSize: 36, color: '#EF4444' }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', mb: 2, letterSpacing: '-0.02em' }}>Not Found</Typography>
-              <Typography variant="body1" sx={{ color: '#475569', mb: 4, fontWeight: 500, fontSize: '1.05rem', lineHeight: 1.6 }}>
-                We couldn't find any submission matching the tracking ID <strong style={{ color: '#0F172A', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0', marginLeft: '4px' }}>{trackingId}</strong>.
-              </Typography>
-              <Divider sx={{ mb: 3, borderColor: '#F1F5F9' }} />
-              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
-                Please double-check your email to ensure the ID is typed correctly. It typically follows a format like <strong>MCI-A8F4K92</strong>.
+              <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', mb: 2 }}>Not Found</Typography>
+              <Typography variant="body1" sx={{ color: '#475569', mb: 4 }}>
+                We couldn't find any submission matching the tracking ID <strong>{trackingId}</strong>.
               </Typography>
             </Card>
           </Fade>
@@ -207,51 +267,22 @@ const PublicTracking = () => {
         {/* Result Tracking Details */}
         {result && (
           <Fade in={Boolean(result)} timeout={600}>
-            <Grid container spacing={4}>
-              {/* Left Column: Details & R&D */}
-              <Grid item xs={12} md={5}>
+            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <Grid container spacing={4} sx={{ width: '100%', maxWidth: '1000px' }}>
+                {/* Left Column: Details & R&D */}
+                <Grid item xs={12} md={5}>
                 
                 {/* Main Identity Card */}
                 <Card sx={{ 
-                  borderRadius: 4, 
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.04)', 
-                  mb: 3, 
-                  overflow: 'hidden',
-                  border: '1px solid #E2E8F0'
+                  borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', mb: 3, overflow: 'hidden', border: '1px solid #E2E8F0'
                 }}>
-                  {/* Top color bar depending on status */}
                   <Box sx={{ height: 6, bgcolor: getStatusColor(result.status) }} />
-                  
                   <Box sx={{ p: 4 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-                      <Chip 
-                        label={result.submissionType.toUpperCase()} 
-                        size="small"
-                        sx={{ 
-                          bgcolor: '#F1F5F9', 
-                          color: '#475569', 
-                          fontWeight: 700, 
-                          letterSpacing: 1,
-                          borderRadius: 1.5,
-                          height: 24,
-                          fontSize: '0.7rem'
-                        }} 
-                      />
-                      <Chip 
-                        label={getStatusText(result.status)} 
-                        size="small"
-                        sx={{ 
-                          bgcolor: `${getStatusColor(result.status)}15`, 
-                          color: getStatusColor(result.status), 
-                          fontWeight: 700,
-                          borderRadius: 1.5,
-                          border: `1px solid ${getStatusColor(result.status)}30`
-                        }} 
-                      />
+                      <Chip label={result.submissionType.toUpperCase()} size="small" sx={{ bgcolor: '#F1F5F9', color: '#475569', fontWeight: 700, borderRadius: 1.5 }} />
+                      <Chip label={getStatusText(result.status)} size="small" sx={{ bgcolor: `${getStatusColor(result.status)}15`, color: getStatusColor(result.status), fontWeight: 700, border: `1px solid ${getStatusColor(result.status)}30` }} />
                     </Box>
-                    
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', mb: 1, lineHeight: 1.2 }}>{result.title}</Typography>
-                    
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 3, p: 2, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px dashed #CBD5E1' }}>
                       <Avatar sx={{ bgcolor: '#DBEAFE', color: '#2563EB', width: 36, height: 36, mr: 2 }}>
                         <AssignmentIcon fontSize="small" />
@@ -261,7 +292,6 @@ const PublicTracking = () => {
                         <Typography variant="body1" sx={{ color: '#0F172A', fontWeight: 700 }}>{result.trackingId}</Typography>
                       </Box>
                     </Box>
-
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, px: 1 }}>
                       <CalendarIcon sx={{ fontSize: 18, color: '#94A3B8', mr: 1.5 }} />
                       <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
@@ -270,6 +300,42 @@ const PublicTracking = () => {
                     </Box>
                   </Box>
                 </Card>
+
+                {/* Meeting Request Card */}
+                {meetingRequestStatus && (
+                  <Card sx={{ 
+                    p: 3, mb: 3, borderRadius: 3, border: '1px solid #E2E8F0', 
+                    bgcolor: meetingRequestStatus.status === 'Approved' ? '#F0FDF4' : '#F8FAFC',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <EventAvailableIcon sx={{ color: meetingRequestStatus.status === 'Approved' ? '#16A34A' : '#475569', mr: 1 }} />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1E293B' }}>
+                        {meetingRequestStatus.status === 'Approved' ? 'Meeting Confirmed' : 'Meeting Request'}
+                      </Typography>
+                      <Chip 
+                        label={meetingRequestStatus.status} 
+                        size="small" 
+                        sx={{ ml: 'auto', fontWeight: 600 }} 
+                        color={meetingRequestStatus.status === 'Approved' ? 'success' : 'default'}
+                      />
+                    </Box>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
+                          {meetingRequestStatus.status === 'Approved' ? 'Date' : 'Preferred Date'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{meetingRequestStatus.preferredDate}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
+                          {meetingRequestStatus.status === 'Approved' ? 'Time' : 'Preferred Time'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{meetingRequestStatus.preferredTime}</Typography>
+                      </Grid>
+                    </Grid>
+                  </Card>
+                )}
 
                 {/* Review Blocks if available */}
                 {(result.workflow?.rmReview?.decision || result.workflow?.financeReview?.decision) && (
@@ -316,11 +382,6 @@ const PublicTracking = () => {
                         <Typography variant="body2" sx={{ fontWeight: 700, color: getStatusColor(result.workflow.financeReview.decision) }}>{result.workflow.financeReview.decision}</Typography>
                       </Grid>
                     </Grid>
-                    {result.workflow.financeReview.remarks && (
-                      <Box sx={{ mt: 2, p: 2, bgcolor: '#F8FAFC', borderRadius: 2, borderLeft: '3px solid #E2E8F0' }}>
-                        <Typography variant="body2" sx={{ color: '#475569', fontStyle: 'italic' }}>"{result.workflow.financeReview.remarks}"</Typography>
-                      </Box>
-                    )}
                   </Card>
                 )}
 
@@ -345,24 +406,7 @@ const PublicTracking = () => {
                         <Typography variant="caption" sx={{ color: '#B45309', fontWeight: 600, textTransform: 'uppercase' }}>Status</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 700, color: '#92400E', mt: 0.5 }}>{result.projectDetails.implementationStatus || 'Approved'}</Typography>
                       </Grid>
-                      <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="caption" sx={{ color: '#B45309', fontWeight: 600, textTransform: 'uppercase' }}>Progress</Typography>
-                          <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 800 }}>{result.projectDetails.progressPercentage || 0}%</Typography>
-                        </Box>
-                        <Box sx={{ width: '100%', height: 8, bgcolor: '#FDE68A', borderRadius: 4, overflow: 'hidden' }}>
-                          <Box sx={{ width: `${result.projectDetails.progressPercentage || 0}%`, height: '100%', bgcolor: '#D97706', transition: 'width 1s ease-in-out' }} />
-                        </Box>
-                      </Grid>
                     </Grid>
-                    
-                    {result.projectDetails.latestUpdate && (
-                      <Box sx={{ p: 2, bgcolor: '#ffffff', borderRadius: 2, borderLeft: '4px solid #D97706', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#D97706', mb: 0.5 }}>Latest Update</Typography>
-                        <Typography variant="body2" sx={{ color: '#78350F', mb: 1 }}>{result.projectDetails.latestUpdate.text}</Typography>
-                        <Typography variant="caption" sx={{ color: '#B45309', fontWeight: 500 }}>By {result.projectDetails.latestUpdate.user} on {formatDate(result.projectDetails.latestUpdate.timestamp)}</Typography>
-                      </Box>
-                    )}
                   </Card>
                 )}
               </Grid>
@@ -372,9 +416,147 @@ const PublicTracking = () => {
                 <Timeline timeline={result.timeline} />
               </Grid>
             </Grid>
-          </Fade>
+          </Box>
+        </Fade>
         )}
       </Container>
+
+      {/* Request Meeting Modal */}
+      <Dialog 
+        open={meetingModalOpen} 
+        onClose={() => setMeetingModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h5" component="span" sx={{ fontWeight: 800, color: '#1E293B' }}>Request Project Meeting</Typography>
+          <IconButton onClick={() => setMeetingModalOpen(false)} size="small"><CloseIcon /></IconButton>
+        </DialogTitle>
+        <form onSubmit={handleMeetingSubmit}>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField 
+                label="Tracking ID" 
+                value={result?.trackingId || ''} 
+                fullWidth 
+                InputProps={{ readOnly: true, sx: { bgcolor: '#F8FAFC' } }} 
+                variant="filled"
+              />
+              <TextField 
+                label="Submission Title" 
+                value={result?.title || ''} 
+                fullWidth 
+                InputProps={{ readOnly: true, sx: { bgcolor: '#F8FAFC' } }} 
+                variant="filled"
+              />
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField 
+                label="Requested By" 
+                required 
+                fullWidth 
+                value={meetingForm.requestedBy}
+                onChange={(e) => setMeetingForm({ ...meetingForm, requestedBy: e.target.value })}
+              />
+              <TextField 
+                label="Email" 
+                type="email" 
+                required 
+                fullWidth 
+                value={meetingForm.email}
+                onChange={(e) => setMeetingForm({ ...meetingForm, email: e.target.value })}
+              />
+            </Box>
+
+            <TextField 
+              select 
+              label="Meeting Purpose" 
+              required 
+              fullWidth
+              value={meetingForm.purpose}
+              onChange={(e) => setMeetingForm({ ...meetingForm, purpose: e.target.value })}
+            >
+              <MenuItem value="Project Discussion">Project Discussion</MenuItem>
+              <MenuItem value="Progress Review">Progress Review</MenuItem>
+              <MenuItem value="Clarification">Clarification</MenuItem>
+              <MenuItem value="Technical Discussion">Technical Discussion</MenuItem>
+              <MenuItem value="Demonstration">Demonstration</MenuItem>
+              <MenuItem value="Other">Other</MenuItem>
+            </TextField>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField 
+                label="Preferred Date" 
+                type="date" 
+                required 
+                fullWidth 
+                InputLabelProps={{ shrink: true }}
+                value={meetingForm.date}
+                onChange={(e) => setMeetingForm({ ...meetingForm, date: e.target.value })}
+              />
+              <TextField 
+                label="Preferred Time" 
+                type="time" 
+                required 
+                fullWidth 
+                InputLabelProps={{ shrink: true }}
+                value={meetingForm.time}
+                onChange={(e) => setMeetingForm({ ...meetingForm, time: e.target.value })}
+              />
+            </Box>
+
+            <TextField 
+              label="Description" 
+              multiline 
+              rows={4} 
+              fullWidth
+              value={meetingForm.description}
+              onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
+            />
+
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<CloudUploadIcon />}
+              sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+            >
+              {meetingForm.attachment ? meetingForm.attachment.name : 'Upload Attachment (Optional)'}
+              <input
+                type="file"
+                hidden
+                onChange={(e) => setMeetingForm({ ...meetingForm, attachment: e.target.files[0] })}
+              />
+            </Button>
+
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 0 }}>
+            <Button onClick={() => setMeetingModalOpen(false)} sx={{ color: '#64748B', fontWeight: 600 }}>Cancel</Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={meetingSubmitting}
+              sx={{ bgcolor: '#2E7D32', '&:hover': { bgcolor: '#1B5E20' }, borderRadius: 2, px: 3 }}
+            >
+              {meetingSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Submit Request'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Snackbar for Notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%', borderRadius: 2 }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

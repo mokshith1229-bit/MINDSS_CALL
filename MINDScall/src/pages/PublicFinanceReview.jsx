@@ -276,12 +276,7 @@ const PublicFinanceReview = () => {
                             Budget Approved — Send to Approval Committee
                           </Box>
                         </MenuItem>
-                        <MenuItem value="CLARIFICATION">
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <HelpOutlineIcon sx={{ color: '#E65100', fontSize: 18 }} />
-                            Needs Revision / Clarification
-                          </Box>
-                        </MenuItem>
+
                         <MenuItem value="REJECTED">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CancelIcon sx={{ color: '#C62828', fontSize: 18 }} />

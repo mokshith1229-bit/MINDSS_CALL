@@ -180,8 +180,7 @@ const PublicBatchReview = () => {
                         onChange={(e) => handleReviewChange(sub.id, 'decision', e.target.value)}
                       >
                         <MenuItem value="PENDING">Pending</MenuItem>
-                        <MenuItem value="APPROVED">Approve for Finance</MenuItem>
-                        <MenuItem value="CLARIFICATION">Request Clarification</MenuItem>
+                        <MenuItem value="APPROVED">Approve</MenuItem>
                         <MenuItem value="REJECTED">Reject</MenuItem>
                       </Select>
                     </FormControl>

@@ -256,20 +256,18 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
     handleSelectPropById(id);
   };
 
-  const handleOpenGmail = async () => {
+  const handleSendEmailNative = async () => {
     if (!managerEmail) { setSnack({ open: true, msg: 'Please provide a Manager Email', type: 'error' }); return; }
     try {
-      const res = await api.patch(`/admin/submissions/${selProp._id}/assign-email`, { stage: 'RM', email: managerEmail });
-      const { token } = res.data.data;
-      const reviewLink = `${import.meta.env.VITE_APP_URL}/review/${token}`;
-      const finalBody = `${emailBody}\n\nSecure Review Link:\n${reviewLink}`;
-      const subject = encodeURIComponent('Proposal Review Request (RM)');
-      const body = encodeURIComponent(finalBody);
-      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${managerEmail}&su=${subject}&body=${body}`, '_blank');
-      setSnack({ open: true, msg: 'Email assignment logged successfully', type: 'success' });
+      await api.post('/admin/submissions/auto-assign-rm', {
+        email: managerEmail, 
+        managerName: selMgr?.name || managerEmail.split('@')[0], 
+        proposalIds: [selProp._id]
+      });
+      setSnack({ open: true, msg: 'Email assigned and sent successfully!', type: 'success' });
       await fetchData(); setSelProp(null); setSelMgr(null);
     } catch (err) {
-      setSnack({ open: true, msg: 'Failed to assign email', type: 'error' });
+      setSnack({ open: true, msg: 'Failed to assign and send email', type: 'error' });
     }
   };
 
@@ -577,9 +575,9 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
                         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Generated Email</Typography>
                         <TextField fullWidth multiline minRows={8} variant="outlined" size="small"
                           value={emailBody} onChange={e => setEmailBody(e.target.value)} sx={{ bgcolor: '#fff', mb: 2 }} />
-                        <Button variant="contained" fullWidth size="large" onClick={handleOpenGmail}
-                          startIcon={<EmailIcon />} sx={{ py: 1.5, fontWeight: 700, bgcolor: '#1565C0' }}>
-                          Open Gmail & Assign RM
+                        <Button variant="contained" fullWidth size="large" onClick={handleSendEmailNative}
+                          startIcon={<SendIcon />} sx={{ py: 1.5, fontWeight: 700, bgcolor: '#1565C0' }}>
+                          Send Email & Assign RM
                         </Button>
                       </Box>
                     </Box>

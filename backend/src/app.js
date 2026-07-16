@@ -21,6 +21,7 @@ const meetingRoutes = require('./routes/meeting.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const reportsRoutes = require('./routes/reports.routes');
 const developerRoutes = require('./routes/developer.routes');
+const meetingRequestRoutes = require('./routes/meetingRequest.routes');
 
 const app = express();
 
@@ -97,6 +98,7 @@ app.use('/api/v1/public/reviews', publicSubmissionRoutes);
 app.use('/api/v1/public/batch-reviews', publicEvaluationRoutes);
 app.use('/api/v1/public/finance-reviews', publicFinanceRoutes);
 app.use('/api/v1/meetings', meetingRoutes);
+app.use('/api/v1/meeting-requests', meetingRequestRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/admin/reports', reportsRoutes);
 app.use('/api/v1/developer', developerRoutes);

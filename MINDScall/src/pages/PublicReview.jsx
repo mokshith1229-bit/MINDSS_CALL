@@ -152,8 +152,8 @@ const PublicReview = () => {
               sx={{ mb: 3 }}
             />
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
                 <Button 
                   fullWidth 
                   variant="contained" 
@@ -167,21 +167,7 @@ const PublicReview = () => {
                   Approve
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <Button 
-                  fullWidth 
-                  variant="contained" 
-                  color="warning" 
-                  size="large"
-                  startIcon={<ClarificationIcon />}
-                  disabled={submitting}
-                  onClick={() => handleSubmit('CLARIFICATION')}
-                  sx={{ py: 1.5, fontWeight: 700 }}
-                >
-                  Need Clarification
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Button 
                   fullWidth 
                   variant="contained" 

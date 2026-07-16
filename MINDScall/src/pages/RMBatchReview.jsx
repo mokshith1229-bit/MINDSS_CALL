@@ -177,8 +177,7 @@ const RMBatchReview = () => {
                         onChange={(e) => handleReviewChange(sub._id, 'decision', e.target.value)}
                       >
                         <MenuItem value="PENDING">Pending</MenuItem>
-                        <MenuItem value="APPROVED">Approve (Send to Evaluation)</MenuItem>
-                        <MenuItem value="CLARIFICATION">Request Clarification</MenuItem>
+                        <MenuItem value="APPROVED">Approve</MenuItem>
                         <MenuItem value="REJECTED">Reject</MenuItem>
                       </Select>
                     </FormControl>

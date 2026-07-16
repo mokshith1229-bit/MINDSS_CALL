@@ -23,6 +23,8 @@ import PublicEvaluatorReview from '../pages/PublicEvaluatorReview';
 import { authStore } from '../store/authStore';
 import UserManagement from '../pages/UserManagement';
 import FeatureManagement from '../pages/FeatureManagement';
+import MeetingRequestsAdmin from '../pages/MeetingRequestsAdmin';
+import TrackingManagement from '../pages/TrackingManagement';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(authStore.getState().isAuthenticated);
@@ -71,6 +73,7 @@ const AppRoutes = () => {
         <Route path="auto-assign-email" element={<AutoAssignEmail />} />
         <Route path="evaluation" element={<Evaluation />} />
         <Route path="meeting" element={<Meeting />} />
+        <Route path="meeting-requests" element={<MeetingRequestsAdmin />} />
         <Route path="approval" element={<Approval />} />
         <Route path="rd-ongoing-projects" element={<RDOngoingProjects />} />
         <Route path="finance-approval" element={<FinanceApproval />} />
@@ -78,6 +81,7 @@ const AppRoutes = () => {
         <Route path="settings" element={<Settings />} />
         <Route path="user-management" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><UserManagement /></ProtectedRoute>} />
         <Route path="feature-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><FeatureManagement /></ProtectedRoute>} />
+        <Route path="tracking-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><TrackingManagement /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

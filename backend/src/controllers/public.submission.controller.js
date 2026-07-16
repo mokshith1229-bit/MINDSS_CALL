@@ -3,6 +3,40 @@ const AuditLog = require('../models/AuditLog.model');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const crypto = require('crypto');
+const sendEmail = require('../utils/emailSender');
+
+const sendHodEmail = (submission) => {
+  const hodEmail = submission.answers?.hodEmail || '';
+  if (!hodEmail) return;
+  const hodName = submission.answers?.hodName || 'HOD';
+  const hodToken = submission.workflow?.hodReviewToken;
+  if (!hodToken) return;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const reviewLink = `${frontendUrl}/public-review/${hodToken}`;
+  const title = submission.answers?.title || submission.answers?.proposaltitle || submission.businessId || 'Untitled';
+  const employeeName = submission.answers?.employeeName || submission.answers?.fullName || 'an employee';
+
+  const hodEmailHtml = `
+    <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+      <h3 style="color: #1976D2;">MINDScall Proposal Review</h3>
+      <p>Dear ${hodName},</p>
+      <p>A new proposal by <b>${employeeName}</b> has been approved by the Reporting Manager and now requires your Head of Department approval.</p>
+      <p><b>Proposal Title:</b> ${title}</p>
+      <p>Please click the secure link below to access the review portal and submit your decision:</p>
+      <div style="margin: 25px 0;">
+        <a href="${reviewLink}" style="padding: 12px 24px; background-color: #1976D2; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Review Proposal</a>
+      </div>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="color: #888;"><small>Best regards,<br>CubeTech Innovation Team</small></p>
+    </div>
+  `;
+  
+  sendEmail({
+    email: hodEmail,
+    subject: \`MINDScall: Action Required - Proposal Needs HOD Approval\`,
+    html: hodEmailHtml
+  }).catch(err => console.error('Failed to send HOD auto-assign email:', err));
+};
 
 // @desc    Get submission details for public review by token
 // @route   GET /api/v1/public/reviews/:token
@@ -146,6 +180,7 @@ exports.submitReview = async (req, res, next) => {
             remarks: remarks || 'Reporting Manager approved the proposal. Awaiting HOD Review.',
             timestamp: new Date()
           });
+          sendHodEmail(submission);
         }
 
       } else if (decision === 'REJECTED') {
@@ -342,6 +377,7 @@ exports.submitRmBatch = async (req, res, next) => {
             remarks: remarks || 'Reporting Manager approved the proposal. Awaiting HOD Review.',
             timestamp: new Date()
           });
+          sendHodEmail(submission);
         }
 
       } else if (decision === 'REJECTED') {
