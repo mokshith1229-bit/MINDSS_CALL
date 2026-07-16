@@ -852,6 +852,35 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
     }
   }, [open, formToEdit]);
 
+  // Auto-save to backend whenever formData changes (only for existing forms)
+  React.useEffect(() => {
+    if (!open || !formToEdit || !formData.name) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const newForm = {
+          id: formToEdit.id,
+          name: formData.name,
+          category: formData.category,
+          description: formData.description,
+          status: formToEdit.status,
+          slug: formToEdit.slug,
+          createdAt: formToEdit.createdAt,
+          updatedAt: new Date().toISOString(),
+          sections: formData.sections,
+          linkSettings: formToEdit.linkSettings,
+          responses: formToEdit.responses,
+          currentVersion: formToEdit.currentVersion
+        };
+        formStore.updateForm(newForm.id, newForm).catch(err => console.error("Auto-save failed", err));
+      } catch (err) {
+        console.error("Auto-save error", err);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [formData, open, formToEdit]);
+
   const handleFieldChange = (secId, fieldId, key, value) => {
     setFormData(prev => ({
       ...prev,

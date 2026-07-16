@@ -78,8 +78,12 @@ const Evaluation = () => {
           };
         });
 
-      // Active = EVALUATION status, History = past evaluation stages
-      setProposals(formattedSubs.filter(s => s.status === 'EVALUATION'));
+      // Active = EVALUATION status, or RM Approved (ready for eval committee)
+      setProposals(formattedSubs.filter(s => 
+        s.status === 'EVALUATION' ||
+        (s.workflow?.rmReview?.decision === 'APPROVED' &&
+          !['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'REJECTED', 'EVALUATION_REJECTED'].includes(s.status))
+      ));
       setCompletedProposals(formattedSubs.filter(s => ['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'EVALUATION_REJECTED'].includes(s.status) && s.workflow?.evaluationReview?.committeeName));
     } catch (err) {
       console.error('Failed to fetch evaluation data', err);

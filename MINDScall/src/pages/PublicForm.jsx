@@ -123,18 +123,25 @@ const FormSelect = styled(Select)({
 
 const FieldGroup = styled(Box)({ marginBottom: 24 });
 
-const FieldLabel = ({ children, required }) => (
-  <Typography
-    sx={{
-      fontWeight: 600,
-      mb: 0.75,
-      color: '#344054',
-      fontSize: '0.875rem',
-      letterSpacing: '-0.01em',
-    }}
-  >
-    {children}{required && <span style={{ color: '#F04438', marginLeft: 3 }}>*</span>}
-  </Typography>
+const FieldLabel = ({ children, required, description }) => (
+  <Box>
+    <Typography
+      sx={{
+        fontWeight: 600,
+        mb: description ? 0.25 : 0.75,
+        color: '#344054',
+        fontSize: '0.875rem',
+        letterSpacing: '-0.01em',
+      }}
+    >
+      {children}{required && <span style={{ color: '#F04438', marginLeft: 3 }}>*</span>}
+    </Typography>
+    {description && (
+      <Typography sx={{ color: '#667085', fontSize: '0.78rem', mb: 1, lineHeight: 1.4 }}>
+        {description}
+      </Typography>
+    )}
+  </Box>
 );
 
 const SubmitBtn = styled(Button)({
@@ -348,6 +355,40 @@ const PublicForm = () => {
   const [wbsPreview, setWbsPreview] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [schemaConfigs, setSchemaConfigs] = useState({});
+
+  React.useEffect(() => {
+    const fetchSchema = async () => {
+      if (!slug) return;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/public/forms/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          const schema = data.data?.schema || [];
+          const configs = {};
+          schema.forEach(sec => {
+            (sec.fields || []).forEach(f => {
+              if (f.label) configs[f.label.toLowerCase().trim()] = f;
+            });
+            (sec.subSections || []).forEach(sub => {
+              (sub.fields || []).forEach(f => {
+                if (f.label) configs[f.label.toLowerCase().trim()] = f;
+              });
+            });
+          });
+          setSchemaConfigs(configs);
+        }
+      } catch (err) {
+        console.error('Failed to fetch schema', err);
+      }
+    };
+    fetchSchema();
+  }, [slug]);
+
+  const getHelpText = (label) => {
+    const field = schemaConfigs[label.toLowerCase().trim()];
+    return field ? field.helpText : null;
+  };
 
   React.useEffect(() => {
     if (formData.category && formData.subCategory && formData.innovationType) {
@@ -538,7 +579,7 @@ const PublicForm = () => {
         <SectionHeader number={1} title="Personal Details" description="Please provide your personal and professional information." />
 
         <FieldGroup>
-          <FieldLabel required>Full Name</FieldLabel>
+          <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
           <FormField
             fullWidth placeholder="e.g. Rajesh Kumar"
             value={formData.employeeName}
@@ -548,7 +589,7 @@ const PublicForm = () => {
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Employee ID</FieldLabel>
+          <FieldLabel required description={getHelpText('Employee ID')}>Employee ID</FieldLabel>
           <FormField
             fullWidth placeholder="e.g. EMP-1029"
             value={formData.employeeId}
@@ -559,7 +600,7 @@ const PublicForm = () => {
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Designation</FieldLabel>
+          <FieldLabel required description={getHelpText('Designation')}>Designation</FieldLabel>
           <FormField
             fullWidth placeholder="e.g. Senior Engineer"
             value={formData.designation}
@@ -569,7 +610,7 @@ const PublicForm = () => {
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Department</FieldLabel>
+          <FieldLabel required description={getHelpText('Department')}>Department</FieldLabel>
           <FormField
             fullWidth placeholder="e.g. Engineering & Infrastructure"
             value={formData.department}
@@ -579,7 +620,7 @@ const PublicForm = () => {
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Official Email ID</FieldLabel>
+          <FieldLabel required description={getHelpText('Official Email ID')}>Official Email ID</FieldLabel>
           <FormField
             fullWidth placeholder="name@company.com" type="email"
             value={formData.officialEmail}
@@ -590,7 +631,7 @@ const PublicForm = () => {
         </FieldGroup>
 
         <FieldGroup sx={{ mb: 0 }}>
-          <FieldLabel required>Contact Number</FieldLabel>
+          <FieldLabel required description={getHelpText('Contact Number')}>Contact Number</FieldLabel>
           <FormField
             fullWidth placeholder="+91 98765 43210"
             value={formData.contactNumber}
@@ -615,11 +656,11 @@ const PublicForm = () => {
                 Reporting Manager
               </Typography>
               <FieldGroup>
-                <FieldLabel required>Full Name</FieldLabel>
+                <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
                 <FormField fullWidth placeholder="Manager's full name" value={formData.rmName} onChange={e => handleChange('rmName', e.target.value)} error={!!errors.rmName} helperText={errors.rmName} />
               </FieldGroup>
               <FieldGroup sx={{ mb: 0 }}>
-                <FieldLabel required>Email ID</FieldLabel>
+                <FieldLabel required description={getHelpText('Email ID')}>Email ID</FieldLabel>
                 <FormField fullWidth placeholder="manager@company.com" type="email" value={formData.rmEmail} onChange={e => handleChange('rmEmail', e.target.value)} error={!!errors.rmEmail} helperText={errors.rmEmail} />
               </FieldGroup>
             </Box>
@@ -631,11 +672,11 @@ const PublicForm = () => {
                 Head of Department (HOD)
               </Typography>
               <FieldGroup>
-                <FieldLabel required>Full Name</FieldLabel>
+                <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
                 <FormField fullWidth placeholder="HOD's full name" value={formData.hodName} onChange={e => handleChange('hodName', e.target.value)} error={!!errors.hodName} helperText={errors.hodName} />
               </FieldGroup>
               <FieldGroup sx={{ mb: 0 }}>
-                <FieldLabel required>Email ID</FieldLabel>
+                <FieldLabel required description={getHelpText('Email ID')}>Email ID</FieldLabel>
                 <FormField fullWidth placeholder="hod@company.com" type="email" value={formData.hodEmail} onChange={e => handleChange('hodEmail', e.target.value)} error={!!errors.hodEmail} helperText={errors.hodEmail} />
               </FieldGroup>
             </Box>
@@ -670,7 +711,7 @@ const PublicForm = () => {
         <SectionHeader number={2} title="Classification" description="Categorize your submission for proper routing and evaluation." />
 
         <FieldGroup>
-          <FieldLabel required>Category</FieldLabel>
+          <FieldLabel required description={getHelpText('Category')}>Category</FieldLabel>
           <FormControl fullWidth error={!!errors.category}>
             <FormSelect value={formData.category} onChange={e => handleChange('category', e.target.value)} displayEmpty>
               <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select a category</MenuItem>
@@ -681,7 +722,7 @@ const PublicForm = () => {
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Sub-Category</FieldLabel>
+          <FieldLabel required description={getHelpText('Sub-Category')}>Sub-Category</FieldLabel>
           <FormControl fullWidth error={!!errors.subCategory}>
             <FormSelect value={formData.subCategory} onChange={e => handleChange('subCategory', e.target.value)} displayEmpty>
               <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select a sub-category</MenuItem>
@@ -692,7 +733,7 @@ const PublicForm = () => {
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Innovation Type</FieldLabel>
+          <FieldLabel required description={getHelpText('Innovation Type')}>Innovation Type</FieldLabel>
           <FormControl fullWidth error={!!errors.innovationType}>
             <FormSelect value={formData.innovationType} onChange={e => handleChange('innovationType', e.target.value)} displayEmpty>
               <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select innovation type</MenuItem>
@@ -704,7 +745,7 @@ const PublicForm = () => {
 
         {/* WBS Preview */}
         <FieldGroup sx={{ mb: 0 }}>
-          <FieldLabel>WBS Code (Auto-generated)</FieldLabel>
+          <FieldLabel description={getHelpText('WBS Code (Auto-generated)')}>WBS Code (Auto-generated)</FieldLabel>
           <FormField
             fullWidth disabled
             value={wbsPreview || 'Will be generated when category fields are selected'}
@@ -724,7 +765,7 @@ const PublicForm = () => {
         <SectionHeader number={1} title="Idea Details" description="Describe your innovative idea clearly and concisely." />
 
         <FieldGroup>
-          <FieldLabel required>Idea / Project Title</FieldLabel>
+          <FieldLabel required description={getHelpText('Idea / Project Title')}>Idea / Project Title</FieldLabel>
           <FormField
             fullWidth placeholder="Enter a clear and descriptive title for your idea"
             value={formData.projectTitle}
@@ -735,7 +776,7 @@ const PublicForm = () => {
 
         <FieldGroup sx={{ mb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0.75 }}>
-            <FieldLabel required>Abstract</FieldLabel>
+            <FieldLabel required description={getHelpText('Abstract')}>Abstract</FieldLabel>
             <Chip
               label={`${abstractWordCount} / 200 words`}
               size="small"
@@ -768,27 +809,27 @@ const PublicForm = () => {
         <SectionHeader number={1} title="Project Overview" description="Provide a comprehensive overview of your proposed project." />
 
         <FieldGroup>
-          <FieldLabel required>Project Title</FieldLabel>
+          <FieldLabel required description={getHelpText('Project Title')}>Project Title</FieldLabel>
           <FormField fullWidth placeholder="Enter the project title" value={formData.proposalTitle} onChange={e => handleChange('proposalTitle', e.target.value)} error={!!errors.proposalTitle} helperText={errors.proposalTitle} />
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Executive Summary</FieldLabel>
+          <FieldLabel required description={getHelpText('Executive Summary')}>Executive Summary</FieldLabel>
           <FormField fullWidth multiline rows={4} placeholder="Provide a brief executive summary of the project..." value={formData.executiveSummary} onChange={e => handleChange('executiveSummary', e.target.value)} error={!!errors.executiveSummary} helperText={errors.executiveSummary} />
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Problem Statement</FieldLabel>
+          <FieldLabel required description={getHelpText('Problem Statement')}>Problem Statement</FieldLabel>
           <FormField fullWidth multiline rows={4} placeholder="Clearly define the problem this project aims to solve..." value={formData.problemStatement} onChange={e => handleChange('problemStatement', e.target.value)} error={!!errors.problemStatement} helperText={errors.problemStatement} />
         </FieldGroup>
 
         <FieldGroup>
-          <FieldLabel required>Objectives</FieldLabel>
+          <FieldLabel required description={getHelpText('Objectives')}>Objectives</FieldLabel>
           <FormField fullWidth multiline rows={3} placeholder="List the key objectives of this project..." value={formData.objectives} onChange={e => handleChange('objectives', e.target.value)} error={!!errors.objectives} helperText={errors.objectives} />
         </FieldGroup>
 
         <FieldGroup sx={{ mb: 0 }}>
-          <FieldLabel required>Scope of Work</FieldLabel>
+          <FieldLabel required description={getHelpText('Scope of Work')}>Scope of Work</FieldLabel>
           <FormField fullWidth multiline rows={4} placeholder="Define the scope, deliverables, and boundaries of this project..." value={formData.scopeOfWork} onChange={e => handleChange('scopeOfWork', e.target.value)} error={!!errors.scopeOfWork} helperText={errors.scopeOfWork} />
         </FieldGroup>
       </SectionBlock>

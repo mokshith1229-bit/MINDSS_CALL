@@ -103,6 +103,23 @@ const FieldConfigPanel = ({ field, onSave, onClose }) => {
   const [optInput, setOptInput] = useState('');
   const [dragOptIdx, setDragOptIdx] = useState(null);
   const [dragOverOptIdx, setDragOverOptIdx] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('');
+
+  useEffect(() => {
+    // Prevent saving if data hasn't actually changed from the initial field props
+    if (JSON.stringify(data) === JSON.stringify(field)) return;
+    
+    setSaveStatus('Saving...');
+    const timer = setTimeout(() => {
+      try {
+        onSave(data);
+        setSaveStatus('✓ All changes saved');
+      } catch (err) {
+        setSaveStatus('Unable to save changes. Retrying...');
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [data, field, onSave]);
 
   const addOption = () => {
     if (!optInput.trim()) return;
@@ -201,9 +218,12 @@ const FieldConfigPanel = ({ field, onSave, onClose }) => {
             </Box>
           </Box>
         )}
-        <Box sx={{ display: 'flex', gap: 1, pt: 1.5, borderTop: '1px solid #E2E8F0' }}>
-          <Button variant="contained" size="small" onClick={() => onSave(data)} disabled={!data.label?.trim()}>Save Settings</Button>
-          <Button variant="text" size="small" onClick={onClose}>Cancel</Button>
+        <Box sx={{ display: 'flex', gap: 1, pt: 1.5, borderTop: '1px solid #E2E8F0', alignItems: 'center' }}>
+          <Typography sx={{ fontSize: '0.8rem', color: saveStatus.includes('Unable') ? '#EF4444' : saveStatus.includes('saved') ? '#10B981' : '#64748B', fontWeight: 600 }}>
+            {saveStatus}
+          </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <Button variant="text" size="small" onClick={onClose}>Close</Button>
         </Box>
       </Box>
     </Box>
@@ -265,7 +285,7 @@ const FieldRow = ({ field, onEdit, onDuplicate, onDelete, onMove, isFirst, isLas
         </Box>
       </Box>
       <Collapse in={configOpen}>
-        <FieldConfigPanel field={field} onSave={d => { onEdit(d); setConfigOpen(false); }} onClose={() => setConfigOpen(false)} />
+        <FieldConfigPanel field={field} onSave={d => { onEdit(d); }} onClose={() => setConfigOpen(false)} />
       </Collapse>
     </Box>
   );
