@@ -767,15 +767,45 @@ const PublicForm = () => {
     }
   }, [formData, extraSections]);
 
+  const processedSections = useMemo(() => {
+    let subType = '';
+    for (const sec of extraSections) {
+      const f = (sec.fields || []).find(fld => (fld.label || '').toLowerCase().trim() === 'submission type');
+      if (f && formData[f.id]) {
+        subType = String(formData[f.id]).toLowerCase().trim();
+        break;
+      }
+    }
+    const isIdea = subType === 'idea';
+
+    const cloned = JSON.parse(JSON.stringify(extraSections));
+    return cloned.filter(sec => {
+      const titleLower = (sec.title || '').toLowerCase().trim();
+      if (isIdea && (titleLower === 'classification' || titleLower === 'management information')) {
+        return false;
+      }
+      return true;
+    }).map(sec => {
+      const titleLower = (sec.title || '').toLowerCase().trim();
+      if (isIdea && titleLower === 'submission details') {
+        sec.fields = (sec.fields || []).filter(f => {
+          const labelLower = (f.label || '').toLowerCase();
+          return labelLower.includes('title') || labelLower.includes('abstract');
+        });
+      }
+      return sec;
+    });
+  }, [extraSections, formData]);
+
   // Build dynamic steps purely from Form Builder sections
   const ALL_STEPS = useMemo(() => {
-    return extraSections.map(sec => ({
+    return processedSections.map(sec => ({
       key: `dyn-${sec.id}`,
       label: sec.title,
       description: sec.description || '',
       sectionData: sec,
     }));
-  }, [extraSections]);
+  }, [processedSections]);
 
   const visibleSteps = useMemo(() => {
     return ALL_STEPS.filter(step => {
@@ -786,7 +816,7 @@ const PublicForm = () => {
         let labelValue = undefined;
         // Search all fields to find matching label
         if (targetValue === undefined) {
-          for (const sec of extraSections) {
+          for (const sec of processedSections) {
             const f = (sec.fields || []).find(fld => fld.label === rule.fieldId);
             if (f) {
               labelValue = formData[f.id];
@@ -800,7 +830,7 @@ const PublicForm = () => {
       }
       return true;
     });
-  }, [ALL_STEPS, formData, extraSections]);
+  }, [ALL_STEPS, formData, processedSections]);
 
   const currentStepKey = visibleSteps[activeStep]?.key;
   const progressPct = visibleSteps.length > 0 ? Math.round(((activeStep + 1) / visibleSteps.length) * 100) : 0;
@@ -1136,7 +1166,7 @@ const PublicForm = () => {
           <Typography sx={{ color: '#667085', fontSize: '0.82rem', mt: 0.25 }}>Review all details before submitting</Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 4 }}>
-          {extraSections.map(sec => {
+          {processedSections.map(sec => {
             const secFields = (sec.fields || []).filter(f => !f.hidden && !['heading', 'paragraph', 'divider'].includes(f.type));
             if (secFields.length === 0) return null;
 
@@ -1146,7 +1176,7 @@ const PublicForm = () => {
               const targetValue = formData[rule.fieldId];
               let labelValue = undefined;
               if (targetValue === undefined) {
-                for (const s of extraSections) {
+                for (const s of processedSections) {
                   const f = (s.fields || []).find(fld => fld.label === rule.fieldId);
                   if (f) {
                     labelValue = formData[f.id];

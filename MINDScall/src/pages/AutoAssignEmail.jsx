@@ -325,7 +325,7 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
       setSnack({ open: true, msg: 'All 6 evaluator emails must be unique', type: 'error' }); return;
     }
     try {
-      await api.post('/admin/evaluations/auto-assign-eval-committee', {
+      await api.post('/admin/evaluations/auto-assign-committee', {
         evaluatorEmails: uniqueEmails, submissionIds: selEvalIds,
       });
       setSnack({ open: true, msg: `${selEvalIds.length} proposal(s) assigned — 6 secure emails dispatched per proposal!`, type: 'success' });
