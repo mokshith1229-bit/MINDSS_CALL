@@ -61,7 +61,7 @@ const FinanceApproval = () => {
       setLoading(true);
       const res = await api.get('/admin/submissions');
       const mapped = (res.data.data.submissions || []).map(sub => {
-        const parsed = parseSubmissionFields(p);
+        const parsed = parseSubmissionFields(sub);
 
         const approvedBudget = parsed.approvedBudget;
         const userEstimatedAmount = parsed.userBudget || parsed.budget || 0;
