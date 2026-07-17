@@ -400,9 +400,9 @@ exports.submitRmBatch = async (req, res, next) => {
         });
       }
       
-      // Optionally remove the token so they can't review again
-      submission.workflow.rmMasterToken = null;
-      submission.workflow.rmReviewToken = null;
+      // Token removal disabled so links remain accessible for 48-72+ hours for RM review
+      // submission.workflow.rmMasterToken = null;
+      // submission.workflow.rmReviewToken = null;
 
       await submission.save();
     }
