@@ -87,7 +87,7 @@ app.use('/api/v1/admin/audit-logs', adminAuditRoutes);
 app.use('/api/v1/admin/email-logs', adminEmailLogRoutes);
 app.use('/api/v1/public/forms', publicFormRoutes);
 app.use('/api/v1/public/reviews', publicSubmissionRoutes);
-app.use('/api/v1/public/batch-reviews', publicEvaluationRoutes);
+app.use('/api/v1/public/evaluations', publicEvaluationRoutes);
 app.use('/api/v1/public/finance-reviews', publicFinanceRoutes);
 app.use('/api/v1/meetings', meetingRoutes);
 app.use('/api/v1/meeting-requests', meetingRequestRoutes);
