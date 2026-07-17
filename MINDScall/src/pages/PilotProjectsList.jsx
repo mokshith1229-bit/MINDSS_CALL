@@ -121,15 +121,15 @@ const PilotProjectsList = () => {
   };
 
   const columns = [
-    { id: 'projectId', label: 'Project ID', sortable: true },
-    { id: 'title', label: 'Project Title', sortable: true, cell: (r) => (
+    { field: 'projectId', headerName: 'Project ID', sortable: true },
+    { field: 'title', headerName: 'Project Title', sortable: true, renderCell: (r) => (
       <Typography variant="body2" sx={{ fontWeight: 600, maxWidth: 250 }} noWrap title={r.title}>
         {r.title}
       </Typography>
     )},
-    { id: 'department', label: 'Department', sortable: true },
-    { id: 'owner', label: 'Owner', sortable: true },
-    { id: 'phase', label: 'Current Phase', sortable: true, cell: (r) => (
+    { field: 'department', headerName: 'Department', sortable: true },
+    { field: 'owner', headerName: 'Owner', sortable: true },
+    { field: 'phase', headerName: 'Current Phase', sortable: true, renderCell: (r) => (
       <Chip 
         label={r.phase} 
         size="small" 
@@ -140,9 +140,9 @@ const PilotProjectsList = () => {
         }} 
       />
     )},
-    { id: 'progress', label: 'Progress', sortable: true, cell: (r) => <ProgressBar value={r.progress} /> },
-    { id: 'startDate', label: 'Start Date', sortable: true },
-    { id: 'status', label: 'Status', sortable: true, cell: (r) => (
+    { field: 'progress', headerName: 'Progress', sortable: true, renderCell: (r) => <ProgressBar value={r.progress} /> },
+    { field: 'startDate', headerName: 'Start Date', sortable: true },
+    { field: 'status', headerName: 'Status', sortable: true, renderCell: (r) => (
       <Chip 
         label={r.status} 
         size="small" 
@@ -153,7 +153,7 @@ const PilotProjectsList = () => {
         }} 
       />
     )},
-    { id: 'actions', label: 'Workspace', align: 'center', cell: (r) => (
+    { field: 'actions', headerName: 'Workspace', align: 'center', renderCell: (r) => (
       <IconButton 
         color="primary" 
         onClick={() => navigate(`/pilot-projects/${r.id}`)}
@@ -206,10 +206,7 @@ const PilotProjectsList = () => {
         </Box>
         <DataTable
           columns={columns}
-          data={filtered}
-          loading={loading}
-          pagination
-          rowsPerPage={10}
+          rows={filtered}
         />
       </Paper>
     </Box>

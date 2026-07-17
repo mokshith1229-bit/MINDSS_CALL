@@ -232,13 +232,13 @@ const PilotProjectWorkspace = () => {
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Project Documents</Typography>
               <DataTable
                 columns={[
-                  { id: 'filename', label: 'File Name' },
-                  { id: 'documentType', label: 'Type' },
-                  { id: 'uploadedBy', label: 'Uploaded By' },
-                  { id: 'uploadedAt', label: 'Date', cell: r => new Date(r.uploadedAt).toLocaleDateString() },
-                  { id: 'actions', label: 'Actions', cell: r => <Button size="small">Download</Button> }
+                  { field: 'filename', headerName: 'File Name' },
+                  { field: 'documentType', headerName: 'Type' },
+                  { field: 'uploadedBy', headerName: 'Uploaded By' },
+                  { field: 'uploadedAt', headerName: 'Date', renderCell: r => new Date(r.uploadedAt).toLocaleDateString() },
+                  { field: 'actions', headerName: 'Actions', renderCell: r => <Button size="small">Download</Button> }
                 ]}
-                data={project.documents || []}
+                rows={project.documents || []}
               />
             </CardContent>
           </Card>
@@ -318,11 +318,11 @@ const PilotProjectWorkspace = () => {
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Audit Trail</Typography>
               <DataTable
                 columns={[
-                  { id: 'timestamp', label: 'Date & Time', cell: r => new Date(r.timestamp).toLocaleString() },
-                  { id: 'user', label: 'User' },
-                  { id: 'action', label: 'Action' }
+                  { field: 'timestamp', headerName: 'Date & Time', renderCell: r => new Date(r.timestamp).toLocaleString() },
+                  { field: 'user', headerName: 'User' },
+                  { field: 'action', headerName: 'Action' }
                 ]}
-                data={project.activityLog || []}
+                rows={project.activityLog || []}
               />
             </CardContent>
           </Card>
