@@ -26,40 +26,75 @@ export const FIELD_TYPES = [
   { value:'radio',       label:'Radio Button',      icon:'RadioButtonChecked', group:'Choice' },
   { value:'checkbox',    label:'Checkbox',          icon:'CheckBox',  group:'Choice' },
   { value:'multiselect', label:'Multi Select',      icon:'Checklist', group:'Choice' },
+  { value:'card_selector',label:'Card Selector',    icon:'Style',     group:'Choice' },
   { value:'rating',      label:'Rating',            icon:'Star',      group:'Advanced' },
   { value:'file',        label:'File Upload',       icon:'AttachFile',group:'Advanced' },
+  { value:'signature',   label:'Signature',         icon:'Draw',      group:'Advanced' },
+  { value:'heading',     label:'Heading',           icon:'Title',     group:'Display' },
+  { value:'paragraph',   label:'Paragraph',         icon:'Subject',   group:'Display' },
+  { value:'divider',     label:'Divider',           icon:'HorizontalRule', group:'Display' },
 ];
 
 export const FIELD_TYPE_COLORS = {
   text:'#7C3AED', textarea:'#2563EB', number:'#059669', email:'#D97706',
   phone:'#DC2626', url:'#0891B2', date:'#DB2777', dropdown:'#9333EA',
-  radio:'#2563EB', checkbox:'#059669', multiselect:'#D97706', rating:'#F59E0B', file:'#64748B',
+  radio:'#2563EB', checkbox:'#059669', multiselect:'#D97706', card_selector:'#0284C7',
+  rating:'#F59E0B', file:'#64748B', signature:'#475569',
+  heading:'#1E293B', paragraph:'#64748B', divider:'#94A3B8',
 };
 
 // ── Default Form Sections ─────────────────────────────────────
-const makeDefaultSections = () => ([
+export const makeDefaultSections = () => ([
   {
-    id:'sec-1', title:'Basic Details', description:'Submitter information',
+    id:'sec-employee', title:'Employee Information', description:'Provide your personal and organizational details',
     fields:[
-      { id:'f-name',  label:'Full Name',  type:'text',     required:true,  placeholder:'Your full name',   helpText:'',  defaultValue:'', validationRule:'', isDefault:true },
-      { id:'f-email', label:'Email',      type:'email',    required:false, placeholder:'your@email.com',   helpText:'',  defaultValue:'', validationRule:'', isDefault:true },
-      { id:'f-cat',   label:'Category',   type:'dropdown', required:true,  placeholder:'',                 helpText:'Select the category that best fits', defaultValue:'', validationRule:'', isDefault:true, options:[] },
+      { id:uid(), label:'Full Name', type:'text', required:true, placeholder:'e.g. Rajesh Kumar', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Employee ID', type:'text', required:true, placeholder:'e.g. EMP-1029', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Designation', type:'text', required:true, placeholder:'e.g. Senior Engineer', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Department', type:'text', required:true, placeholder:'e.g. Engineering', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Official Email ID', type:'email', required:true, placeholder:'name@company.com', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Contact Number', type:'phone', required:true, placeholder:'+91 98765 43210', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Reporting Manager Name', type:'text', required:true, placeholder:"Manager's full name", helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Reporting Manager Email ID', type:'email', required:true, placeholder:'manager@company.com', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
     ],
   },
   {
-    id:'sec-2', title:'Idea Information', description:'Describe your idea',
+    id:'sec-type', title:'Submission Type', description:'Choose whether you are submitting an Idea or a formal Proposal.',
     fields:[
-      { id:'f-title',   label:'Idea Title',           type:'text',     required:true,  placeholder:'Brief title of your idea',     helpText:'Keep it concise — max 100 chars', defaultValue:'', validationRule:'max:100', isDefault:true },
-      { id:'f-details', label:'Idea Details',         type:'textarea', required:true,  placeholder:'Describe your idea in detail...', helpText:'Problem statement, solution, expected impact', defaultValue:'', validationRule:'', isDefault:true },
-      { id:'f-collab',  label:'Collaborators',        type:'text',     required:false, placeholder:'e.g. John, Jane (comma-separated)', helpText:'',defaultValue:'',validationRule:'',isDefault:true },
-      { id:'f-impact',  label:'Expected Impact',      type:'textarea', required:false, placeholder:'Quantify the expected benefits...', helpText:'', defaultValue:'', validationRule:'',isDefault:true },
+      { id:'f-sub-type', label:'Submission Type', type:'card_selector', required:true, placeholder:'', helpText:'', defaultValue:'Idea', validationRule:'', isDefault:true, options:['Idea', 'Proposal'] },
     ],
   },
   {
-    id:'sec-3', title:'Supporting Documents', description:'Attach any supporting files',
+    id:'sec-class', title:'Classification', description:'Categorize your submission for proper routing and evaluation.',
     fields:[
-      { id:'f-file',    label:'Attachments',           type:'file',     required:false, placeholder:'', helpText:'PDF, DOC, Images up to 10MB', defaultValue:'', validationRule:'', isDefault:true },
-      { id:'f-comments',label:'Additional Comments',   type:'textarea', required:false, placeholder:'Any additional context...', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Category', type:'dropdown', required:true, placeholder:'Select a category', helpText:'', defaultValue:'', validationRule:'', isDefault:true, options:['Process Development', 'Product Development'] },
+      { id:uid(), label:'Sub-Category', type:'dropdown', required:true, placeholder:'Select a sub-category', helpText:'', defaultValue:'', validationRule:'', isDefault:true, options:['Software', 'Hardware', 'Operations', 'Safety'] },
+      { id:uid(), label:'Innovation Type', type:'dropdown', required:true, placeholder:'Select innovation type', helpText:'', defaultValue:'', validationRule:'', isDefault:true, options:['Incremental', 'Breakthrough', 'Disruptive'] },
+    ],
+  },
+  {
+    id:'sec-idea', title:'Idea Details', description:'Describe your innovative idea clearly and concisely.',
+    visibilityRule: { fieldId: 'Submission Type', value: 'Idea' },
+    fields:[
+      { id:'f-idea-title', label:'Idea / Project Title', type:'text', required:true, placeholder:'Enter a clear and descriptive title for your idea', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:'f-idea-abs', label:'Abstract', type:'textarea', required:true, placeholder:'Describe the background, proposed idea, and expected benefits...', helpText:'Max 200 words', defaultValue:'', validationRule:'max:200', isDefault:true },
+    ],
+  },
+  {
+    id:'sec-proposal', title:'Project Overview', description:'Provide a comprehensive overview of your proposed project.',
+    visibilityRule: { fieldId: 'Submission Type', value: 'Proposal' },
+    fields:[
+      { id:'f-prop-title', label:'Project Title', type:'text', required:true, placeholder:'Enter the project title', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Executive Summary', type:'textarea', required:true, placeholder:'Provide a brief executive summary...', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Problem Statement', type:'textarea', required:true, placeholder:'Clearly define the problem...', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Objectives', type:'textarea', required:true, placeholder:'List the key objectives...', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+      { id:uid(), label:'Scope of Work', type:'textarea', required:true, placeholder:'Define the scope and deliverables...', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
+    ],
+  },
+  {
+    id:'sec-attach', title:'Supporting Documents', description:'Upload any files that support your submission. This step is optional.',
+    fields:[
+      { id:'f-attach', label:'Attachments', type:'file', required:false, placeholder:'', helpText:'', defaultValue:'', validationRule:'', isDefault:true },
     ],
   },
 ]);
@@ -67,7 +102,7 @@ const makeDefaultSections = () => ([
 // ── Templates ─────────────────────────────────────────────────
 const TEMPLATES = [
   {
-    id:'tpl-1', name:'Idea Submission',        category:'Process Development',          icon:'💡', description:'Standard idea submission form with category, title, and details',
+    id:'tpl-1', name:'Proposal / Idea Submission',        category:'Process Development',          icon:'💡', description:'Standard submission form with Idea and Proposal branching',
     sections: makeDefaultSections(),
   },
   {
@@ -99,10 +134,7 @@ const TEMPLATES = [
       ]},
     ],
   },
-  {
-    id:'tpl-4', name:'Innovation Proposal',    category:'Product Development',          icon:'🚀', description:'Detailed innovation proposal with impact metrics',
-    sections: makeDefaultSections(),
-  },
+
   {
     id:'tpl-5', name:'Safety Incident Report', category:'Process Development',              icon:'🛡️', description:'Report safety incidents or near-miss events',
     sections:[

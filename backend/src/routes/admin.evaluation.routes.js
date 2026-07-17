@@ -7,7 +7,8 @@ const {
   autoAssignCommittee,
   autoAssignEvalByEmail,
   autoAssignFinance,
-  getFinanceBatches
+  getFinanceBatches,
+  autoAssignApproval
 } = require('../controllers/admin.evaluation.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
@@ -34,5 +35,8 @@ router.post('/auto-assign-eval-by-email', autoAssignEvalByEmail);
 // Finance Assignment Routes
 router.post('/auto-assign-finance', autoAssignFinance);
 router.get('/finance-batches', getFinanceBatches);
+
+// Approval Committee Assignment Route
+router.post('/auto-assign-approval', autoAssignApproval);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const Committee = require('../models/Committee.model');
 const Batch = require('../models/Batch.model');
 const FinanceBatch = require('../models/FinanceBatch.model');
+const ApprovalBatch = require('../models/ApprovalBatch.model');
 const Submission = require('../models/Submission.model');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
@@ -345,6 +346,91 @@ exports.getFinanceBatches = async (req, res, next) => {
   try {
     const batches = await FinanceBatch.find().populate('submissions').sort({ createdAt: -1 });
     res.status(200).json(new ApiResponse(200, { batches }, 'Finance batches retrieved successfully'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ==========================================
+// AUTO ASSIGN APPROVAL COMMITTEE
+// ==========================================
+
+exports.autoAssignApproval = async (req, res, next) => {
+  try {
+    const { reviewerEmails, submissionIds, batchName } = req.body;
+
+    if (!reviewerEmails || reviewerEmails.length === 0 || !submissionIds || submissionIds.length === 0) {
+      return next(new ApiError(400, 'reviewerEmails and submissionIds are required'));
+    }
+
+    const submissions = await Submission.find({ _id: { $in: submissionIds } });
+    if (submissions.length === 0) {
+      return next(new ApiError(404, 'No valid submissions found'));
+    }
+
+    // Ensure all submissions are in FINANCE_APPROVED state
+    const validSubs = submissions.filter(s => s.status === 'FINANCE_APPROVED' || s.status === 'APPROVAL_COMMITTEE');
+    if (validSubs.length === 0) {
+      return next(new ApiError(400, 'No eligible submissions found for Approval Committee assignment.'));
+    }
+
+    // Generate a secure review token for this approval batch
+    const reviewToken = crypto.randomBytes(24).toString('hex');
+    const resolvedBatchName = batchName || `Approval-Batch-${Date.now()}`;
+
+    const approvalBatch = await ApprovalBatch.create({
+      name: resolvedBatchName,
+      reviewerEmails,
+      submissions: validSubs.map(s => s._id),
+      reviewToken,
+      status: 'EMAIL_SENT'
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const reviewLink = `${frontendUrl}/approval-review/${reviewToken}`;
+
+    const links = [];
+    // Log timeline for each valid submission and update status
+    for (const sub of validSubs) {
+      sub.status = 'APPROVAL_COMMITTEE';
+      sub.timeline.push({
+        stage: 'Sent To Approval Committee',
+        actionBy: req.user?.email || 'Admin',
+        role: 'Admin',
+        remarks: `Assigned to approval committee: ${reviewerEmails.join(', ')} in batch: ${resolvedBatchName}`,
+        timestamp: new Date()
+      });
+      await sub.save();
+
+      const title = sub.answers?.title || sub.answers?.proposaltitle || sub.businessId || 'Untitled';
+      links.push(`<li style="margin-bottom:5px;"><b>${sub.businessId || 'Proposal'}</b> – ${title}</li>`);
+    }
+
+    // Send email to all approval reviewers
+    const emailSubject = `MINDScall: Approval Committee Review Required for Batch ${resolvedBatchName}`;
+    const emailHtml = `
+      <h3>MINDScall Approval Committee</h3>
+      <p>Dear Approval Committee Member,</p>
+      <p>You have been assigned to evaluate a new batch of proposals for final approval.</p>
+      <ul>
+        <li><b>Batch Name:</b> ${resolvedBatchName}</li>
+        <li><b>Proposals to Review:</b> ${validSubs.length}</li>
+      </ul>
+      <p>Please click the secure link below to access the review portal:</p>
+      <a href="${reviewLink}" style="padding: 10px 15px; background-color: #2E7D32; color: white; text-decoration: none; border-radius: 4px;">Start Evaluation</a>
+      <br><br>
+      <p>Or copy this link into your browser: <br>${reviewLink}</p>
+      <hr />
+      <p><small>This is an automated message from MINDScall.</small></p>
+    `;
+
+    await sendEmail({
+      email: reviewerEmails.join(', '),
+      subject: emailSubject,
+      html: emailHtml
+    });
+
+    res.status(200).json(new ApiResponse(200, { approvalBatch, assignedCount: validSubs.length }, 'Approval Committee assigned and email sent successfully.'));
   } catch (err) {
     next(err);
   }

@@ -199,11 +199,11 @@ exports.submitForm = async (req, res, next) => {
           <p>Dear ${employeeName},</p>
           <p>Thank you for your ${submissionType.toLowerCase()} submission.</p>
           <p>Your tracking ID is: <b>${trackingId}</b></p>
-          <p>Your WBS Code is: <b>${businessId}</b></p>
           <p>You can track the progress of your submission at any time using the Public Tracking Portal.</p>
           <div style="margin: 25px 0;">
             <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/track?id=${trackingId}" style="padding: 12px 24px; background-color: #2E7D32; color: white; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Track Submission</a>
           </div>
+          <p style="color: #555; font-size: 0.9em;">Or access the tracking portal directly using this link:<br/><a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/track?id=${trackingId}">${process.env.FRONTEND_URL || 'http://localhost:5173'}/track?id=${trackingId}</a></p>
           <hr style="border: 0; border-top: 1px solid #eee;" />
           <p style="color: #888;"><small>Best regards,<br>CubeTech Innovation Team</small></p>
         </div>

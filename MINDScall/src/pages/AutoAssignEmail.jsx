@@ -123,6 +123,15 @@ const AutoAssignEmail = () => {
   const [finBatchName, setFinBatchName] = useState('');
   const [selFinProp, setSelFinProp]   = useState(null);
 
+  // ── Tab 4: Approval Committee Assignment ──
+  const [approvalSubs, setApprovalSubs] = useState([]);
+  const [approvalSearch, setApprovalSearch] = useState('');
+  const [approvalFilter, setApprovalFilter] = useState('All');
+  const [selApprovalIds, setSelApprovalIds] = useState([]);
+  const [approvalReviewerEmails, setApprovalReviewerEmails] = useState(['']);
+  const [approvalBatchName, setApprovalBatchName] = useState('');
+  const [selApprovalProp, setSelApprovalProp] = useState(null);
+
   // ─── Fetch All Data ──────────────────────────────────────────────
   const fetchData = async () => {
     try {
@@ -180,6 +189,9 @@ const AutoAssignEmail = () => {
 
       // ── Finance pool: FINANCE_APPROVED (both eval-approved and eval-rejected route here) ──
       setFinanceSubs(parsed.filter(s => s.status === 'FINANCE_APPROVED'));
+
+      // ── Approval Committee pool: FINANCE_APPROVED or APPROVAL_COMMITTEE ──
+      setApprovalSubs(parsed.filter(s => s.status === 'FINANCE_APPROVED' || s.status === 'APPROVAL_COMMITTEE'));
 
       // ── Fetch active committees ──
       const commRes = await api.get('/admin/evaluations/committees');
@@ -367,6 +379,43 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
     Assigned: financeSubs.filter(s => !!s.workflow?.financeReview?.reviewerName).length,
   };
 
+  // ─── Tab 4: Approval Committee Assignment handlers ──────────────
+  const filteredApprovalSubs = approvalSubs.filter(s => {
+    const q = approvalSearch.toLowerCase();
+    const matchSearch = (s.title || '').toLowerCase().includes(q) ||
+      (s.businessId || '').toLowerCase().includes(q) || (s.employeeName || '').toLowerCase().includes(q);
+    if (approvalFilter === 'Assigned') return matchSearch && s.status === 'APPROVAL_COMMITTEE';
+    if (approvalFilter === 'Unassigned') return matchSearch && s.status !== 'APPROVAL_COMMITTEE';
+    return matchSearch;
+  });
+
+  const handleAddApprovalEmail = () => setApprovalReviewerEmails(prev => [...prev, '']);
+  const handleRemoveApprovalEmail = idx => setApprovalReviewerEmails(prev => prev.filter((_, i) => i !== idx));
+  const handleApprovalEmailChange = (idx, val) => setApprovalReviewerEmails(prev => prev.map((e, i) => i === idx ? val : e));
+
+  const handleAutoAssignApproval = async () => {
+    const validEmails = approvalReviewerEmails.filter(e => e.trim());
+    if (validEmails.length === 0 || selApprovalIds.length === 0) {
+      setSnack({ open: true, msg: 'Add at least one reviewer email and select proposals', type: 'error' }); return;
+    }
+    try {
+      await api.post('/admin/evaluations/auto-assign-approval', {
+        reviewerEmails: validEmails, submissionIds: selApprovalIds, batchName: approvalBatchName || undefined,
+      });
+      setSnack({ open: true, msg: `${selApprovalIds.length} proposal(s) assigned to approval committee — email sent!`, type: 'success' });
+      setSelApprovalIds([]); setApprovalReviewerEmails(['']); setApprovalBatchName(''); setSelApprovalProp(null);
+      await fetchData();
+    } catch (err) {
+      setSnack({ open: true, msg: err.response?.data?.message || 'Failed to assign to approval committee', type: 'error' });
+    }
+  };
+
+  const approvalCounts = {
+    All: approvalSubs.length,
+    Unassigned: approvalSubs.filter(s => s.status !== 'APPROVAL_COMMITTEE').length,
+    Assigned: approvalSubs.filter(s => s.status === 'APPROVAL_COMMITTEE').length,
+  };
+
   if (loading) return (
     <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
   );
@@ -412,6 +461,16 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
                 Finance Assignment
                 <Chip label={finCounts.Unassigned} size="small"
                   sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#E3F2FD', color: '#1565C0', fontWeight: 700 }} />
+              </Box>
+            }
+          />
+          <Tab
+            icon={<AssignedIcon sx={{ fontSize: 18 }} />} iconPosition="start"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Approval Committee
+                <Chip label={approvalCounts.Unassigned} size="small"
+                  sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#FFF8E1', color: '#F57F17', fontWeight: 700 }} />
               </Box>
             }
           />
@@ -934,6 +993,173 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
                             "{selFinProp.workflow.evaluationReview.remarks}"
                           </Typography>
                         )}
+                      </Box>
+                    </Box>
+                  </Fade>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB 4 — Approval Committee Assignment
+      ══════════════════════════════════════════════════════════════ */}
+      <TabPanel value={tabIndex} index={3}>
+        <Grid container spacing={3}>
+          {/* List */}
+          <Grid item xs={12} lg={7}>
+            <Card sx={{ borderRadius: 3, border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)' }} elevation={0}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Proposals for Approval</Typography>
+                  <Tooltip title="Refresh"><IconButton size="small" onClick={fetchData}><RefreshIcon fontSize="small" /></IconButton></Tooltip>
+                </Box>
+                <TextField fullWidth size="small" placeholder="Search proposal title, ID, or employee..."
+                  value={approvalSearch} onChange={e => setApprovalSearch(e.target.value)}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#9E9E9E', fontSize: 20 }} /></InputAdornment> }}
+                  sx={{ mb: 1.5 }} />
+                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                  {['All', 'Unassigned', 'Assigned'].map(f => (
+                    <Chip key={f} label={`${f} (${approvalCounts[f] ?? 0})`} size="small" onClick={() => setApprovalFilter(f)}
+                      sx={{ fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer',
+                        bgcolor: approvalFilter === f ? '#1565C0' : '#F5F5F5',
+                        color: approvalFilter === f ? '#fff' : '#546E7A' }} />
+                  ))}
+                </Box>
+                <Box sx={{ maxHeight: 600, overflowY: 'auto', pr: 0.5 }}>
+                  {filteredApprovalSubs.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', p: 4, color: '#9E9E9E' }}>
+                      <UnassignedIcon sx={{ fontSize: 40, mb: 1, opacity: 0.5 }} />
+                      <Typography>No proposals found</Typography>
+                    </Box>
+                  ) : filteredApprovalSubs.map(sub => {
+                    const isSelected = selApprovalIds.includes(sub._id);
+                    return (
+                      <Box key={sub._id} onClick={() => {
+                        setSelApprovalIds(prev => prev.includes(sub._id) ? prev.filter(x => x !== sub._id) : [...prev, sub._id]);
+                        setSelApprovalProp(sub);
+                      }}
+                        sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, p: 1.5, borderRadius: 2, mb: 1, cursor: 'pointer',
+                          border: `1.5px solid ${isSelected ? '#1565C0' : '#F0F0F0'}`, bgcolor: isSelected ? '#1565C010' : '#FAFAFA',
+                          transition: 'all 0.2s', '&:hover': { borderColor: '#1565C060' } }}>
+                        <Checkbox size="small" checked={isSelected} sx={{ color: '#1565C0', '&.Mui-checked': { color: '#1565C0' }, mt: -0.3 }} />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.3, flexWrap: 'wrap' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#1565C0', fontFamily: 'monospace' }}>{sub.businessId}</Typography>
+                            <TypeBadge type={sub.submissionType} />
+                            {sub.status === 'APPROVAL_COMMITTEE' && (
+                              <Chip label="Assigned" size="small" sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#FFF8E1', color: '#F57F17', fontWeight: 700 }} />
+                            )}
+                          </Box>
+                          <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }} noWrap>{sub.title}</Typography>
+                          <Typography variant="caption" sx={{ color: '#78909C' }} noWrap>{sub.employeeName} • {sub.dept}</Typography>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Assignment Panel */}
+          <Grid item xs={12} lg={5}>
+            <Card sx={{ borderRadius: 3, border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)', position: 'sticky', top: 16 }} elevation={0}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                  <AssignedIcon sx={{ color: '#F57F17', fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Assign to Approval Committee</Typography>
+                </Box>
+                <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>
+                  Select proposals → add committee reviewer emails → send a secure review link.
+                  Reviewers click the link to provide their final approval.
+                </Typography>
+
+                {/* Selected count */}
+                <Box sx={{ p: 1.5, bgcolor: selApprovalIds.length > 0 ? '#FFF8E1' : '#FAFAFA', borderRadius: 2, mb: 2,
+                  border: `1px solid ${selApprovalIds.length > 0 ? '#FFE082' : '#E0E0E0'}` }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: selApprovalIds.length > 0 ? '#F57F17' : '#9E9E9E' }}>
+                    {selApprovalIds.length > 0 ? `${selApprovalIds.length} proposal(s) selected for final approval` : '← Select proposals from the list'}
+                  </Typography>
+                </Box>
+
+                {/* Reviewer Emails */}
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Committee Member Emails</Typography>
+                    <Button size="small" startIcon={<AddIcon />} onClick={handleAddApprovalEmail}
+                      sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.75rem' }}>
+                      Add Reviewer
+                    </Button>
+                  </Box>
+                  {approvalReviewerEmails.map((email, idx) => (
+                    <Box key={idx} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                      <TextField fullWidth size="small" type="email" placeholder={`Reviewer email ${idx + 1}`}
+                        value={email} onChange={e => handleApprovalEmailChange(idx, e.target.value)}
+                        InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ fontSize: 18, color: '#9E9E9E' }} /></InputAdornment> }} />
+                      {approvalReviewerEmails.length > 1 && (
+                        <IconButton size="small" onClick={() => handleRemoveApprovalEmail(idx)} sx={{ color: '#EF5350' }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                  <Typography variant="caption" sx={{ color: '#78909C' }}>
+                    Each reviewer receives one email with a link to review all selected proposals.
+                  </Typography>
+                </Box>
+
+                <TextField fullWidth size="small" label="Batch Name (optional)"
+                  placeholder={`Approval-Batch-${new Date().toLocaleDateString('en-IN')}`}
+                  value={approvalBatchName} onChange={e => setApprovalBatchName(e.target.value)} sx={{ mb: 2 }} />
+
+                <Box sx={{ p: 1.5, bgcolor: '#E8F5E9', borderRadius: 2, mb: 2, border: '1px solid #C8E6C9' }}>
+                  <Typography variant="caption" sx={{ color: '#2E7D32', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                    📋 What happens next?
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#1B5E20' }}>
+                    Approval Committee members receive an email with a secure link. When they provide final approval, the proposal is marked as Approved.
+                  </Typography>
+                </Box>
+
+                <Button variant="contained" fullWidth size="large"
+                  disabled={selApprovalIds.length === 0 || !approvalReviewerEmails.some(e => e.trim())}
+                  onClick={handleAutoAssignApproval} startIcon={<SendIcon />}
+                  sx={{ fontWeight: 700, py: 1.5, bgcolor: '#F57F17', color: '#fff', '&:hover': { bgcolor: '#F9A825' } }}>
+                  Send Approval Email ({selApprovalIds.length})
+                </Button>
+
+                {/* Selected proposal preview */}
+                {selApprovalProp && (
+                  <Fade in timeout={400}>
+                    <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #E0E0E0' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Last Selected Proposal</Typography>
+                      <Box sx={{ bgcolor: '#F9FAFB', p: 1.5, borderRadius: 2, border: '1px solid #E8EAED' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#1565C0', fontFamily: 'monospace' }}>{selApprovalProp.businessId}</Typography>
+                          <TypeBadge type={selApprovalProp.submissionType} />
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>{selApprovalProp.title}</Typography>
+                        <Divider sx={{ my: 1 }} />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700 }}>RM Decision</Typography>
+                          <ReviewBadge decision={selApprovalProp.workflow?.rmReview?.decision} />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700 }}>Eval Decision</Typography>
+                          <ReviewBadge decision={selApprovalProp.workflow?.evaluationReview?.decision} />
+                        </Box>
+                        {selApprovalProp.workflow?.evaluationReview?.remarks && (
+                          <Typography variant="caption" sx={{ color: '#546E7A', display: 'block', mt: 0.5, fontStyle: 'italic' }}>
+                            "{selApprovalProp.workflow.evaluationReview.remarks}"
+                          </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: '#757575', fontWeight: 700 }}>Finance Decision</Typography>
+                          <ReviewBadge decision={selApprovalProp.workflow?.financeReview?.decision} />
+                        </Box>
                       </Box>
                     </Box>
                   </Fade>

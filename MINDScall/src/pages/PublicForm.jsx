@@ -6,7 +6,7 @@ import {
   Snackbar, Alert, List, ListItem, ListItemIcon,
   ListItemText, IconButton, Divider, Chip, InputAdornment,
   LinearProgress, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
-  Grid
+  Grid, RadioGroup, FormControlLabel, Checkbox, Rating,
 } from '@mui/material';
 import { styled, keyframes } from '@mui/material/styles';
 import {
@@ -19,7 +19,8 @@ import {
   Phone as PhoneIcon, Email as EmailIcon, Badge as BadgeIcon,
   ArrowForward as ArrowForwardIcon, ArrowBack as ArrowBackIcon,
   Visibility as ViewIcon,
-  ContentCopy as CopyIcon
+  ContentCopy as CopyIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 
@@ -37,13 +38,7 @@ const SUB_CATEGORIES = [
 
 const INNOVATION_TYPES = ['Process Development', 'Product Development'];
 
-const ALL_STEPS = [
-  { key: 'employee',    label: 'Employee Information', description: 'Provide your personal and organizational details' },
-  { key: 'submission',  label: 'Submission Details',   description: 'Select the type, category, and classification' },
-  { key: 'idea',        label: 'Idea Details',          description: 'Describe your innovative idea' },
-  { key: 'proposal',   label: 'Project Overview',       description: 'Provide a comprehensive project overview' },
-  { key: 'attachments', label: 'Attachments',           description: 'Upload supporting documents' },
-];
+// ALL_STEPS is now a useMemo inside PublicForm so extra builder sections can be injected.
 
 // ─── Animations ──────────────────────────────────────────────────────────────
 
@@ -333,6 +328,339 @@ const TypeCard = ({ type, selected, onClick }) => (
   </Box>
 );
 
+// ─── Schema Matching Helpers ──────────────────────────────────────────────────
+
+// Labels already hardcoded in each section — builder fields matching these are filtered out to prevent duplication
+const HARDCODED_LABELS = {
+  employee: new Set([
+    'full name', 'employee id', 'employee code', 'designation', 'department',
+    'official email id', 'official email', 'contact number', 'phone number',
+    'email id', 'email address', 'reporting manager', 'hod', 'head of department',
+  ]),
+  submission: new Set([
+    'submission type', 'category', 'sub-category', 'subcategory', 'sub category',
+    'innovation type', 'wbs code (auto-generated)', 'wbs code', 'wbs',
+  ]),
+  idea: new Set([
+    'idea / project title', 'idea title', 'title', 'abstract', 'idea abstract',
+    'idea description',
+  ]),
+  proposal: new Set([
+    'project title', 'proposal title', 'executive summary', 'summary',
+    'problem statement', 'objectives', 'objective', 'scope of work', 'scope',
+    'proposed solution', 'solution', 'expected benefits', 'benefits',
+    'process / product development',
+  ]),
+  attachments: new Set([
+    'attachments', 'supporting documents', 'file upload', 'upload files', 'documents',
+  ]),
+};
+
+// Returns the step key a builder section title maps to, or null if brand new
+const matchStep = (title) => {
+  const lower = (title || '').toLowerCase();
+  for (const [key, patterns] of Object.entries(SECTION_MATCH)) {
+    if (patterns.some(p => lower.includes(p))) return key;
+  }
+  return null;
+};
+
+// ─── Dynamic Field Renderer ───────────────────────────────────────────────────
+
+export const DynamicField = ({ field, value, onChange, error }) => {
+  const handleChange = (e) => onChange(field.id, e.target.value);
+  const baseProps = {
+    fullWidth: true,
+    placeholder: field.placeholder || '',
+    value: value !== undefined && value !== null ? value : '',
+    onChange: handleChange,
+    error: !!error,
+    helperText: error || '',
+    disabled: field.readOnly || false,
+  };
+
+  switch (field.type) {
+    case 'card_selector': {
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 0.5 }}>
+          {(field.options || []).map(opt => (
+            <TypeCard
+              key={opt} type={opt}
+              selected={value === opt}
+              onClick={() => onChange(field.id, opt)}
+            />
+          ))}
+        </Box>
+      );
+    }
+    case 'signature': {
+      return (
+        <Box sx={{ p: 3, border: '2px dashed #D0D5DD', borderRadius: 3, bgcolor: '#FAFBFC', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s', '&:hover': { borderColor: '#12B76A', bgcolor: '#F6FEF9' } }} onClick={() => onChange(field.id, value ? '' : 'Signed (Simulated)')}>
+          <Typography sx={{ color: value ? '#101828' : '#667085', fontSize: '1rem', fontStyle: 'italic', fontWeight: value ? 600 : 400 }}>
+            {value ? `Digitally Signed` : 'Click to add digital signature'}
+          </Typography>
+        </Box>
+      );
+    }
+    case 'heading':
+      return <Typography sx={{ fontSize: '1.25rem', fontWeight: 800, color: '#101828', mt: 1, mb: 1 }}>{field.label}</Typography>;
+    case 'paragraph':
+      return <Typography sx={{ fontSize: '0.95rem', color: '#475467', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{field.placeholder || field.helpText || field.label}</Typography>;
+    case 'divider':
+      return <Divider sx={{ my: 1, borderColor: '#EAECF0', borderBottomWidth: 2 }} />;
+      
+    case 'text':
+    case 'url':
+      return <FormField {...baseProps} />;
+    case 'email':
+      return <FormField {...baseProps} type="email" />;
+    case 'phone':
+      return <FormField {...baseProps} type="tel" />;
+    case 'number':
+      return <FormField {...baseProps} type="number" />;
+    case 'textarea': {
+      let wordCountDisplay = null;
+      if (field.validationRule && field.validationRule.startsWith('max:')) {
+        const maxWords = parseInt(field.validationRule.split(':')[1], 10);
+        const wordCount = String(value || '').trim().split(/\s+/).filter(Boolean).length;
+        const over = wordCount > maxWords;
+        wordCountDisplay = (
+          <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+            <Typography variant="caption" sx={{ color: over ? '#F04438' : '#667085', fontWeight: 600 }}>
+              {wordCount} / {maxWords} words {over && '(Limit Exceeded)'}
+            </Typography>
+          </Box>
+        );
+      }
+      return (
+        <Box>
+          <FormField {...baseProps} multiline rows={field.rows || 4} />
+          {wordCountDisplay}
+        </Box>
+      );
+    }
+    case 'date':
+      return <FormField {...baseProps} type="date" InputLabelProps={{ shrink: true }} />;
+
+    case 'dropdown':
+      return (
+        <FormControl fullWidth error={!!error}>
+          <FormSelect
+            value={value || ''}
+            onChange={e => onChange(field.id, e.target.value)}
+            displayEmpty
+          >
+            <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>
+              {field.placeholder || 'Select an option'}
+            </MenuItem>
+            {(field.options || []).map(opt => (
+              <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+            ))}
+          </FormSelect>
+          {error && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{error}</Typography>}
+        </FormControl>
+      );
+
+    case 'radio': {
+      const radioVal = value || '';
+      return (
+        <Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {(field.options || []).map(opt => (
+              <Box
+                key={opt}
+                onClick={() => onChange(field.id, opt)}
+                sx={{
+                  p: 1.5, borderRadius: 2, cursor: 'pointer',
+                  border: `1.5px solid ${radioVal === opt ? '#12B76A' : '#D0D5DD'}`,
+                  bgcolor: radioVal === opt ? '#F6FEF9' : '#FAFBFC',
+                  display: 'flex', alignItems: 'center', gap: 1.5,
+                  transition: 'all 0.15s ease',
+                  '&:hover': { borderColor: '#12B76A', bgcolor: '#F6FEF9' },
+                }}
+              >
+                <Box sx={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${radioVal === opt ? '#12B76A' : '#D0D5DD'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {radioVal === opt && (
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#12B76A' }} />
+                  )}
+                </Box>
+                <Typography sx={{ fontSize: '0.9rem', color: '#101828', fontWeight: radioVal === opt ? 600 : 400 }}>
+                  {opt}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+          {error && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.5 }}>{error}</Typography>}
+        </Box>
+      );
+    }
+
+    case 'checkbox': {
+      const cbSelected = Array.isArray(value) ? value : [];
+      return (
+        <Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {(field.options || []).map(opt => {
+              const checked = cbSelected.includes(opt);
+              return (
+                <Box
+                  key={opt}
+                  onClick={() => {
+                    const next = checked ? cbSelected.filter(v => v !== opt) : [...cbSelected, opt];
+                    onChange(field.id, next);
+                  }}
+                  sx={{
+                    p: 1.5, borderRadius: 2, cursor: 'pointer',
+                    border: `1.5px solid ${checked ? '#12B76A' : '#D0D5DD'}`,
+                    bgcolor: checked ? '#F6FEF9' : '#FAFBFC',
+                    display: 'flex', alignItems: 'center', gap: 1.5,
+                    transition: 'all 0.15s ease',
+                    '&:hover': { borderColor: '#12B76A', bgcolor: '#F6FEF9' },
+                  }}
+                >
+                  <Box sx={{
+                    width: 18, height: 18, borderRadius: 1, flexShrink: 0,
+                    border: `2px solid ${checked ? '#12B76A' : '#D0D5DD'}`,
+                    bgcolor: checked ? '#12B76A' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s ease',
+                  }}>
+                    {checked && <CheckIcon sx={{ fontSize: 12, color: '#fff' }} />}
+                  </Box>
+                  <Typography sx={{ fontSize: '0.9rem', color: '#101828', fontWeight: checked ? 600 : 400 }}>
+                    {opt}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+          {error && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.5 }}>{error}</Typography>}
+        </Box>
+      );
+    }
+
+    case 'multiselect': {
+      const msSelected = Array.isArray(value) ? value : [];
+      return (
+        <Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {(field.options || []).map(opt => {
+              const isSelected = msSelected.includes(opt);
+              return (
+                <Chip
+                  key={opt}
+                  label={opt}
+                  onClick={() => {
+                    const next = isSelected ? msSelected.filter(v => v !== opt) : [...msSelected, opt];
+                    onChange(field.id, next);
+                  }}
+                  sx={{
+                    fontWeight: 600, fontSize: '0.82rem',
+                    bgcolor: isSelected ? '#12B76A' : '#F2F4F7',
+                    color: isSelected ? '#fff' : '#344054',
+                    border: `1.5px solid ${isSelected ? '#12B76A' : '#D0D5DD'}`,
+                    '&:hover': { bgcolor: isSelected ? '#039855' : '#EAECF0' },
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                />
+              );
+            })}
+          </Box>
+          {error && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{error}</Typography>}
+        </Box>
+      );
+    }
+
+    case 'rating':
+      return (
+        <Box>
+          <Rating
+            value={Number(value) || 0}
+            onChange={(e, newVal) => onChange(field.id, newVal)}
+            size="large"
+            sx={{ '& .MuiRating-iconFilled': { color: '#F59E0B' }, '& .MuiRating-iconEmpty': { color: '#E5E7EB' } }}
+          />
+          {error && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.5 }}>{error}</Typography>}
+        </Box>
+      );
+
+    case 'file':
+      return (
+        <FileZone
+          files={Array.isArray(value) ? value : []}
+          setFiles={(fn) => {
+            const current = Array.isArray(value) ? value : [];
+            const next = typeof fn === 'function' ? fn(current) : fn;
+            onChange(field.id, next);
+          }}
+        />
+      );
+
+    default:
+      return <FormField {...baseProps} />;
+  }
+};
+
+// ─── Dynamic Section Renderer (for brand-new builder sections) ────────────────
+
+export const DynamicSection = ({ section, formData, onFieldChange, errors = {} }) => {
+  const visibleFields = (section.fields || []).filter(f => !f.hidden && f.enabled !== false);
+  const visibleSubSections = (section.subSections || []).filter(s => !s.hidden);
+
+  return (
+    <Box>
+      <SectionBlock sx={{ py: { xs: 3, sm: 4 }, px: { xs: 2.5, sm: 4 } }}>
+        <SectionHeader number={1} title={section.title} description={section.description} />
+        {visibleFields.map((field, idx) => {
+          const isLayout = ['heading', 'paragraph', 'divider'].includes(field.type);
+          return (
+            <FieldGroup key={field.id} sx={{ mb: (idx === visibleFields.length - 1 && visibleSubSections.length === 0) ? 0 : undefined }}>
+              {!isLayout && (
+                <FieldLabel required={field.required} description={field.helpText}>
+                  {field.label}
+                </FieldLabel>
+              )}
+              <DynamicField
+                field={field}
+                value={formData[field.id]}
+                onChange={onFieldChange}
+                error={errors[field.id]}
+              />
+            </FieldGroup>
+          );
+        })}
+        {visibleSubSections.map((subSec) => (
+          <Box key={subSec.id} sx={{ mt: 3, p: { xs: 2, sm: 3 }, border: '1px solid #E2E8F0', borderRadius: 3, bgcolor: '#FAFBFB' }}>
+            <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: '#334155', mb: 2 }}>{subSec.title}</Typography>
+            {(subSec.fields || []).filter(f => !f.hidden && f.enabled !== false).map((field, fIdx, arr) => {
+              const isLayout = ['heading', 'paragraph', 'divider'].includes(field.type);
+              return (
+                <FieldGroup key={field.id} sx={{ mb: fIdx === arr.length - 1 ? 0 : undefined }}>
+                  {!isLayout && (
+                    <FieldLabel required={field.required} description={field.helpText}>
+                      {field.label}
+                    </FieldLabel>
+                  )}
+                  <DynamicField
+                    field={field}
+                    value={formData[field.id]}
+                    onChange={onFieldChange}
+                    error={errors[field.id]}
+                  />
+                </FieldGroup>
+              );
+            })}
+          </Box>
+        ))}
+      </SectionBlock>
+    </Box>
+  );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const PublicForm = () => {
@@ -346,7 +674,6 @@ const PublicForm = () => {
     projectTitle: '', abstract: '',
     proposalTitle: '', executiveSummary: '', problemStatement: '', objectives: '', scopeOfWork: '',
   });
-  const [files, setFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [snack, setSnack] = useState({ open: false, msg: '', type: 'info' });
   const [submitted, setSubmitted] = useState(false);
@@ -356,6 +683,7 @@ const PublicForm = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [schemaConfigs, setSchemaConfigs] = useState({});
+  const [extraSections, setExtraSections] = useState([]);
 
   React.useEffect(() => {
     const fetchSchema = async () => {
@@ -364,9 +692,11 @@ const PublicForm = () => {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/public/forms/${slug}`);
         if (res.ok) {
           const data = await res.json();
-          const schema = data.data?.schema || [];
+          const sections = data.data?.schema || [];
+
+          // ── Build schemaConfigs (unchanged — powers getHelpText / getPlaceholder) ──
           const configs = {};
-          schema.forEach(sec => {
+          sections.forEach(sec => {
             (sec.fields || []).forEach(f => {
               if (f.label) configs[f.label.toLowerCase().trim()] = f;
             });
@@ -377,6 +707,19 @@ const PublicForm = () => {
             });
           });
           setSchemaConfigs(configs);
+
+          // ── Set completely dynamic sections ──
+          setExtraSections(sections);
+
+          const dynamicDefaults = {};
+          sections.forEach(sec => {
+            (sec.fields || []).forEach(f => {
+              if (f && f.id) dynamicDefaults[f.id] = f.defaultValue || '';
+            });
+          });
+          if (Object.keys(dynamicDefaults).length > 0) {
+            setFormData(prev => ({ ...prev, ...dynamicDefaults }));
+          }
         }
       } catch (err) {
         console.error('Failed to fetch schema', err);
@@ -396,10 +739,22 @@ const PublicForm = () => {
   };
 
   React.useEffect(() => {
-    if (formData.category && formData.subCategory && formData.innovationType) {
+    let cat = '';
+    let subCat = '';
+    let inno = '';
+    for (const sec of extraSections) {
+      for (const f of (sec.fields || [])) {
+        const label = (f.label || '').toLowerCase().trim();
+        if (label === 'category') cat = formData[f.id];
+        if (label === 'sub-category' || label === 'subcategory') subCat = formData[f.id];
+        if (label === 'innovation type') inno = formData[f.id];
+      }
+    }
+
+    if (cat && subCat && inno) {
       const fetchWbs = async () => {
         try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/public/forms/wbs/preview?category=${encodeURIComponent(formData.category)}&subCategory=${encodeURIComponent(formData.subCategory)}&innovationType=${encodeURIComponent(formData.innovationType)}`);
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/public/forms/wbs/preview?category=${encodeURIComponent(cat)}&subCategory=${encodeURIComponent(subCat)}&innovationType=${encodeURIComponent(inno)}`);
           if (res.ok) {
             const data = await res.json();
             if (data.data?.wbsCode) setWbsPreview(data.data.wbsCode);
@@ -410,19 +765,46 @@ const PublicForm = () => {
     } else {
       setWbsPreview('');
     }
-  }, [formData.category, formData.subCategory, formData.innovationType]);
+  }, [formData, extraSections]);
+
+  // Build dynamic steps purely from Form Builder sections
+  const ALL_STEPS = useMemo(() => {
+    return extraSections.map(sec => ({
+      key: `dyn-${sec.id}`,
+      label: sec.title,
+      description: sec.description || '',
+      sectionData: sec,
+    }));
+  }, [extraSections]);
 
   const visibleSteps = useMemo(() => {
     return ALL_STEPS.filter(step => {
-      if (step.key === 'idea') return formData.submissionType === 'Idea';
-      if (step.key === 'proposal') return formData.submissionType === 'Proposal';
+      const rule = step.sectionData?.visibilityRule;
+      if (rule && rule.fieldId && rule.value) {
+        // Try to find the field value either by field ID or by label
+        const targetValue = formData[rule.fieldId];
+        let labelValue = undefined;
+        // Search all fields to find matching label
+        if (targetValue === undefined) {
+          for (const sec of extraSections) {
+            const f = (sec.fields || []).find(fld => fld.label === rule.fieldId);
+            if (f) {
+              labelValue = formData[f.id];
+              break;
+            }
+          }
+        }
+        
+        const actualValue = targetValue !== undefined ? targetValue : labelValue;
+        return String(actualValue || '').toLowerCase() === String(rule.value || '').toLowerCase();
+      }
       return true;
     });
-  }, [formData.submissionType]);
+  }, [ALL_STEPS, formData, extraSections]);
 
-  const currentStepKey = visibleSteps[activeStep]?.key || 'employee';
-  const progressPct = Math.round(((activeStep + 1) / visibleSteps.length) * 100);
-  const abstractWordCount = formData.abstract.trim() ? formData.abstract.trim().split(/\s+/).length : 0;
+  const currentStepKey = visibleSteps[activeStep]?.key;
+  const progressPct = visibleSteps.length > 0 ? Math.round(((activeStep + 1) / visibleSteps.length) * 100) : 0;
+  const abstractWordCount = 0; // Deprecated hardcoded state
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -431,43 +813,27 @@ const PublicForm = () => {
 
   const validateStep = (stepKey) => {
     const newErrors = {};
-    const emailRegex = /\S+@\S+\.\S+/;
-    const phoneRegex = /^[0-9+\-() ]{7,15}$/;
+    const step = visibleSteps[activeStep];
+    
+    if (step?.sectionData?.fields) {
+      step.sectionData.fields.forEach(field => {
+        if (!field.hidden) {
+          const val = formData[field.id];
+          const hasValue = Array.isArray(val) ? val.length > 0 : !!String(val ?? '').trim();
+          
+          if (field.required && !hasValue) {
+            newErrors[field.id] = `${field.label} is required`;
+          } else if (hasValue && field.validationRule && field.validationRule.startsWith('max:')) {
+            const maxWords = parseInt(field.validationRule.split(':')[1], 10);
+            const wordCount = String(val).trim().split(/\s+/).filter(Boolean).length;
+            if (wordCount > maxWords) {
+              newErrors[field.id] = `${field.label} must be ${maxWords} words or less (currently ${wordCount})`;
+            }
+          }
+        }
+      });
+    }
 
-    if (stepKey === 'employee') {
-      if (!formData.employeeName.trim()) newErrors.employeeName = 'Employee Name is required';
-      if (!formData.employeeId.trim()) newErrors.employeeId = 'Employee ID is required';
-      if (!formData.designation.trim()) newErrors.designation = 'Designation is required';
-      if (!formData.department.trim()) newErrors.department = 'Department is required';
-      if (!formData.officialEmail.trim()) newErrors.officialEmail = 'Official Email is required';
-      else if (!emailRegex.test(formData.officialEmail)) newErrors.officialEmail = 'Enter a valid email address';
-      if (!formData.contactNumber.trim()) newErrors.contactNumber = 'Contact Number is required';
-      else if (!phoneRegex.test(formData.contactNumber)) newErrors.contactNumber = 'Enter a valid contact number';
-      if (!formData.rmName.trim()) newErrors.rmName = 'Reporting Manager Name is required';
-      if (!formData.rmEmail.trim()) newErrors.rmEmail = 'Reporting Manager Email is required';
-      else if (!emailRegex.test(formData.rmEmail)) newErrors.rmEmail = 'Enter a valid email address';
-      if (!formData.hodName.trim()) newErrors.hodName = 'HOD Name is required';
-      if (!formData.hodEmail.trim()) newErrors.hodEmail = 'HOD Email is required';
-      else if (!emailRegex.test(formData.hodEmail)) newErrors.hodEmail = 'Enter a valid email address';
-    }
-    if (stepKey === 'submission') {
-      if (!formData.submissionType) newErrors.submissionType = 'Submission Type is required';
-      if (!formData.category) newErrors.category = 'Category is required';
-      if (!formData.subCategory) newErrors.subCategory = 'Sub-Category is required';
-      if (!formData.innovationType) newErrors.innovationType = 'Innovation Type is required';
-    }
-    if (stepKey === 'idea') {
-      if (!formData.projectTitle.trim()) newErrors.projectTitle = 'Project Title is required';
-      if (!formData.abstract.trim()) newErrors.abstract = 'Abstract is required';
-      else if (abstractWordCount > 200) newErrors.abstract = 'Abstract cannot exceed 200 words';
-    }
-    if (stepKey === 'proposal') {
-      if (!formData.proposalTitle.trim()) newErrors.proposalTitle = 'Project Title is required';
-      if (!formData.executiveSummary.trim()) newErrors.executiveSummary = 'Executive Summary is required';
-      if (!formData.problemStatement.trim()) newErrors.problemStatement = 'Problem Statement is required';
-      if (!formData.objectives.trim()) newErrors.objectives = 'Objectives are required';
-      if (!formData.scopeOfWork.trim()) newErrors.scopeOfWork = 'Scope of Work is required';
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -491,16 +857,48 @@ const PublicForm = () => {
       setIsSubmitting(true);
       try {
         const payload = new FormData();
+        let name = '';
+        let managerName = '';
+        let managerEmail = '';
+        let title = '';
+        let extractedSubEmail = '';
+        let submissionTypeStr = 'Submission';
+
+        for (const sec of extraSections) {
+          for (const f of (sec.fields || [])) {
+            const label = (f.label || '').toLowerCase().trim();
+            const val = formData[f.id];
+            if (!val) continue;
+
+            if (label === 'full name' || label === 'employee name') name = val;
+            if (label === 'reporting manager name' || label === 'manager name' || label === 'rm name') managerName = val;
+            if (label === 'reporting manager email id' || label === 'rm email' || label === 'manager email') managerEmail = val;
+            if (label === 'idea / project title' || label === 'project title' || label === 'proposal title') title = val;
+            if (label === 'official email id' || label === 'official email' || label === 'email') extractedSubEmail = val;
+            if (label === 'submission type') submissionTypeStr = val;
+          }
+        }
+
         const answersPayload = {
           ...formData,
-          title: formData.submissionType === 'Proposal' ? formData.proposalTitle : formData.projectTitle,
-          name: formData.employeeName,
-          managerName: formData.rmName,
-          managerEmail: formData.rmEmail,
+          title: title,
+          name: name,
+          managerName: managerName,
+          managerEmail: managerEmail,
         };
         payload.append('answers', JSON.stringify(answersPayload));
-        payload.append('submitterEmail', formData.officialEmail);
-        files.forEach(f => payload.append('attachments', f));
+        payload.append('submitterEmail', extractedSubEmail);
+        
+        // Find any file arrays in formData and append them to attachments
+        Object.values(formData).forEach(val => {
+          if (Array.isArray(val)) {
+            val.forEach(item => {
+              if (item instanceof File) {
+                payload.append('attachments', item);
+              }
+            });
+          }
+        });
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/public/forms/${slug}/submit`, {
           method: 'POST',
@@ -550,7 +948,7 @@ const PublicForm = () => {
             Submission Successful!
           </Typography>
           <Typography sx={{ color: '#667085', mb: 4, fontSize: '0.95rem' }}>
-            Your {formData.submissionType?.toLowerCase() || 'submission'} has been received. A confirmation email has been sent to your official email address.
+            Your submission has been received. A confirmation email has been sent to your official email address.
           </Typography>
 
           {trackingId && (
@@ -559,12 +957,7 @@ const PublicForm = () => {
               <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#12B76A', letterSpacing: 2 }}>{trackingId}</Typography>
             </Box>
           )}
-          {wbsCode && (
-            <Box sx={{ mb: 3, p: 2.5, bgcolor: '#FFFCF0', borderRadius: 2.5, border: '1.5px solid #FEC84B' }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#B54708', textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>WBS Code</Typography>
-              <Typography sx={{ fontSize: '1.1rem', fontWeight: 800, color: '#B54708' }}>{wbsCode}</Typography>
-            </Box>
-          )}
+
 
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
             <SecondaryBtn variant="outlined" onClick={() => window.location.href = '/track'} size="large">Track Status</SecondaryBtn>
@@ -576,289 +969,20 @@ const PublicForm = () => {
   }
 
   // ─── Render Sections ────────────────────────────────────────────────────────
-
-  const renderEmployeeInfo = () => (
-    <Box key="employee">
-      {/* Personal Details */}
-      <SectionBlock>
-        <SectionHeader number={1} title="Personal Details" description="Please provide your personal and professional information." />
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
-          <FormField
-            fullWidth placeholder={getPlaceholder('Full Name', "e.g. Rajesh Kumar")}
-            value={formData.employeeName}
-            onChange={e => handleChange('employeeName', e.target.value)}
-            error={!!errors.employeeName} helperText={errors.employeeName}
-          />
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Employee ID')}>Employee ID</FieldLabel>
-          <FormField
-            fullWidth placeholder={getPlaceholder('Employee ID', "e.g. EMP-1029")}
-            value={formData.employeeId}
-            onChange={e => handleChange('employeeId', e.target.value)}
-            error={!!errors.employeeId} helperText={errors.employeeId}
-            InputProps={{ startAdornment: <InputAdornment position="start"><BadgeIcon sx={{ color: '#98A2B3', fontSize: 18 }} /></InputAdornment> }}
-          />
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Designation')}>Designation</FieldLabel>
-          <FormField
-            fullWidth placeholder={getPlaceholder('Designation', "e.g. Senior Engineer")}
-            value={formData.designation}
-            onChange={e => handleChange('designation', e.target.value)}
-            error={!!errors.designation} helperText={errors.designation}
-          />
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Department')}>Department</FieldLabel>
-          <FormField
-            fullWidth placeholder={getPlaceholder('Department', "e.g. Engineering & Infrastructure")}
-            value={formData.department}
-            onChange={e => handleChange('department', e.target.value)}
-            error={!!errors.department} helperText={errors.department}
-          />
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Official Email ID')}>Official Email ID</FieldLabel>
-          <FormField
-            fullWidth placeholder={getPlaceholder('Official Email ID', "name@company.com")} type="email"
-            value={formData.officialEmail}
-            onChange={e => handleChange('officialEmail', e.target.value)}
-            error={!!errors.officialEmail} helperText={errors.officialEmail}
-            InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ color: '#98A2B3', fontSize: 18 }} /></InputAdornment> }}
-          />
-        </FieldGroup>
-
-        <FieldGroup sx={{ mb: 0 }}>
-          <FieldLabel required description={getHelpText('Contact Number')}>Contact Number</FieldLabel>
-          <FormField
-            fullWidth placeholder={getPlaceholder('Contact Number', "+91 98765 43210")}
-            value={formData.contactNumber}
-            onChange={e => handleChange('contactNumber', e.target.value)}
-            error={!!errors.contactNumber} helperText={errors.contactNumber}
-            InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon sx={{ color: '#98A2B3', fontSize: 18 }} /></InputAdornment> }}
-          />
-        </FieldGroup>
-      </SectionBlock>
-
-      <SectionDivider />
-
-      {/* Reporting Manager & HOD */}
-      <SectionBlock>
-        <SectionHeader number={2} title="Reporting Hierarchy" description="Details of your Reporting Manager and Head of Department." />
-
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ p: 3, bgcolor: '#FAFBFC', borderRadius: 3, border: '1.5px solid #EAECF0', height: '100%' }}>
-              <Typography sx={{ fontWeight: 700, color: '#101828', fontSize: '0.9rem', mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#12B76A' }} />
-                Reporting Manager
-              </Typography>
-              <FieldGroup>
-                <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
-                <FormField fullWidth placeholder={getPlaceholder('Full Name', "Manager's full name")} value={formData.rmName} onChange={e => handleChange('rmName', e.target.value)} error={!!errors.rmName} helperText={errors.rmName} />
-              </FieldGroup>
-              <FieldGroup sx={{ mb: 0 }}>
-                <FieldLabel required description={getHelpText('Email ID')}>Email ID</FieldLabel>
-                <FormField fullWidth placeholder={getPlaceholder('Email ID', "manager@company.com")} type="email" value={formData.rmEmail} onChange={e => handleChange('rmEmail', e.target.value)} error={!!errors.rmEmail} helperText={errors.rmEmail} />
-              </FieldGroup>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ p: 3, bgcolor: '#FAFBFC', borderRadius: 3, border: '1.5px solid #EAECF0', height: '100%' }}>
-              <Typography sx={{ fontWeight: 700, color: '#101828', fontSize: '0.9rem', mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6941C6' }} />
-                Head of Department (HOD)
-              </Typography>
-              <FieldGroup>
-                <FieldLabel required description={getHelpText('Full Name')}>Full Name</FieldLabel>
-                <FormField fullWidth placeholder={getPlaceholder('Full Name', "HOD's full name")} value={formData.hodName} onChange={e => handleChange('hodName', e.target.value)} error={!!errors.hodName} helperText={errors.hodName} />
-              </FieldGroup>
-              <FieldGroup sx={{ mb: 0 }}>
-                <FieldLabel required description={getHelpText('Email ID')}>Email ID</FieldLabel>
-                <FormField fullWidth placeholder={getPlaceholder('Email ID', "hod@company.com")} type="email" value={formData.hodEmail} onChange={e => handleChange('hodEmail', e.target.value)} error={!!errors.hodEmail} helperText={errors.hodEmail} />
-              </FieldGroup>
-            </Box>
-          </Grid>
-        </Grid>
-      </SectionBlock>
-    </Box>
-  );
-
-  const renderSubmissionDetails = () => (
-    <Box key="submission">
-      <SectionBlock>
-        <SectionHeader number={1} title="Submission Type" description="Choose whether you are submitting an Idea or a formal Proposal." />
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 1 }}>
-          {['Idea', 'Proposal'].map(type => (
-            <TypeCard
-              key={type} type={type}
-              selected={formData.submissionType === type}
-              onClick={() => handleChange('submissionType', type)}
-            />
-          ))}
-        </Box>
-        {errors.submissionType && (
-          <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 1 }}>{errors.submissionType}</Typography>
-        )}
-      </SectionBlock>
-
-      <SectionDivider />
-
-      <SectionBlock>
-        <SectionHeader number={2} title="Classification" description="Categorize your submission for proper routing and evaluation." />
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Category')}>Category</FieldLabel>
-          <FormControl fullWidth error={!!errors.category}>
-            <FormSelect value={formData.category} onChange={e => handleChange('category', e.target.value)} displayEmpty>
-              <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select a category</MenuItem>
-              {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-            </FormSelect>
-            {errors.category && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{errors.category}</Typography>}
-          </FormControl>
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Sub-Category')}>Sub-Category</FieldLabel>
-          <FormControl fullWidth error={!!errors.subCategory}>
-            <FormSelect value={formData.subCategory} onChange={e => handleChange('subCategory', e.target.value)} displayEmpty>
-              <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select a sub-category</MenuItem>
-              {SUB_CATEGORIES.map(sc => <MenuItem key={sc} value={sc}>{sc}</MenuItem>)}
-            </FormSelect>
-            {errors.subCategory && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{errors.subCategory}</Typography>}
-          </FormControl>
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Innovation Type')}>Innovation Type</FieldLabel>
-          <FormControl fullWidth error={!!errors.innovationType}>
-            <FormSelect value={formData.innovationType} onChange={e => handleChange('innovationType', e.target.value)} displayEmpty>
-              <MenuItem value="" disabled sx={{ color: '#98A2B3' }}>Select innovation type</MenuItem>
-              {INNOVATION_TYPES.map(it => <MenuItem key={it} value={it}>{it}</MenuItem>)}
-            </FormSelect>
-            {errors.innovationType && <Typography sx={{ color: '#F04438', fontSize: '0.78rem', mt: 0.75 }}>{errors.innovationType}</Typography>}
-          </FormControl>
-        </FieldGroup>
-
-        {/* WBS Preview */}
-        <FieldGroup sx={{ mb: 0 }}>
-          <FieldLabel description={getHelpText('WBS Code (Auto-generated)')}>WBS Code (Auto-generated)</FieldLabel>
-          <FormField
-            fullWidth disabled
-            value={wbsPreview || 'Will be generated when category fields are selected'}
-            InputProps={{ sx: { bgcolor: '#F9FAFB', color: wbsPreview ? '#101828' : '#98A2B3', fontWeight: wbsPreview ? 700 : 400 } }}
-          />
-          <Typography sx={{ color: '#667085', fontSize: '0.78rem', mt: 0.75 }}>
-            A unique WBS code will be assigned when you submit the form.
-          </Typography>
-        </FieldGroup>
-      </SectionBlock>
-    </Box>
-  );
-
-  const renderIdeaDetails = () => (
-    <Box key="idea">
-      <SectionBlock>
-        <SectionHeader number={1} title="Idea Details" description="Describe your innovative idea clearly and concisely." />
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Idea / Project Title')}>Idea / Project Title</FieldLabel>
-          <FormField
-            fullWidth placeholder={getPlaceholder('Idea / Project Title', "Enter a clear and descriptive title for your idea")}
-            value={formData.projectTitle}
-            onChange={e => handleChange('projectTitle', e.target.value)}
-            error={!!errors.projectTitle} helperText={errors.projectTitle}
-          />
-        </FieldGroup>
-
-        <FieldGroup sx={{ mb: 0 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0.75 }}>
-            <FieldLabel required description={getHelpText('Abstract')}>Abstract</FieldLabel>
-            <Chip
-              label={`${abstractWordCount} / 200 words`}
-              size="small"
-              sx={{
-                fontWeight: 700, fontSize: '0.72rem', height: 24,
-                bgcolor: abstractWordCount > 200 ? '#FEF3F2' : abstractWordCount > 150 ? '#FFFAEB' : '#ECFDF3',
-                color: abstractWordCount > 200 ? '#F04438' : abstractWordCount > 150 ? '#B54708' : '#027A48',
-                border: `1px solid ${abstractWordCount > 200 ? '#FECDCA' : abstractWordCount > 150 ? '#FEC84B' : '#A9EFC5'}`,
-              }}
-            />
-          </Box>
-          <Typography sx={{ color: '#667085', fontSize: '0.8rem', mb: 1 }}>
-            Include: Introduction · Proposed Idea · Expected Benefits
-          </Typography>
-          <FormField
-            fullWidth multiline rows={8}
-            placeholder={`Introduction:\nDescribe the background and context of your idea...\n\nProposed Idea:\nExplain what you are proposing...\n\nExpected Benefits:\nList the anticipated outcomes and benefits...`}
-            value={formData.abstract}
-            onChange={e => handleChange('abstract', e.target.value)}
-            error={!!errors.abstract} helperText={errors.abstract}
-          />
-        </FieldGroup>
-      </SectionBlock>
-    </Box>
-  );
-
-  const renderProjectOverview = () => (
-    <Box key="proposal">
-      <SectionBlock>
-        <SectionHeader number={1} title="Project Overview" description="Provide a comprehensive overview of your proposed project." />
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Project Title')}>Project Title</FieldLabel>
-          <FormField fullWidth placeholder={getPlaceholder('Project Title', "Enter the project title")} value={formData.proposalTitle} onChange={e => handleChange('proposalTitle', e.target.value)} error={!!errors.proposalTitle} helperText={errors.proposalTitle} />
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Executive Summary')}>Executive Summary</FieldLabel>
-          <FormField fullWidth multiline rows={4} placeholder={getPlaceholder('Executive Summary', "Provide a brief executive summary of the project...")} value={formData.executiveSummary} onChange={e => handleChange('executiveSummary', e.target.value)} error={!!errors.executiveSummary} helperText={errors.executiveSummary} />
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Problem Statement')}>Problem Statement</FieldLabel>
-          <FormField fullWidth multiline rows={4} placeholder={getPlaceholder('Problem Statement', "Clearly define the problem this project aims to solve...")} value={formData.problemStatement} onChange={e => handleChange('problemStatement', e.target.value)} error={!!errors.problemStatement} helperText={errors.problemStatement} />
-        </FieldGroup>
-
-        <FieldGroup>
-          <FieldLabel required description={getHelpText('Objectives')}>Objectives</FieldLabel>
-          <FormField fullWidth multiline rows={3} placeholder={getPlaceholder('Objectives', "List the key objectives of this project...")} value={formData.objectives} onChange={e => handleChange('objectives', e.target.value)} error={!!errors.objectives} helperText={errors.objectives} />
-        </FieldGroup>
-
-        <FieldGroup sx={{ mb: 0 }}>
-          <FieldLabel required description={getHelpText('Scope of Work')}>Scope of Work</FieldLabel>
-          <FormField fullWidth multiline rows={4} placeholder={getPlaceholder('Scope of Work', "Define the scope, deliverables, and boundaries of this project...")} value={formData.scopeOfWork} onChange={e => handleChange('scopeOfWork', e.target.value)} error={!!errors.scopeOfWork} helperText={errors.scopeOfWork} />
-        </FieldGroup>
-      </SectionBlock>
-    </Box>
-  );
-
-  const renderAttachments = () => (
-    <Box key="attachments">
-      <SectionBlock>
-        <SectionHeader number={1} title="Supporting Documents" description="Upload any files that support your submission. This step is optional." />
-        <FileZone files={files} setFiles={setFiles} />
-      </SectionBlock>
-    </Box>
-  );
-
+  
   const renderStepContent = () => {
-    switch (currentStepKey) {
-      case 'employee':    return renderEmployeeInfo();
-      case 'submission':  return renderSubmissionDetails();
-      case 'idea':        return renderIdeaDetails();
-      case 'proposal':    return renderProjectOverview();
-      case 'attachments': return renderAttachments();
-      default:            return null;
+    const step = visibleSteps[activeStep];
+    if (step?.sectionData) {
+      return (
+        <DynamicSection
+          section={step.sectionData}
+          formData={formData}
+          onFieldChange={handleChange}
+          errors={errors}
+        />
+      );
     }
+    return null;
   };
 
   const isLastStep = activeStep === visibleSteps.length - 1;
@@ -1012,42 +1136,60 @@ const PublicForm = () => {
           <Typography sx={{ color: '#667085', fontSize: '0.82rem', mt: 0.25 }}>Review all details before submitting</Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 4 }}>
-          <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>Employee Information</Typography>
-          <PreviewRow label="Name" value={formData.employeeName} />
-          <PreviewRow label="Employee ID" value={formData.employeeId} />
-          <PreviewRow label="Designation" value={formData.designation} />
-          <PreviewRow label="Department" value={formData.department} />
-          <PreviewRow label="Email" value={formData.officialEmail} />
-          <PreviewRow label="Contact" value={formData.contactNumber} />
-          <PreviewRow label="RM Name" value={formData.rmName} />
-          <PreviewRow label="RM Email" value={formData.rmEmail} />
-          <PreviewRow label="HOD Name" value={formData.hodName} />
-          <PreviewRow label="HOD Email" value={formData.hodEmail} />
+          {extraSections.map(sec => {
+            const secFields = (sec.fields || []).filter(f => !f.hidden && !['heading', 'paragraph', 'divider'].includes(f.type));
+            if (secFields.length === 0) return null;
 
-          <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Submission Details</Typography>
-          <PreviewRow label="Type" value={formData.submissionType} />
-          <PreviewRow label="Category" value={formData.category} />
-          <PreviewRow label="Sub-Category" value={formData.subCategory} />
-          <PreviewRow label="Innovation Type" value={formData.innovationType} />
+            // Only show section if it passes visibility rule
+            const rule = sec.visibilityRule;
+            if (rule && rule.fieldId && rule.value) {
+              const targetValue = formData[rule.fieldId];
+              let labelValue = undefined;
+              if (targetValue === undefined) {
+                for (const s of extraSections) {
+                  const f = (s.fields || []).find(fld => fld.label === rule.fieldId);
+                  if (f) {
+                    labelValue = formData[f.id];
+                    break;
+                  }
+                }
+              }
+              const actualValue = targetValue !== undefined ? targetValue : labelValue;
+              if (String(actualValue || '').toLowerCase() !== String(rule.value || '').toLowerCase()) {
+                return null; // hide section in preview
+              }
+            }
 
-          {formData.submissionType === 'Idea' && (
-            <>
-              <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Idea Details</Typography>
-              <PreviewRow label="Project Title" value={formData.projectTitle} />
-              <PreviewRow label="Abstract" value={formData.abstract?.slice(0, 200) + (formData.abstract?.length > 200 ? '…' : '')} />
-            </>
-          )}
-          {formData.submissionType === 'Proposal' && (
-            <>
-              <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Project Overview</Typography>
-              <PreviewRow label="Project Title" value={formData.proposalTitle} />
-              <PreviewRow label="Executive Summary" value={formData.executiveSummary?.slice(0, 150) + (formData.executiveSummary?.length > 150 ? '…' : '')} />
-              <PreviewRow label="Problem Statement" value={formData.problemStatement?.slice(0, 150) + (formData.problemStatement?.length > 150 ? '…' : '')} />
-            </>
-          )}
-
-          <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>Attachments</Typography>
-          <PreviewRow label="Files" value={files.length > 0 ? files.map(f => f.name).join(', ') : 'None'} />
+            return (
+              <Box key={sec.id}>
+                <Typography sx={{ fontWeight: 700, color: '#344054', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: 1, mt: 3, mb: 1.5 }}>
+                  {sec.title}
+                </Typography>
+                {secFields.map(f => {
+                  let val = formData[f.id];
+                  let displayVal = String(val ?? '—');
+                  
+                  if (Array.isArray(val)) {
+                    if (f.type === 'file') {
+                      displayVal = val.length > 0 ? val.map(file => file.name).join(', ') : 'None';
+                    } else {
+                      displayVal = val.join(', ') || '—';
+                    }
+                  } else if (f.type === 'signature' && val) {
+                    displayVal = val;
+                  }
+                  
+                  return (
+                    <PreviewRow
+                      key={f.id}
+                      label={f.label}
+                      value={displayVal}
+                    />
+                  );
+                })}
+              </Box>
+            );
+          })}
         </DialogContent>
         <DialogActions sx={{ p: 3, borderTop: '1px solid #EAECF0', gap: 2 }}>
           <SecondaryBtn variant="outlined" onClick={() => setPreviewOpen(false)}>Edit</SecondaryBtn>

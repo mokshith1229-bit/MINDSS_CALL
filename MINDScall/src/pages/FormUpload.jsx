@@ -32,10 +32,11 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
-import { formStore, uid, slugify, FIELD_TYPE_COLORS } from '../store/formStore';
+import { formStore, uid, slugify, FIELD_TYPE_COLORS, makeDefaultSections } from '../store/formStore';
 import FormBuilder from '../components/FormBuilder';
 import { useDropzone } from 'react-dropzone';
 import { formatKey } from '../utils/submissionParser';
+import { DynamicSection } from './PublicForm';
 import Timeline from '../components/Timeline';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -793,33 +794,14 @@ const FBSecCard = ({ title, icon, accentColor = '#2E7D32', children }) => (
   </Card>
 );
 
-// ── The Main Dialog ───────────────────────────────────────────────────────────
-const DEFAULT_SECTIONS = [
-  { id: 'sec-0', title: 'Submission Type', fields: [{ id: 'submissionType', label: 'Submission Type', type: 'radio', options: ['Idea', 'Proposal'], required: true, enabled: true }] },
-  { id: 'sec-1', title: 'Basic Information', fields: [{ id: 'name', label: 'Full Name', type: 'text', required: true, enabled: true }, { id: 'dob', label: 'Date of Birth', type: 'date', required: true, enabled: true }, { id: 'employeeCode', label: 'Employee Code', type: 'text', required: true, enabled: true }] },
-  { id: 'sec-2', title: 'Organization Details', fields: [{ id: 'department', label: 'Department', type: 'dropdown', required: true, enabled: true }, { id: 'subDepartment', label: 'Sub Department', type: 'dropdown', required: true, enabled: true }, { id: 'subSubDepartment', label: 'Sub Sub Department', type: 'dropdown', required: false, enabled: true }] },
-  { id: 'sec-3', title: 'Classification', fields: [{ id: 'processProduct', label: 'Process / Product Development', type: 'dropdown', required: true, enabled: true }] },
-  { id: 'sec-4', title: 'Management Information', fields: [{ id: 'reportingManagerName', label: 'Reporting Manager Name', type: 'text', required: true, enabled: true }, { id: 'reportingManagerEmail', label: 'Reporting Manager Email', type: 'email', required: true, enabled: true }, { id: 'hodName', label: 'HOD Name', type: 'text', required: true, enabled: true }, { id: 'hodEmail', label: 'HOD Email', type: 'email', required: true, enabled: true }] },
-  { id: 'sec-5', title: 'Submission Details', fields: [
-    { id: 'title', label: 'Project title', type: 'text', required: true, enabled: true },
-    { id: 'problemStatement', label: 'PROBLEM STATEMENT', type: 'textarea', required: true, enabled: true },
-    { id: 'proposedSolution', label: 'Proposed solution', type: 'textarea', required: true, enabled: true },
-    { id: 'objectives', label: 'Objectives', type: 'textarea', required: true, enabled: true },
-    { id: 'keyDeliverables', label: 'Key Deliverables', type: 'textarea', required: true, enabled: true },
-    { id: 'timelinesAndBudget', label: 'Timelines and Budget', type: 'textarea', required: true, enabled: true },
-    { id: 'overallBudget', label: 'Overall Budget', type: 'textarea', required: true, enabled: true },
-    { id: 'expectedBenefits', label: 'Expected Benefits', type: 'textarea', required: true, enabled: true },
-    { id: 'projectTeam', label: 'Project Team', type: 'textarea', required: true, enabled: true }
-  ] },
-  { id: 'sec-6', title: 'Attachments', fields: [{ id: 'attachments', label: 'Attachments', type: 'file', required: false, enabled: true }] }
-];
+
 
 const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => {
   const [formData, setFormData] = React.useState({
     name: '',
     category: '',
     description: '',
-    sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS))
+    sections: makeDefaultSections()
   });
 
   const [expandedSec, setExpandedSec] = React.useState('sec-0');
@@ -829,11 +811,11 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
       if (formToEdit) {
         let parsedSections = formToEdit.sections && formToEdit.sections.length > 0 && formToEdit.sections[0].fields 
           ? JSON.parse(JSON.stringify(formToEdit.sections))
-          : JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+          : makeDefaultSections();
 
         if (formToEdit.sections && formToEdit.sections.length > 0 && !formToEdit.sections[0].fields) {
            const activeTitles = formToEdit.sections.map(s => s.title);
-           parsedSections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS)).map(sec => ({
+           parsedSections = makeDefaultSections().map(sec => ({
              ...sec,
              fields: sec.fields.map(f => ({ ...f, enabled: activeTitles.includes(sec.title) }))
            }));
@@ -846,7 +828,12 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
           sections: parsedSections
         });
       } else {
-        setFormData({ name: '', category: '', description: '', sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)) });
+        setFormData({
+          name: '',
+          category: '',
+          description: '',
+          sections: makeDefaultSections()
+        });
       }
       setExpandedSec('sec-0');
     }
@@ -854,7 +841,7 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
 
   // Auto-save to backend whenever formData changes (only for existing forms)
   React.useEffect(() => {
-    if (!open || !formToEdit || !formData.name) return;
+    if (!open || !formToEdit || formToEdit.isNewTemplate || !formData.name) return;
 
     const timer = setTimeout(() => {
       try {
@@ -912,23 +899,24 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
 
   const handleSave = () => {
     if (!formData.name) return;
+    const isExisting = formToEdit && !formToEdit.isNewTemplate;
     
     const newForm = {
-      id: formToEdit ? formToEdit.id : `form-${Date.now()}`,
+      id: isExisting ? formToEdit.id : `form-${Date.now()}`,
       name: formData.name,
       category: formData.category,
       description: formData.description,
-      status: formToEdit ? formToEdit.status : 'published',
-      slug: formToEdit ? formToEdit.slug : slugify(formData.name),
-      createdAt: formToEdit ? formToEdit.createdAt : new Date().toISOString(),
+      status: isExisting ? formToEdit.status : 'draft',
+      slug: isExisting ? formToEdit.slug : slugify(formData.name),
+      createdAt: isExisting ? formToEdit.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       sections: formData.sections,
-      linkSettings: formToEdit ? formToEdit.linkSettings : { active: true, expiryDate: '', maxResponses: 500, onePerUser: false },
-      responses: formToEdit ? formToEdit.responses : 0,
-      currentVersion: formToEdit ? formToEdit.currentVersion : 1
+      linkSettings: isExisting ? formToEdit.linkSettings : { active: true, expiryDate: '', maxResponses: 500, onePerUser: false },
+      responses: isExisting ? formToEdit.responses : 0,
+      currentVersion: isExisting ? formToEdit.currentVersion : 1
     };
 
-    if (formToEdit) {
+    if (formToEdit && !formToEdit.isNewTemplate) {
       formStore.updateForm(newForm.id, newForm);
     } else {
       formStore.addForm(newForm);
@@ -942,7 +930,7 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth PaperProps={{ sx: { borderRadius: 3, height: '90vh' } }}>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #E5E7EB', bgcolor: '#fff' }}>
         <BuildIcon sx={{ color: '#0277BD' }} />
-        <Typography variant="h6" sx={{ fontWeight: 800, flex: 1 }}>{formToEdit ? 'Edit Form Settings' : 'Create New Form'}</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 800, flex: 1 }}>{(formToEdit && !formToEdit.isNewTemplate) ? 'Edit Form Settings' : 'Create New Form'}</Typography>
         <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent sx={{ p: 0, bgcolor: '#F9FAFB', display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
@@ -1000,42 +988,19 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
                 if (!hasSubSecs && !hasFields) return null;
 
                 return (
-                  <Box key={sec.id} sx={{ mb: 3.5 }}>
-                    <Box sx={{ mb: 2, pb: 1, borderBottom: '2px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Chip label={`Section ${si + 1}`} size="small" sx={{ bgcolor: '#1A2332', color: '#fff', fontWeight: 700, fontSize: '0.65rem', height: 18 }} />
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1A2332' }}>{sec.title}</Typography>
-                    </Box>
-                    
-                    {/* Flat fields */}
-                    <Grid container spacing={2} sx={{ mb: hasSubSecs ? 2 : 0 }}>
-                      {(sec.fields || []).filter(f => f.enabled !== false).map(field => (
-                        <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
-                          {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={2} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />
-                            : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
-                              : field.type === 'dropdown' ? <FormControl fullWidth disabled size="small"><InputLabel shrink>{field.label}{field.required ? ' *' : ''}</InputLabel><Select label={field.label} value="" notched>{(field.options || []).map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}</Select></FormControl>
-                                : field.type === 'radio' ? <FormControl disabled size="small"><Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600 }}>{field.label}{field.required ? ' *' : ''}</Typography><Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>{(field.options || []).map(o => <FormControlLabel key={o} control={<Checkbox disabled size="small" />} label={o} />)}</Box></FormControl>
-                                  : <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth type={field.type === 'date' ? 'date' : 'text'} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />}
-                        </Grid>
-                      ))}
-                    </Grid>
-
-                    {/* Sub-sections */}
-                    {(sec.subSections || []).map((sub) => (
-                      <Box key={sub.id} sx={{ mb: 2, ml: 2, p: 2, border: '1px solid #E2E8F0', borderRadius: 2, bgcolor: '#FAFBFB' }}>
-                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#334155', mb: 1.5 }}>{sub.title}</Typography>
-                        <Grid container spacing={2}>
-                          {(sub.fields || []).filter(f => f.enabled !== false).map(field => (
-                            <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
-                              {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={2} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />
-                                : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
-                                  : field.type === 'dropdown' ? <FormControl fullWidth disabled size="small"><InputLabel shrink>{field.label}{field.required ? ' *' : ''}</InputLabel><Select label={field.label} value="" notched>{(field.options || []).map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}</Select></FormControl>
-                                    : field.type === 'radio' ? <FormControl disabled size="small"><Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 600 }}>{field.label}{field.required ? ' *' : ''}</Typography><Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>{(field.options || []).map(o => <FormControlLabel key={o} control={<Checkbox disabled size="small" />} label={o} />)}</Box></FormControl>
-                                      : <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth type={field.type === 'date' ? 'date' : 'text'} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled size="small" />}
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </Box>
-                    ))}
+                  <Box key={sec.id} sx={{ 
+                    mb: 4, 
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    bgcolor: '#fff',
+                    pointerEvents: 'none' // Disables interaction in preview mode
+                  }}>
+                    <DynamicSection 
+                      section={sec} 
+                      formData={{}} 
+                      onFieldChange={() => {}} 
+                    />
                   </Box>
                 );
               })}
@@ -1049,9 +1014,20 @@ const FormEditorDialog = ({ open, onClose, formToEdit, categories, onSave }) => 
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2.5, borderTop: '1px solid #E5E7EB', bgcolor: '#fff' }}>
-        <Button onClick={onClose} sx={{ color: '#4B5563', fontWeight: 600 }}>Cancel</Button>
-        <Button variant="contained" disabled={!formData.name || !formData.category} onClick={handleSave} sx={{ bgcolor: '#0277BD', fontWeight: 700, px: 3, borderRadius: 2, '&:hover': { bgcolor: '#01579B' } }}>{formToEdit ? 'Save Changes' : 'Create & Generate Link'}</Button>
+      <DialogActions sx={{ p: 2.5, borderTop: '1px solid #E5E7EB', bgcolor: '#fff', display: 'flex', alignItems: 'center' }}>
+        {(formToEdit && !formToEdit.isNewTemplate) && (
+          <Typography sx={{ color: '#10B981', fontWeight: 600, fontSize: '0.85rem', flex: 1 }}>
+            ✓ Auto-saving is active. All changes are saved automatically.
+          </Typography>
+        )}
+        {(!formToEdit || formToEdit.isNewTemplate) && <Box sx={{ flex: 1 }} />}
+        
+        <Button onClick={onClose} sx={{ color: '#4B5563', fontWeight: 600 }}>{(formToEdit && !formToEdit.isNewTemplate) ? 'Close Editor' : 'Cancel'}</Button>
+        {(!formToEdit || formToEdit.isNewTemplate) && (
+          <Button variant="contained" disabled={!formData.name || !formData.category} onClick={handleSave} sx={{ bgcolor: '#0277BD', fontWeight: 700, px: 3, borderRadius: 2, '&:hover': { bgcolor: '#01579B' } }}>
+            Create Form
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );
@@ -1077,24 +1053,20 @@ const FormPreviewDialog = ({ open, onClose, form, categories }) => {
             {form.description && <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 0.5 }}>{form.description}</Typography>}
           </Box>
           <CardContent sx={{ p: 3.5 }}>
-            {(form.sections || []).filter(sec => (sec.fields || []).some(f => f.enabled !== false)).map((sec, si) => (
-              <Box key={sec.id} sx={{ mb: 3 }}>
-                <Box sx={{ mb: 2, pb: 1, borderBottom: '2px solid #F1F5F9' }}>
-                  <Chip label={`Section ${si + 1}`} size="small" sx={{ bgcolor: '#1A2332', color: '#fff', fontWeight: 700, fontSize: '0.65rem', height: 18, mr: 1 }} />
-                  <Typography component="span" variant="subtitle1" sx={{ fontWeight: 800, color: '#1A2332' }}>{sec.title}</Typography>
-                  {sec.description && <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.25 }}>{sec.description}</Typography>}
-                </Box>
-                <Grid container spacing={2}>
-                  {(sec.fields || []).filter(f => f.enabled !== false).map(field => (
-                    <Grid item xs={12} sm={['textarea', 'file'].includes(field.type) ? 12 : 6} key={field.id}>
-                      {field.type === 'textarea' ? <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth multiline rows={3} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled />
-                        : field.type === 'file' ? <Box sx={{ border: '2px dashed #CBD5E1', borderRadius: 2, p: 2.5, textAlign: 'center', bgcolor: '#F8FAFC' }}><Typography variant="body2" sx={{ color: '#94A3B8' }}>📎 {field.label}{field.required ? ' *' : ''}</Typography></Box>
-                          : field.type === 'dropdown' ? <FormControl fullWidth disabled><InputLabel shrink>{field.label}{field.required ? ' *' : ''}</InputLabel><Select label={field.label} value="" notched>{(field.options || categories.map(c => c.name)).map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}</Select></FormControl>
-                            : field.type === 'rating' ? <Box><Typography variant="caption" sx={{ fontWeight: 700, color: '#546E7A' }}>{field.label}{field.required ? ' *' : ''}</Typography><Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>{[1, 2, 3, 4, 5].map(n => <StarIcon key={n} sx={{ color: '#F59E0B', fontSize: 24 }} />)}</Box></Box>
-                              : <TextField label={`${field.label}${field.required ? ' *' : ''}`} fullWidth type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : field.type === 'email' ? 'email' : 'text'} placeholder={field.placeholder} InputLabelProps={{ shrink: true }} disabled />}
-                    </Grid>
-                  ))}
-                </Grid>
+            {(form.sections || []).map((sec, si) => (
+              <Box key={sec.id} sx={{ 
+                mb: 4, 
+                border: '1px solid #E5E7EB',
+                borderRadius: 3,
+                overflow: 'hidden',
+                bgcolor: '#fff',
+                pointerEvents: 'none'
+              }}>
+                <DynamicSection 
+                  section={sec} 
+                  formData={{}} 
+                  onFieldChange={() => {}} 
+                />
               </Box>
             ))}
             <Divider sx={{ my: 2.5 }} />
@@ -1378,7 +1350,7 @@ const FormUpload = () => {
 
         {tab === 0 && <SubmissionsTab forms={forms} categories={categories} submissions={submissions} />}
         {tab === 1 && <CategoryTab categories={categories} />}
-        {tab === 2 && <TemplatesTab templates={templates} categories={categories} onUseTemplate={tpl => { setFormToEdit(null); setEditorOpen(true); }} />}
+        {tab === 2 && <TemplatesTab templates={templates} categories={categories} onUseTemplate={tpl => { setFormToEdit({ ...tpl, isNewTemplate: true }); setEditorOpen(true); }} />}
         {tab === 3 && <AnalyticsTab forms={forms} submissions={submissions} categories={categories} />}
       </Card>
 
@@ -1386,7 +1358,7 @@ const FormUpload = () => {
       <FormEditorDialog
         open={editorOpen} onClose={() => { setEditorOpen(false); setFormToEdit(null); }}
         formToEdit={formToEdit} categories={categories}
-        onSave={form => { toast(formToEdit ? 'Form updated!' : 'Form created! Share the generated link.'); }}
+        onSave={form => { toast((formToEdit && !formToEdit.isNewTemplate) ? 'Form updated!' : 'Form created! Share the generated link.'); }}
       />
 
       <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>

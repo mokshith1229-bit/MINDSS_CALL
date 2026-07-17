@@ -18,6 +18,7 @@ import {
   ArrowUpward as MoveUpIcon, ArrowDownward as MoveDownIcon,
   Visibility as ShowIcon, VisibilityOff as HideIcon,
   Lock as LockIcon, LockOpen as UnlockIcon,
+  Style as CardSelectorIcon, Draw as SignatureIcon, Title as HeadingIcon, Subject as ParagraphIcon, HorizontalRule as DividerIcon,
 } from '@mui/icons-material';
 import { uid, FIELD_TYPES, FIELD_TYPE_COLORS } from '../store/formStore';
 
@@ -27,6 +28,7 @@ const ICON_MAP = {
   Today: DateIcon, ArrowDropDownCircle: DropdownIcon,
   RadioButtonChecked: RadioIcon, CheckBox: CheckboxIcon,
   Checklist: MultiSelectIcon, Star: StarIcon, AttachFile: FileIcon,
+  Style: CardSelectorIcon, Draw: SignatureIcon, Title: HeadingIcon, Subject: ParagraphIcon, HorizontalRule: DividerIcon,
   Abc: TextIcon,
 };
 
@@ -179,6 +181,18 @@ const FieldConfigPanel = ({ field, onSave, onClose }) => {
         </FormControl>
         <TextField size="small" label="Placeholder" value={data.placeholder || ''} onChange={set('placeholder')} />
         <TextField size="small" label="Description / Help Text" value={data.helpText || ''} onChange={set('helpText')} />
+        <TextField size="small" label="Default Value" value={data.defaultValue || ''} onChange={set('defaultValue')} />
+        <TextField size="small" label="Validation Rule (Regex, Min, Max)" value={data.validationRule || ''} onChange={set('validationRule')} />
+        
+        <FormControl size="small" fullWidth sx={{ mt: 0.5 }}>
+          <InputLabel>Field Width</InputLabel>
+          <Select value={data.width || '100%'} onChange={set('width')} label="Field Width">
+            <MenuItem value="100%">Full Width (100%)</MenuItem>
+            <MenuItem value="50%">Half Width (50%)</MenuItem>
+            <MenuItem value="33%">One Third (33%)</MenuItem>
+            <MenuItem value="25%">One Quarter (25%)</MenuItem>
+          </Select>
+        </FormControl>
         
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
           <FormControlLabel
@@ -419,6 +433,8 @@ const SectionBlock = ({ section, sectionIdx, totalSections, onUpdateSection, onD
   const [editTitle, setEditTitle] = useState(false);
   const [titleVal, setTitleVal] = useState(section.title);
   const [descVal, setDescVal] = useState(section.description || '');
+  const [visFieldId, setVisFieldId] = useState(section.visibilityRule?.fieldId || '');
+  const [visValue, setVisValue] = useState(section.visibilityRule?.value || '');
   const [anchorEl, setAnchorEl] = useState(null);
   const [confirmDelOpen, setConfirmDelOpen] = useState(false);
 
@@ -456,7 +472,11 @@ const SectionBlock = ({ section, sectionIdx, totalSections, onUpdateSection, onD
   };
 
   const saveTitle = () => {
-    onUpdateSection(section.id, { title: titleVal, description: descVal });
+    onUpdateSection(section.id, { 
+      title: titleVal, 
+      description: descVal,
+      visibilityRule: visFieldId ? { fieldId: visFieldId, value: visValue } : null
+    });
     setEditTitle(false);
   };
 
@@ -508,6 +528,14 @@ const SectionBlock = ({ section, sectionIdx, totalSections, onUpdateSection, onD
             <Box sx={{ display: 'flex', gap: 1.5, flexDirection: 'column' }}>
               <TextField size="small" value={titleVal} onChange={e => setTitleVal(e.target.value)} label="Section Title *" autoFocus fullWidth />
               <TextField size="small" value={descVal} onChange={e => setDescVal(e.target.value)} label="Description (optional)" fullWidth />
+              <Box sx={{ p: 1.5, bgcolor: '#F1F5F9', borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569' }}>Conditional Visibility Rule (Optional)</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField size="small" value={visFieldId} onChange={e => setVisFieldId(e.target.value)} label="Field Label or ID" sx={{ flex: 1, bgcolor: '#fff' }} />
+                  <TextField size="small" value={visValue} onChange={e => setVisValue(e.target.value)} label="Must Equal Value" sx={{ flex: 1, bgcolor: '#fff' }} />
+                </Box>
+                <Typography variant="caption" sx={{ color: '#94A3B8' }}>Leave empty to always show this section.</Typography>
+              </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button size="small" variant="contained" onClick={saveTitle}>Save</Button>
                 <Button size="small" onClick={() => setEditTitle(false)}>Cancel</Button>
