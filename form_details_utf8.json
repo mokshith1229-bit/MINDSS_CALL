@@ -1,0 +1,293 @@
+{
+  "form": {
+    "linkSettings": {
+      "expiryDate": "",
+      "maxResponses": null,
+      "onePerUser": false
+    },
+    "_id": "6a58b90105d246fe2c7edcf9",
+    "title": "Proposal/Idea Submission",
+    "description": "",
+    "slug": "proposal-idea-submission",
+    "status": "PUBLISHED",
+    "category": "Process Development",
+    "createdBy": "6a54c6c033f0694d7f251194",
+    "createdAt": "2026-07-16T10:57:05.997Z",
+    "updatedAt": "2026-07-17T06:26:23.184Z",
+    "__v": 0
+  },
+  "version": {
+    "_id": "6a59cb0e6d4bb7d94aa93a76",
+    "form": "6a58b90105d246fe2c7edcf9",
+    "versionNumber": 77,
+    "schema": [
+      {
+        "id": "sec-0",
+        "title": "Submission Type",
+        "fields": [
+          {
+            "id": "submissionType",
+            "label": "Submission Type",
+            "type": "radio",
+            "options": [
+              "Idea",
+              "Proposal"
+            ],
+            "required": true,
+            "enabled": true
+          }
+        ]
+      },
+      {
+        "id": "sec-1",
+        "title": "Basic Information",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Full Name",
+            "type": "text",
+            "required": true,
+            "enabled": true
+          },
+          {
+            "id": "dob",
+            "label": "Date of Birth",
+            "type": "date",
+            "required": true,
+            "enabled": true
+          },
+          {
+            "id": "employeeCode",
+            "label": "Employee Code",
+            "type": "text",
+            "required": true,
+            "enabled": true
+          }
+        ]
+      },
+      {
+        "id": "sec-2",
+        "title": "Organization Details",
+        "fields": [
+          {
+            "id": "department",
+            "label": "Department",
+            "type": "dropdown",
+            "required": true,
+            "enabled": true,
+            "options": [
+              "Engineering",
+              "saefty",
+              "ITS",
+              "FInance"
+            ]
+          },
+          {
+            "id": "subDepartment",
+            "label": "Sub Department",
+            "type": "dropdown",
+            "required": true,
+            "enabled": true,
+            "options": [
+              "Pavements",
+              "Safety"
+            ]
+          },
+          {
+            "id": "subSubDepartment",
+            "label": "Work Function",
+            "type": "dropdown",
+            "required": false,
+            "enabled": true,
+            "options": [
+              "AI&ML",
+              "Materials"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sec-3",
+        "title": "Classification",
+        "fields": [
+          {
+            "id": "id-1784268783528-lmff2q",
+            "label": "Process/Product development ",
+            "type": "dropdown",
+            "required": false,
+            "placeholder": "",
+            "helpText": "",
+            "defaultValue": "",
+            "validationRule": "",
+            "isDefault": false,
+            "options": [
+              "Process development",
+              "Product development"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sec-4",
+        "title": "Management Information",
+        "fields": [
+          {
+            "id": "reportingManagerName",
+            "label": "Reporting Manager Name",
+            "type": "text",
+            "required": true,
+            "enabled": true
+          },
+          {
+            "id": "reportingManagerEmail",
+            "label": "Reporting Manager Email",
+            "type": "email",
+            "required": true,
+            "enabled": true
+          },
+          {
+            "id": "hodName",
+            "label": "HOD Name",
+            "type": "text",
+            "required": true,
+            "enabled": true
+          },
+          {
+            "id": "hodEmail",
+            "label": "HOD Email",
+            "type": "email",
+            "required": true,
+            "enabled": true
+          }
+        ]
+      },
+      {
+        "id": "sec-5",
+        "title": "Submission Details",
+        "fields": [
+          {
+            "id": "id-1784268074826-bwch3w",
+            "label": "Idea No [if applicable]",
+            "type": "text",
+            "required": false,
+            "placeholder": "",
+            "helpText": "",
+            "defaultValue": "",
+            "validationRule": "",
+            "isDefault": false
+          },
+          {
+            "id": "title",
+            "label": "Project title",
+            "type": "text",
+            "required": true,
+            "enabled": true,
+            "helpText": "",
+            "readOnly": false,
+            "placeholder": "Provide a concise and descriptive title that clearly reflects the proposed R&D initiative."
+          },
+          {
+            "id": "problemStatement",
+            "label": "Problem Statement",
+            "type": "textarea",
+            "required": true,
+            "enabled": true,
+            "helpText": "",
+            "placeholder": "Clearly define the existing challenge, gap, or opportunity that necessitates the proposed research  or innovation. "
+          },
+          {
+            "id": "proposedSolution",
+            "label": "Proposed solution",
+            "type": "textarea",
+            "required": true,
+            "enabled": true,
+            "readOnly": false
+          },
+          {
+            "id": "id-1784199153136-qm6aao",
+            "label": "Proposed Solution / Innovation ",
+            "type": "textarea",
+            "required": true,
+            "placeholder": "Briefly describe the proposed concept, technology, methodology, or innovative approach to  address the identified problem. ",
+            "helpText": "",
+            "defaultValue": "",
+            "validationRule": "",
+            "isDefault": false
+          },
+          {
+            "id": "objectives",
+            "label": "Objectives",
+            "type": "textarea",
+            "required": true,
+            "enabled": true,
+            "helpText": "",
+            "placeholder": "Outline the specific, measurable objectives and intended outcomes of the project. "
+          },
+          {
+            "id": "keyDeliverables",
+            "label": "Key Deliverables",
+            "type": "textarea",
+            "required": true,
+            "enabled": true,
+            "helpText": "",
+            "placeholder": "List the major project deliverables (maximum of five), along with their corresponding milestones"
+          },
+          {
+            "id": "timelinesAndBudget",
+            "label": "Timelines and Budget",
+            "type": "textarea",
+            "required": true,
+            "enabled": true
+          },
+          {
+            "id": "overallBudget",
+            "label": "Overall Budget",
+            "type": "number",
+            "required": true,
+            "enabled": true,
+            "helpText": "",
+            "placeholder": "Overall budget"
+          },
+          {
+            "id": "expectedBenefits",
+            "label": "Expected Benefits",
+            "type": "textarea",
+            "required": true,
+            "enabled": true,
+            "helpText": "",
+            "readOnly": false,
+            "placeholder": "Summarize the anticipated technical, operational, financial, safety, sustainability, or strategic benefits resulting from the successful implementation of the project. "
+          },
+          {
+            "id": "projectTeam",
+            "label": "Project Team",
+            "type": "textarea",
+            "required": true,
+            "enabled": true,
+            "helpText": "",
+            "readOnly": false,
+            "placeholder": "Project lead, SME, team members, roles and contributions "
+          }
+        ],
+        "subSections": []
+      },
+      {
+        "id": "sec-6",
+        "title": "Attachments",
+        "fields": [
+          {
+            "id": "attachments",
+            "label": "Attachments",
+            "type": "file",
+            "required": false,
+            "enabled": true
+          }
+        ]
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-17T06:26:22.208Z",
+    "updatedAt": "2026-07-17T06:26:22.208Z",
+    "__v": 0
+  }
+}

@@ -65,6 +65,7 @@ const navSections = [
     sectionLabel: 'Projects',
     items: [
       { label: 'R&D Ongoing Projects', icon: <ProjectsIcon fontSize="small" />, path: '/rd-ongoing-projects', featureKey: 'module.rd_ongoing_projects' },
+      { label: 'Pilot Projects', icon: <ProjectsIcon fontSize="small" />, path: '/pilot-projects', featureKey: 'module.pilot_projects' },
       { label: 'Meeting Requests', icon: <EmailIcon fontSize="small" />, path: '/meeting-requests', featureKey: 'module.meeting_requests' },
     ],
   },

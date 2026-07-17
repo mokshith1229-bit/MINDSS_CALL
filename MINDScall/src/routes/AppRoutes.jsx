@@ -19,6 +19,8 @@ import PublicFinanceReview from '../pages/PublicFinanceReview';
 import PublicTracking from '../pages/PublicTracking';
 import Login from '../pages/Login';
 import RDOngoingProjects from '../pages/RDOngoingProjects';
+import PilotProjectsList from '../pages/PilotProjectsList';
+import PilotProjectWorkspace from '../pages/PilotProjectWorkspace';
 import PublicEvaluatorReview from '../pages/PublicEvaluatorReview';
 import { authStore } from '../store/authStore';
 import UserManagement from '../pages/UserManagement';
@@ -76,6 +78,8 @@ const AppRoutes = () => {
         <Route path="meeting-requests" element={<MeetingRequestsAdmin />} />
         <Route path="approval" element={<Approval />} />
         <Route path="rd-ongoing-projects" element={<RDOngoingProjects />} />
+        <Route path="pilot-projects" element={<PilotProjectsList />} />
+        <Route path="pilot-projects/:id" element={<PilotProjectWorkspace />} />
         <Route path="finance-approval" element={<FinanceApproval />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />

@@ -22,6 +22,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const reportsRoutes = require('./routes/reports.routes');
 const developerRoutes = require('./routes/developer.routes');
 const meetingRequestRoutes = require('./routes/meetingRequest.routes');
+const adminPilotRoutes = require('./routes/admin.pilot.routes');
 
 const app = express();
 
@@ -94,6 +95,7 @@ app.use('/api/v1/meeting-requests', meetingRequestRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/admin/reports', reportsRoutes);
 app.use('/api/v1/developer', developerRoutes);
+app.use('/api/v1/admin/pilot-projects', adminPilotRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
