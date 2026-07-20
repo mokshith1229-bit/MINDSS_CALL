@@ -556,6 +556,42 @@ export const formStore = {
     }
   },
 
+  async scheduleMeeting(id, data) {
+    try {
+      const res = await api.post(`/admin/submissions/${id}/schedule-meeting`, data);
+      if (res.data && res.data.success) {
+        const updatedSub = res.data.data.submission;
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          projectDetails: updatedSub.projectDetails,
+          timeline: updatedSub.timeline,
+        } : s);
+        notify();
+      }
+    } catch (err) {
+      console.error('Failed to schedule meeting:', err);
+      throw err;
+    }
+  },
+
+  async completeMeeting(id, data) {
+    try {
+      const res = await api.post(`/admin/submissions/${id}/complete-meeting`, data);
+      if (res.data && res.data.success) {
+        const updatedSub = res.data.data.submission;
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          projectDetails: updatedSub.projectDetails,
+          timeline: updatedSub.timeline,
+        } : s);
+        notify();
+      }
+    } catch (err) {
+      console.error('Failed to complete meeting:', err);
+      throw err;
+    }
+  },
+
   async deleteSubmission(id){
     try {
       const res = await api.delete(`/admin/submissions/${id}`);

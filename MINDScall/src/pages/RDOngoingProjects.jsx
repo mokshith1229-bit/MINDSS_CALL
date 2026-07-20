@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, TextField, InputAdornment, Button, Chip, Drawer, Grid, Divider, ToggleButtonGroup, ToggleButton,
-  FormControl, InputLabel, Select, MenuItem, LinearProgress, IconButton, Tabs, Tab, Avatar, Paper, Slider, Badge, Link
+  FormControl, InputLabel, Select, MenuItem, LinearProgress, IconButton, Tabs, Tab, Avatar, Paper, Slider, Badge, Link,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import {
   Search as SearchIcon, Visibility as ViewIcon, BusinessCenter as ProjectIcon, AttachFile as AttachFileIcon, Close as CloseIcon, Send as SendIcon,
-  CheckCircle, PlayArrow, Error, Star, Receipt, Timeline, Description, Chat, CloudUpload, Flag
+  CheckCircle, PlayArrow, Error, Star, Receipt, Timeline, Description, Chat, CloudUpload, Flag, Event, EventAvailable
 } from '@mui/icons-material';
 import { formStore } from '../store/formStore';
 
@@ -42,6 +43,19 @@ const RDOngoingProjects = () => {
   const [newUpdateFiles, setNewUpdateFiles] = useState([]);
   const [postingUpdate, setPostingUpdate] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
+
+  // Meeting Modals
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
+
+  // Complete meeting state
+  const [selectedMeetingId, setSelectedMeetingId] = useState('');
+  const [completeAttendees, setCompleteAttendees] = useState('');
+  const [completeSummary, setCompleteSummary] = useState('');
+  const [completeDecisions, setCompleteDecisions] = useState('');
+  const [completeActionItems, setCompleteActionItems] = useState('');
+  const [completeNextSteps, setCompleteNextSteps] = useState('');
+  const [completeRisks, setCompleteRisks] = useState('');
+  const [completeNextDate, setCompleteNextDate] = useState('');
 
   useEffect(() => {
     formStore.init(); // Fetch submissions from database on mount
@@ -139,6 +153,34 @@ const RDOngoingProjects = () => {
           </Box>
         );
     }},
+    { field: 'meetings', headerName: 'Meetings', width: 100, renderCell: (params) => {
+        const meetings = params.row.projectDetails?.meetings || [];
+        const completed = meetings.filter(m => m.status === 'Completed').length;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
+            <Event fontSize="small" sx={{ color: '#0078D4' }} />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{completed}</Typography>
+          </Box>
+        );
+    }},
+    { field: 'lastMeeting', headerName: 'Last Meeting', width: 130, renderCell: (params) => {
+        const meetings = params.row.projectDetails?.meetings || [];
+        const completed = meetings.filter(m => m.status === 'Completed').sort((a,b) => new Date(b.date) - new Date(a.date));
+        return (
+          <Typography variant="body2" sx={{ color: '#323130' }}>
+            {completed.length > 0 ? new Date(completed[0].date).toLocaleDateString() : 'N/A'}
+          </Typography>
+        );
+    }},
+    { field: 'nextMeeting', headerName: 'Next Meeting', width: 130, renderCell: (params) => {
+        const meetings = params.row.projectDetails?.meetings || [];
+        const scheduled = meetings.filter(m => m.status === 'Scheduled').sort((a,b) => new Date(a.date) - new Date(b.date));
+        return (
+          <Typography variant="body2" sx={{ color: '#0078D4', fontWeight: 600 }}>
+            {scheduled.length > 0 ? new Date(scheduled[0].date).toLocaleDateString() : 'N/A'}
+          </Typography>
+        );
+    }},
     { field: 'updates', headerName: 'Updates', width: 90, renderCell: (params) => {
         const count = params.row.projectDetails?.updates?.length || 0;
         return (
@@ -230,6 +272,37 @@ const RDOngoingProjects = () => {
       console.error(err);
     } finally {
       setPostingUpdate(false);
+    }
+  };
+
+  const handleCompleteMeeting = async () => {
+    if (!selectedMeetingId) return;
+    try {
+      const data = {
+        meetingId: selectedMeetingId,
+        attendees: completeAttendees,
+        discussionSummary: completeSummary,
+        keyDecisions: completeDecisions,
+        actionItems: completeActionItems,
+        nextSteps: completeNextSteps,
+        risksIdentified: completeRisks,
+        nextMeetingDate: completeNextDate
+      };
+      await formStore.completeMeeting(selectedSub.id, data);
+      
+      const updatedSub = formStore.getAllSubmissions().find(s => s.id === selectedSub.id);
+      setSelectedSub(updatedSub);
+      setCompleteModalOpen(false);
+      setSelectedMeetingId('');
+      setCompleteAttendees('');
+      setCompleteSummary('');
+      setCompleteDecisions('');
+      setCompleteActionItems('');
+      setCompleteNextSteps('');
+      setCompleteRisks('');
+      setCompleteNextDate('');
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -342,7 +415,13 @@ const RDOngoingProjects = () => {
       </Grid>
 
       {/* Detail Drawer */}
-      <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 600, lg: 750 }, bgcolor: '#FAFAFA' } }}>
+      <Drawer 
+        anchor="right" 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)} 
+        PaperProps={{ sx: { width: { xs: '100%', md: 600, lg: 750 }, bgcolor: '#FAFAFA' } }}
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 2 }}
+      >
         {selectedSub && (
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Drawer Header */}
@@ -356,7 +435,18 @@ const RDOngoingProjects = () => {
                 </Box>
                 <Typography variant="body1" sx={{ color: '#605E5C', fontWeight: 500 }}>{selectedSub.parsedTitle}</Typography>
               </Box>
-              <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: '#605E5C' }}><CloseIcon /></IconButton>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button 
+                  variant="contained" 
+                  size="small" 
+                  startIcon={<EventAvailable />} 
+                  onClick={() => setCompleteModalOpen(true)}
+                  sx={{ textTransform: 'none', bgcolor: '#10B981', boxShadow: 'none', '&:hover': { bgcolor: '#059669' } }}
+                >
+                  Meeting Completed
+                </Button>
+                <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: '#605E5C' }}><CloseIcon /></IconButton>
+              </Box>
             </Box>
 
             {/* Tabs */}
@@ -464,7 +554,12 @@ const RDOngoingProjects = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Avatar sx={{ width: 32, height: 32, bgcolor: '#0078D4', fontSize: '0.875rem' }}>{(update.updatedBy || update.user || 'U').charAt(0)}</Avatar>
                             <Box>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130' }}>{update.title || 'Project Update'}</Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130' }}>{update.title || 'Project Update'}</Typography>
+                                {update.title?.includes('Meeting Completed') && (
+                                  <Chip label="Meeting Completed" size="small" icon={<CheckCircle fontSize="small" sx={{ color: '#10B981 !important' }} />} sx={{ bgcolor: '#ECFDF5', color: '#10B981', fontWeight: 600, height: 20, '& .MuiChip-label': { px: 1 } }} />
+                                )}
+                              </Box>
                               <Typography variant="caption" sx={{ color: '#605E5C' }}>{(update.updatedBy || update.user)} • {new Date(update.timestamp).toLocaleString()}</Typography>
                             </Box>
                           </Box>
@@ -569,6 +664,53 @@ const RDOngoingProjects = () => {
           </Box>
         )}
       </Drawer>
+
+      {/* Meeting Completed Modal */}
+      <Dialog open={completeModalOpen} onClose={() => setCompleteModalOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid #EDEBE9', pb: 2 }}>Meeting Completed Update</DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>Select Meeting</InputLabel>
+                <Select value={selectedMeetingId} label="Select Meeting" onChange={e => setSelectedMeetingId(e.target.value)}>
+                  {selectedSub?.projectDetails?.meetings?.filter(m => m.status === 'Scheduled').map(m => (
+                    <MenuItem key={m._id} value={m._id}>{m.title} - {new Date(m.date).toLocaleDateString()}</MenuItem>
+                  ))}
+                  {(!selectedSub?.projectDetails?.meetings || selectedSub.projectDetails.meetings.filter(m => m.status === 'Scheduled').length === 0) && (
+                    <MenuItem disabled value="">No scheduled meetings available</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField label="Attendees" fullWidth size="small" value={completeAttendees} onChange={e => setCompleteAttendees(e.target.value)} placeholder="Who actually attended?" required />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField label="Discussion Summary" fullWidth size="small" multiline rows={3} value={completeSummary} onChange={e => setCompleteSummary(e.target.value)} required />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="Key Decisions" fullWidth size="small" multiline rows={3} value={completeDecisions} onChange={e => setCompleteDecisions(e.target.value)} placeholder="e.g., • Proceed with Pilot\n• Improve reporting" />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="Action Items" fullWidth size="small" multiline rows={3} value={completeActionItems} onChange={e => setCompleteActionItems(e.target.value)} placeholder="e.g., • Update AI model\n• Deploy to field" />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="Next Steps" fullWidth size="small" multiline rows={2} value={completeNextSteps} onChange={e => setCompleteNextSteps(e.target.value)} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="Risks Identified" fullWidth size="small" multiline rows={2} value={completeRisks} onChange={e => setCompleteRisks(e.target.value)} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="Next Meeting Date (Optional)" type="date" fullWidth size="small" value={completeNextDate} onChange={e => setCompleteNextDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #EDEBE9' }}>
+          <Button onClick={() => setCompleteModalOpen(false)} sx={{ textTransform: 'none', color: '#605E5C' }}>Cancel</Button>
+          <Button variant="contained" onClick={handleCompleteMeeting} disabled={!selectedMeetingId || !completeAttendees || !completeSummary} sx={{ textTransform: 'none', bgcolor: '#10B981', '&:hover': { bgcolor: '#059669' } }}>Save Meeting Update</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

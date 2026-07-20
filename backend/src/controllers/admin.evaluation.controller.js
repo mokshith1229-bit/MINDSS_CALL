@@ -424,11 +424,16 @@ exports.autoAssignApproval = async (req, res, next) => {
       <p><small>This is an automated message from MINDScall.</small></p>
     `;
 
-    await sendEmail({
-      email: reviewerEmails.join(', '),
-      subject: emailSubject,
-      html: emailHtml
-    });
+    // Send email to all approval reviewers - don't fail if email fails
+    try {
+      await sendEmail({
+        email: reviewerEmails,
+        subject: emailSubject,
+        html: emailHtml
+      });
+    } catch (emailErr) {
+      console.error('Approval email failed (non-fatal):', emailErr.message);
+    }
 
     res.status(200).json(new ApiResponse(200, { approvalBatch, assignedCount: validSubs.length }, 'Approval Committee assigned and email sent successfully.'));
   } catch (err) {

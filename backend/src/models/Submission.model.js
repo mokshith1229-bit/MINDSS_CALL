@@ -138,6 +138,33 @@ const submissionSchema = new mongoose.Schema(
           size: Number,
         }]
       }],
+      meetings: [{
+        title: String,
+        agenda: String,
+        date: String,
+        time: String,
+        duration: String,
+        platform: String,
+        link: String,
+        participants: [String],
+        notes: String,
+        status: { type: String, enum: ['Scheduled', 'Completed'], default: 'Scheduled' },
+        completionDetails: {
+          attendees: String,
+          discussionSummary: String,
+          keyDecisions: String,
+          actionItems: String,
+          nextSteps: String,
+          risksIdentified: String,
+          nextMeetingDate: String,
+          attachments: [{
+            filename: String,
+            url: String,
+            mimetype: String,
+            size: Number,
+          }]
+        }
+      }],
       expectedBenefits: { type: String, default: '' },
       actualBenefits: { type: String, default: '' }
     },

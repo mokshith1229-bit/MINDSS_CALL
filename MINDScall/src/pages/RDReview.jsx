@@ -330,7 +330,13 @@ const RDReview = () => {
       </Grid>
 
       {/* Details Drawer */}
-      <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 850 }, bgcolor: '#F8FAFC' } }}>
+      <Drawer 
+        anchor="right" 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)} 
+        PaperProps={{ sx: { width: { xs: '100%', md: 850 }, bgcolor: '#F8FAFC' } }}
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 2 }}
+      >
         {selectedSub && (
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Box sx={{ p: 3, bgcolor: '#FFFFFF', borderBottom: '1px solid #E0E0E0', display: 'flex', alignItems: 'center', gap: 2 }}>

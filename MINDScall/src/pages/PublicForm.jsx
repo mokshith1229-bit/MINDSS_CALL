@@ -23,6 +23,7 @@ import {
   Star as StarIcon,
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
+import MindsLogo from '../assets/tracking_logo.png';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -788,10 +789,23 @@ const PublicForm = () => {
     }).map(sec => {
       const titleLower = (sec.title || '').toLowerCase().trim();
       if (isIdea && titleLower === 'submission details') {
+        let hasAbstract = false;
         sec.fields = (sec.fields || []).filter(f => {
           const labelLower = (f.label || '').toLowerCase();
+          if (labelLower.includes('abstract')) hasAbstract = true;
           return labelLower.includes('title') || labelLower.includes('abstract');
         });
+
+        if (!hasAbstract) {
+          sec.fields.push({
+            id: 'abstract',
+            type: 'textarea',
+            label: 'Abstract',
+            required: true,
+            validationRule: 'max:200',
+            helpText: 'Provide a brief abstract of your idea (max 200 words).'
+          });
+        }
       }
       return sec;
     });
@@ -1056,13 +1070,19 @@ const PublicForm = () => {
       {/* ── Page Content ─────────────────────────────────────────────── */}
       <Box sx={{ maxWidth: 860, mx: 'auto', px: { xs: 2, md: 3 }, pt: 5 }}>
 
-        {/* Page Title */}
+        {/* Page Title & Branding */}
         <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.5rem', md: '1.9rem' }, color: '#101828', letterSpacing: '-0.03em', mb: 1 }}>
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+            <img src={MindsLogo} alt="MINDScall Logo" style={{ height: '70px', objectFit: 'contain', display: 'block', mixBlendMode: 'multiply' }} />
+          </Box>
+          <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.6rem', md: '2rem' }, color: '#101828', letterSpacing: '-0.03em', mb: 0.5 }}>
+            MINDScall Innovation Portal
+          </Typography>
+          <Typography sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', md: '1.25rem' }, color: '#344054', mb: 1.5 }}>
             Idea &amp; Proposal Submission Form
           </Typography>
           <Typography sx={{ color: '#667085', fontSize: '0.95rem', maxWidth: 560, mx: 'auto', lineHeight: 1.6 }}>
-            Submit your innovative ideas or formal project proposals for review by the R&amp;D and Innovation team.
+            Submit your innovative ideas and formal project proposals for review by the R&amp;D &amp; Innovation Team.
           </Typography>
         </Box>
 

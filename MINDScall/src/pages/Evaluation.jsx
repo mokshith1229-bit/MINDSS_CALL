@@ -257,8 +257,6 @@ const Evaluation = () => {
         </DialogActions>
       </Dialog>
 
-// Removed Create Batch Dialog
-
       {/* Minimalist Premium Detail Drawer */}
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: '100%', md: 700 }, bgcolor: '#FAFAFA' } }}>
         {selectedProposalData && (

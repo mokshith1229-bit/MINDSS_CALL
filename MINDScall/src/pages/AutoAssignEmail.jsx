@@ -3,8 +3,11 @@ import {
   Box, Grid, Card, CardContent, Typography, TextField, InputAdornment,
   Avatar, Chip, Button, Divider, Snackbar, Alert, CircularProgress,
   Checkbox, Fade, Tabs, Tab, FormControl, Select, MenuItem, InputLabel,
-  Tooltip, IconButton
+  Tooltip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
+  LinearProgress, List, ListItem, ListItemText, ListItemIcon
 } from '@mui/material';
+import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
+import { useNavigate } from 'react-router-dom';
 import {
   Search as SearchIcon,
   CheckCircle as AssignedIcon,
@@ -19,6 +22,14 @@ import {
   Refresh as RefreshIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  BusinessCenter as ProjectIcon,
+  Event as EventIcon,
+  List as ListIcon,
+  Visibility as ViewIcon,
+  CheckCircle,
+  PlayArrow,
+  Flag,
+  Error
 } from '@mui/icons-material';
 import { TypeBadge } from '../components/DataTable';
 import api from '../utils/api';
@@ -132,6 +143,26 @@ const AutoAssignEmail = () => {
   const [approvalBatchName, setApprovalBatchName] = useState('');
   const [selApprovalProp, setSelApprovalProp] = useState(null);
 
+  // ── Tab 5: R&D Ongoing ──
+  const [ongoingSubs, setOngoingSubs] = useState([]);
+  const [ongoingSearch, setOngoingSearch] = useState('');
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [viewMeetingsModalOpen, setViewMeetingsModalOpen] = useState(false);
+  const [selectedOngoingSub, setSelectedOngoingSub] = useState(null);
+  
+  // Schedule meeting form state
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingAgenda, setMeetingAgenda] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
+  const [meetingDuration, setMeetingDuration] = useState('30 mins');
+  const [meetingPlatform, setMeetingPlatform] = useState('Microsoft Teams');
+  const [meetingLink, setMeetingLink] = useState('');
+  const [meetingParticipants, setMeetingParticipants] = useState('');
+  const [meetingNotes, setMeetingNotes] = useState('');
+
+  const navigate = useNavigate();
+
   // ─── Fetch All Data ──────────────────────────────────────────────
   const fetchData = async () => {
     try {
@@ -192,6 +223,9 @@ const AutoAssignEmail = () => {
 
       // ── Approval Committee pool: FINANCE_APPROVED or APPROVAL_COMMITTEE ──
       setApprovalSubs(parsed.filter(s => s.status === 'FINANCE_APPROVED' || s.status === 'APPROVAL_COMMITTEE'));
+
+      // ── R&D Ongoing pool: All APPROVED projects (matches what R&D Ongoing Projects shows) ──
+      setOngoingSubs(parsed.filter(s => s.status === 'APPROVED'));
 
       // ── Fetch active committees ──
       const commRes = await api.get('/admin/evaluations/committees');
@@ -416,6 +450,133 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
     Assigned: approvalSubs.filter(s => s.status === 'APPROVAL_COMMITTEE').length,
   };
 
+  // ─── Tab 5: R&D Ongoing handlers ──────────────
+  const ongoingCounts = {
+    All: ongoingSubs.length
+  };
+
+  const handleScheduleMeeting = async () => {
+    if (!meetingDate || !meetingTime || !meetingLink || !meetingParticipants || !selectedOngoingSub) return;
+    try {
+      const projectTitle = selectedOngoingSub.title || selectedOngoingSub.businessId || 'R&D Project';
+      const data = {
+        title: `Review Meeting - ${projectTitle}`,
+        agenda: meetingAgenda,
+        date: meetingDate,
+        time: meetingTime,
+        duration: meetingDuration || '1 hour',
+        platform: meetingPlatform || 'Meeting Link',
+        link: meetingLink,
+        participants: meetingParticipants.split(',').map(e => e.trim()).filter(Boolean),
+        notes: meetingNotes
+      };
+      await api.post(`/admin/submissions/${selectedOngoingSub._id}/schedule-meeting`, data);
+      
+      setSnack({ open: true, msg: `Meeting invitation sent to ${data.participants.length} participant(s)!`, type: 'success' });
+      setMeetingDate(''); setMeetingTime(''); setMeetingLink(''); setMeetingParticipants(''); setMeetingAgenda('');
+      setSelectedOngoingSub(null);
+      await fetchData();
+    } catch (err) {
+      setSnack({ open: true, msg: err.response?.data?.message || 'Failed to send meeting invitation', type: 'error' });
+    }
+  };
+
+  const getStatusColor = (status) => {
+    if(status === 'Completed') return '#10B981';
+    if(status === 'Near Completion') return '#059669';
+    if(status === 'In Progress' || status === 'Pilot Testing') return '#3B82F6';
+    if(status === 'Planning') return '#F59E0B';
+    if(status === 'On Hold') return '#EF4444';
+    return '#6B7280';
+  };
+
+  const ongoingColumns = [
+    { field: 'businessId', headerName: 'Project ID', width: 130, renderCell: (params) => (
+      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0078D4' }}>{params.value || 'N/A'}</Typography>
+    )},
+    { field: 'title', headerName: 'Project Title', flex: 1, minWidth: 200, renderCell: (params) => <Typography variant="body2" sx={{ fontWeight: 600, color: '#323130' }} noWrap>{params.value}</Typography> },
+    { field: 'owner', headerName: 'Owner', width: 150, renderCell: (params) => {
+      const owner = params.row.projectDetails?.owner || 'Unassigned';
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar sx={{ width: 24, height: 24, bgcolor: owner === 'Unassigned' ? '#e1dfdd' : '#0078D4', fontSize: '0.75rem' }}>
+            {owner === 'Unassigned' ? '?' : owner.charAt(0)}
+          </Avatar>
+          <Typography variant="body2" noWrap>{owner}</Typography>
+        </Box>
+      );
+    }},
+    { field: 'dept', headerName: 'Department', width: 140 },
+    { field: 'phase', headerName: 'Current Phase', width: 150, renderCell: (params) => {
+      const status = params.row.projectDetails?.implementationStatus || 'Approved';
+      return <Typography variant="body2" sx={{ color: '#323130', fontWeight: 500 }}>{status}</Typography>;
+    }},
+    { field: 'progress', headerName: 'Progress', width: 120, renderCell: (params) => {
+      const val = params.row.projectDetails?.progressPercentage || 0;
+      const color = getStatusColor(params.row.projectDetails?.implementationStatus);
+      return (
+        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ width: '100%', mr: 1 }}>
+            <LinearProgress variant="determinate" value={val} sx={{ height: 6, borderRadius: 3, bgcolor: '#EDEBE9', '& .MuiLinearProgress-bar': { bgcolor: color } }} />
+          </Box>
+          <Box sx={{ minWidth: 35 }}>
+            <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600 }}>{`${val}%`}</Typography>
+          </Box>
+        </Box>
+      );
+    }},
+    { field: 'lastMeeting', headerName: 'Last Meeting', width: 120, renderCell: (params) => {
+      const meetings = params.row.projectDetails?.meetings || [];
+      const completed = meetings.filter(m => m.status === 'Completed').sort((a,b) => new Date(b.date) - new Date(a.date));
+      return (
+        <Typography variant="body2" sx={{ color: '#323130' }}>
+          {completed.length > 0 ? new Date(completed[0].date).toLocaleDateString() : 'N/A'}
+        </Typography>
+      );
+    }},
+    { field: 'nextMeeting', headerName: 'Next Meeting', width: 120, renderCell: (params) => {
+      const meetings = params.row.projectDetails?.meetings || [];
+      const scheduled = meetings.filter(m => m.status === 'Scheduled').sort((a,b) => new Date(a.date) - new Date(b.date));
+      return (
+        <Typography variant="body2" sx={{ color: '#0078D4', fontWeight: 600 }}>
+          {scheduled.length > 0 ? new Date(scheduled[0].date).toLocaleDateString() : 'N/A'}
+        </Typography>
+      );
+    }},
+    { field: 'meetingStatus', headerName: 'Meeting Status', width: 130, renderCell: (params) => {
+      const meetings = params.row.projectDetails?.meetings || [];
+      const scheduled = meetings.filter(m => m.status === 'Scheduled');
+      if (scheduled.length > 0) return <Chip label="Scheduled" size="small" sx={{ bgcolor: '#E3F2FD', color: '#1565C0', fontWeight: 600 }} />;
+      return <Chip label="None Pending" size="small" sx={{ bgcolor: '#F5F5F5', color: '#757575', fontWeight: 600 }} />;
+    }},
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      getActions: (params) => [
+        <GridActionsCellItem
+          icon={<EventIcon />}
+          label="Schedule Meeting"
+          onClick={() => { setSelectedOngoingSub(params.row); setScheduleModalOpen(true); }}
+          showInMenu
+        />,
+        <GridActionsCellItem
+          icon={<ListIcon />}
+          label="View Previous Meetings"
+          onClick={() => { setSelectedOngoingSub(params.row); setViewMeetingsModalOpen(true); }}
+          showInMenu
+        />,
+        <GridActionsCellItem
+          icon={<ViewIcon />}
+          label="View Project"
+          onClick={() => navigate('/ongoing-projects')}
+          showInMenu
+        />,
+      ],
+    },
+  ];
+
   if (loading) return (
     <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
   );
@@ -471,6 +632,16 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
                 Approval Committee
                 <Chip label={approvalCounts.Unassigned} size="small"
                   sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#FFF8E1', color: '#F57F17', fontWeight: 700 }} />
+              </Box>
+            }
+          />
+          <Tab
+            icon={<ProjectIcon sx={{ fontSize: 18 }} />} iconPosition="start"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                R&D Ongoing
+                <Chip label={ongoingSubs.length} size="small"
+                  sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 700 }} />
               </Box>
             }
           />
@@ -1169,6 +1340,175 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
           </Grid>
         </Grid>
       </TabPanel>
+
+      {/* ══════════════════════════════════════════════════════════════
+          Tab 5: R&D Ongoing Assignment (Meeting Scheduling)
+      ══════════════════════════════════════════════════════════════ */}
+      <TabPanel value={tabIndex} index={4}>
+        <Grid container spacing={3}>
+          {/* Left: Project List */}
+          <Grid item xs={12} lg={5}>
+            <Card sx={{ borderRadius: 3, border: '1px solid #E5E7EB', boxShadow: 'none' }} elevation={0}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>R&D Ongoing Projects</Typography>
+                <Typography variant="body2" sx={{ color: '#78909C', mb: 2 }}>Select a project to schedule a meeting invitation.</Typography>
+                <TextField
+                  size="small" fullWidth
+                  placeholder="Search projects..."
+                  value={ongoingSearch}
+                  onChange={(e) => setOngoingSearch(e.target.value)}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+                  sx={{ mb: 2 }}
+                />
+                <Box sx={{ maxHeight: 480, overflowY: 'auto', pr: 0.5 }}>
+                  {ongoingSubs
+                    .filter(s => !ongoingSearch || s.businessId?.toLowerCase().includes(ongoingSearch.toLowerCase()) || s.title?.toLowerCase().includes(ongoingSearch.toLowerCase()))
+                    .map(sub => {
+                      const isSel = selectedOngoingSub?._id === sub._id;
+                      return (
+                        <Box key={sub._id} onClick={() => setSelectedOngoingSub(sub)}
+                          sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1.5, borderRadius: 2, mb: 1,
+                            cursor: 'pointer', border: `1px solid ${isSel ? '#1565C0' : '#F0F0F0'}`,
+                            bgcolor: isSel ? '#EEF2FF' : '#FAFAFA', transition: 'all 0.2s',
+                            '&:hover': { bgcolor: isSel ? '#E3EAF7' : '#F5F5F5' } }}>
+                          <Avatar sx={{ background: 'linear-gradient(135deg, #1565C0, #42A5F5)', width: 38, height: 38, fontSize: '0.75rem', fontWeight: 700 }}>
+                            {(sub.businessId || 'RD').substring(0, 2).toUpperCase()}
+                          </Avatar>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#212121' }} noWrap>{sub.title || 'Untitled Project'}</Typography>
+                            <Typography variant="caption" sx={{ color: '#78909C' }} noWrap>{sub.businessId} • {sub.dept || 'General'}</Typography>
+                          </Box>
+                          {isSel && <Chip label="Selected" size="small" sx={{ bgcolor: '#1565C0', color: '#fff', fontWeight: 700, fontSize: '0.65rem' }} />}
+                        </Box>
+                      );
+                    })}
+                  {ongoingSubs.length === 0 && (
+                    <Typography variant="body2" sx={{ color: '#9E9E9E', textAlign: 'center', py: 4 }}>No active R&D projects found</Typography>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Right: Action Panel */}
+          <Grid item xs={12} lg={7}>
+            <Card sx={{ borderRadius: 3, border: '1px solid #E5E7EB', boxShadow: 'none' }} elevation={0}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Schedule Meeting</Typography>
+                <Typography variant="body2" sx={{ color: '#78909C', mb: 2.5 }}>Select a project and send a meeting invitation link to all participants.</Typography>
+
+                {selectedOngoingSub ? (
+                  <Fade in timeout={400}>
+                    <Box>
+                      <Box sx={{ p: 2, bgcolor: '#EEF2FF', borderRadius: 2, mb: 2.5, border: '1px solid #BBDEFB' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{selectedOngoingSub.title || 'Untitled Project'}</Typography>
+                        <Typography variant="caption" sx={{ color: '#546E7A' }}>{selectedOngoingSub.businessId} • {selectedOngoingSub.dept || 'General'}</Typography>
+                      </Box>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <TextField label="Meeting Date" type="date" fullWidth size="small" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} InputLabelProps={{ shrink: true }} required />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <TextField label="Meeting Time" type="time" fullWidth size="small" value={meetingTime} onChange={e => setMeetingTime(e.target.value)} InputLabelProps={{ shrink: true }} required />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField label="Meeting Link" fullWidth size="small" value={meetingLink} onChange={e => setMeetingLink(e.target.value)} placeholder="Paste your Google Meet / Teams / Zoom link here..." required
+                            InputProps={{ startAdornment: <InputAdornment position="start"><EventIcon fontSize="small" sx={{ color: '#78909C' }} /></InputAdornment> }}
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField label="Participants (Emails)" fullWidth size="small" value={meetingParticipants} onChange={e => setMeetingParticipants(e.target.value)} placeholder="email1@company.com, email2@company.com..." required
+                            helperText="Separate multiple emails with commas"
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField label="Agenda (Optional)" fullWidth size="small" multiline rows={2} value={meetingAgenda} onChange={e => setMeetingAgenda(e.target.value)} placeholder="Briefly describe the meeting purpose..." />
+                        </Grid>
+                      </Grid>
+
+                      <Button variant="contained" fullWidth
+                        disabled={!meetingDate || !meetingTime || !meetingLink || !meetingParticipants}
+                        onClick={handleScheduleMeeting} startIcon={<SendIcon />}
+                        sx={{ mt: 2.5, fontWeight: 700, py: 1.5, bgcolor: '#1565C0', textTransform: 'none', fontSize: '0.95rem' }}>
+                        Send Meeting Invitation
+                      </Button>
+                    </Box>
+                  </Fade>
+                ) : (
+                  <Box sx={{ p: 4, bgcolor: '#FAFAFA', borderRadius: 2, border: '1px dashed #CFD8DC', textAlign: 'center' }}>
+                    <ProjectIcon sx={{ fontSize: 40, color: '#CFD8DC', mb: 1 }} />
+                    <Typography variant="body2" sx={{ color: '#9E9E9E' }}>← Select a project to begin</Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+
+      {/* View Previous Meetings Modal */}
+      <Dialog open={viewMeetingsModalOpen} onClose={() => setViewMeetingsModalOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid #EDEBE9', pb: 2 }}>
+          Previous Meetings - {selectedOngoingSub?.businessId}
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <List sx={{ pt: 0, bgcolor: '#FAFAFA' }}>
+            {selectedOngoingSub?.projectDetails?.meetings?.length > 0 ? (
+              selectedOngoingSub.projectDetails.meetings.sort((a,b) => new Date(b.date) - new Date(a.date)).map((meeting, index) => (
+                <ListItem key={index} sx={{ borderBottom: '1px solid #E0E0E0', p: 3, alignItems: 'flex-start' }}>
+                  <ListItemIcon>
+                    {meeting.status === 'Completed' ? <CheckCircle sx={{ color: '#10B981' }} /> : <EventIcon sx={{ color: '#0078D4' }} />}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{meeting.title}</Typography>
+                        <Chip label={meeting.status} size="small" sx={{ bgcolor: meeting.status === 'Completed' ? '#E8F5E9' : '#E3F2FD', color: meeting.status === 'Completed' ? '#2E7D32' : '#1565C0', fontWeight: 600 }} />
+                      </Box>
+                    }
+                    secondary={
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 3 }}>
+                          <Typography variant="body2"><strong>Date:</strong> {new Date(meeting.date).toLocaleDateString()}</Typography>
+                          <Typography variant="body2"><strong>Time:</strong> {meeting.time}</Typography>
+                          <Typography variant="body2"><strong>Platform:</strong> {meeting.platform}</Typography>
+                        </Box>
+                        {meeting.summary && (
+                          <Box sx={{ p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#757575', display: 'block', mb: 0.5 }}>Discussion Summary</Typography>
+                            <Typography variant="body2">{meeting.summary}</Typography>
+                          </Box>
+                        )}
+                        {meeting.decisions && (
+                          <Box sx={{ p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#757575', display: 'block', mb: 0.5 }}>Key Decisions</Typography>
+                            <Typography variant="body2">{meeting.decisions}</Typography>
+                          </Box>
+                        )}
+                        {meeting.actionItems && (
+                          <Box sx={{ p: 1.5, bgcolor: '#fff', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#757575', display: 'block', mb: 0.5 }}>Action Items</Typography>
+                            <Typography variant="body2">{meeting.actionItems}</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              ))
+            ) : (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="body1" sx={{ color: '#757575' }}>No meetings found for this project.</Typography>
+              </Box>
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #EDEBE9' }}>
+          <Button onClick={() => setViewMeetingsModalOpen(false)} sx={{ textTransform: 'none', color: '#605E5C' }}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar open={snack.open} autoHideDuration={4000}
         onClose={() => setSnack(s => ({ ...s, open: false }))}

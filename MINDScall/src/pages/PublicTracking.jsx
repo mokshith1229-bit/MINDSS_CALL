@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Box, Typography, Card, TextField, Button, CircularProgress,
   Chip, Grid, Container, Fade, Divider, Avatar, Dialog, DialogTitle,
-  DialogContent, DialogActions, MenuItem, Snackbar, Alert, IconButton
+  DialogContent, DialogActions, MenuItem, Snackbar, Alert, IconButton, Tooltip
 } from '@mui/material';
 import {
   Search as SearchIcon, 
@@ -224,31 +224,39 @@ const PublicTracking = () => {
                 >
                   {loading ? <CircularProgress size={24} color="inherit" /> : 'Track Status'}
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  disabled={!result}
-                  onClick={() => {
-                    setMeetingForm(prev => ({
-                      ...prev,
-                      requestedBy: result.submitterName || '',
-                      email: result.submitterEmail || ''
-                    }));
-                    setMeetingModalOpen(true);
-                  }}
-                  sx={{ 
-                    borderColor: '#2E7D32', 
-                    color: '#2E7D32',
-                    '&:hover': { borderColor: '#1B5E20', bgcolor: 'rgba(46, 125, 50, 0.04)' }, 
-                    minWidth: '160px', 
-                    height: '48px',
-                    borderRadius: 2,
-                    fontWeight: 600, 
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                  }}
-                >
-                  Request Meeting
-                </Button>
+                <Tooltip title={!result ? "Please track a submission first" : result.status !== 'APPROVED' ? "Meetings can only be requested once the project is accepted by the Approval Committee" : ""}>
+                  <span>
+                    <Button 
+                      variant="outlined" 
+                      disabled={!result || result.status !== 'APPROVED'}
+                      onClick={() => {
+                        setMeetingForm(prev => ({
+                          ...prev,
+                          requestedBy: result.submitterName || '',
+                          email: result.submitterEmail || ''
+                        }));
+                        setMeetingModalOpen(true);
+                      }}
+                      sx={{ 
+                        borderColor: '#2E7D32', 
+                        color: '#2E7D32',
+                        '&:hover': { borderColor: '#1B5E20', bgcolor: 'rgba(46, 125, 50, 0.04)' }, 
+                        minWidth: '160px', 
+                        height: '48px',
+                        borderRadius: 2,
+                        fontWeight: 600, 
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        '&.Mui-disabled': {
+                          borderColor: '#E2E8F0',
+                          color: '#94A3B8'
+                        }
+                      }}
+                    >
+                      Request Meeting
+                    </Button>
+                  </span>
+                </Tooltip>
               </Box>
             </Box>
           </form>
@@ -470,13 +478,13 @@ const PublicTracking = () => {
                 variant="filled"
               />
               <TextField 
-                label="Email" 
+                label="Email *" 
                 type="email" 
                 required 
                 fullWidth 
                 value={meetingForm.email}
-                InputProps={{ readOnly: true, sx: { bgcolor: '#F8FAFC' } }} 
-                variant="filled"
+                onChange={(e) => setMeetingForm({ ...meetingForm, email: e.target.value })}
+                variant="outlined"
               />
             </Box>
 
