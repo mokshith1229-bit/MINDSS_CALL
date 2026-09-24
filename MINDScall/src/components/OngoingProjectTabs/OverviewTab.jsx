@@ -11,7 +11,7 @@ const OverviewTab = ({ project, onUpdate }) => {
 
   const handleAddObjective = () => {
     if (!newObj.trim()) return;
-    setObjectives([...objectives, { text: newObj, status: 'Not Started' }]);
+    setObjectives([...objectives, { name: newObj, status: 'Not Started' }]);
     setNewObj('');
   };
 
@@ -70,7 +70,7 @@ const OverviewTab = ({ project, onUpdate }) => {
               ) : (
                 objectives.map((obj, idx) => (
                   <TableRow key={idx}>
-                    <TableCell>{obj.text}</TableCell>
+                    <TableCell>{obj.name || obj.text}</TableCell>
                     <TableCell>
                       <Chip size="small" label={obj.status} sx={{ bgcolor: obj.status === 'Completed' ? '#D1FAE5' : '#F3F2F1', color: obj.status === 'Completed' ? '#065F46' : '#323130' }} />
                     </TableCell>

@@ -6,9 +6,11 @@ import {
 } from '@mui/material';
 import {
   ArrowBack, Dashboard, RocketLaunch, Assignment, Timeline, AttachMoney,
-  FolderOpen, Group, Warning, Autorenew, CheckCircle, History
+  FolderOpen, Group, Warning, Autorenew, CheckCircle, History,
+  PictureAsPdf, GridOn
 } from '@mui/icons-material';
 import { formStore } from '../store/formStore';
+import { exportProjectToPDF, exportProjectToExcel } from '../utils/exportReportUtils';
 import OverviewTab from '../components/OngoingProjectTabs/OverviewTab';
 import ProjectInitiationTab from '../components/OngoingProjectTabs/ProjectInitiationTab';
 import WorkPlanTab from '../components/OngoingProjectTabs/WorkPlanTab';
@@ -20,6 +22,8 @@ import ChangeRequestsTab from '../components/OngoingProjectTabs/ChangeRequestsTa
 import FinalReportTab from '../components/OngoingProjectTabs/FinalReportTab';
 import MeetingsTab from '../components/OngoingProjectTabs/MeetingsTab';
 import TimelineTab from '../components/OngoingProjectTabs/TimelineTab';
+import TestMatrixTab from '../components/OngoingProjectTabs/TestMatrixTab';
+import SamplesTab from '../components/OngoingProjectTabs/SamplesTab';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -79,6 +83,22 @@ const OngoingProjectWorkspace = () => {
     }
   };
 
+  const handleAddTestMatrix = async (formData) => {
+    try {
+      await formStore.addTestMatrix(project.id, formData);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddSample = async (formData) => {
+    try {
+      await formStore.addSample(project.id, formData);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#F3F2F1' }}>
       {/* HEADER */}
@@ -103,6 +123,10 @@ const OngoingProjectWorkspace = () => {
             </Box>
           </Box>
           <Box sx={{ textAlign: 'right', minWidth: 200 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
+              <Button size="small" variant="outlined" startIcon={<PictureAsPdf />} onClick={() => exportProjectToPDF(project)} sx={{ textTransform: 'none', color: '#D32F2F', borderColor: '#D32F2F', '&:hover': { bgcolor: 'rgba(211, 47, 47, 0.04)', borderColor: '#D32F2F' } }}>PDF Report</Button>
+              <Button size="small" variant="outlined" startIcon={<GridOn />} onClick={() => exportProjectToExcel(project)} sx={{ textTransform: 'none', color: '#107C10', borderColor: '#107C10', '&:hover': { bgcolor: 'rgba(16, 124, 16, 0.04)', borderColor: '#107C10' } }}>Excel Report</Button>
+            </Box>
             <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600, mb: 0.5, display: 'block' }}>OVERALL PROGRESS: {progress}%</Typography>
             <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4, bgcolor: '#EDEBE9', '& .MuiLinearProgress-bar': { bgcolor: '#10B981' } }} />
           </Box>
@@ -135,6 +159,8 @@ const OngoingProjectWorkspace = () => {
           >
             <Tab label="Overview & Objectives" />
             <Tab label="Project Initiation" />
+            <Tab label="Samples Inventory" />
+            <Tab label="Test Matrix" />
             <Tab label="Work Plan & Milestones" />
             <Tab label="Progress & Reports" />
             <Tab label="Budget & Expenditure" />
@@ -156,30 +182,36 @@ const OngoingProjectWorkspace = () => {
             <ProjectInitiationTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={2}>
-            <WorkPlanTab project={project} onUpdate={handleUpdate} />
+            <SamplesTab project={project} onUpdate={{ addSample: handleAddSample }} />
           </TabPanel>
           <TabPanel value={tabIndex} index={3}>
-            <ProgressUpdatesTab project={project} onUpdate={handleUpdate} />
+            <TestMatrixTab project={project} onUpdate={{ addTestMatrix: handleAddTestMatrix }} />
           </TabPanel>
           <TabPanel value={tabIndex} index={4}>
-            <BudgetTab project={project} onUpdate={handleUpdate} />
+            <WorkPlanTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={5}>
-            <DocumentsTab project={project} onUpdate={handleUpdate} />
+            <ProgressUpdatesTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={6}>
-            <MeetingsTab project={project} />
+            <BudgetTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={7}>
-            <IssuesTab project={project} onUpdate={handleUpdate} />
+            <DocumentsTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={8}>
-            <ChangeRequestsTab project={project} onUpdate={handleUpdate} />
+            <MeetingsTab project={project} />
           </TabPanel>
           <TabPanel value={tabIndex} index={9}>
-            <FinalReportTab project={project} onUpdate={handleUpdate} />
+            <IssuesTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={10}>
+            <ChangeRequestsTab project={project} onUpdate={handleUpdate} />
+          </TabPanel>
+          <TabPanel value={tabIndex} index={11}>
+            <FinalReportTab project={project} onUpdate={handleUpdate} />
+          </TabPanel>
+          <TabPanel value={tabIndex} index={12}>
             <TimelineTab project={project} />
           </TabPanel>
         </Box>

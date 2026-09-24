@@ -29,6 +29,7 @@ import UserManagement from '../pages/UserManagement';
 import FeatureManagement from '../pages/FeatureManagement';
 import MeetingRequestsAdmin from '../pages/MeetingRequestsAdmin';
 import TrackingManagement from '../pages/TrackingManagement';
+import LabCalendar from '../pages/LabCalendar';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(authStore.getState().isAuthenticated);
@@ -90,6 +91,7 @@ const AppRoutes = () => {
         <Route path="user-management" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><UserManagement /></ProtectedRoute>} />
         <Route path="feature-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><FeatureManagement /></ProtectedRoute>} />
         <Route path="tracking-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><TrackingManagement /></ProtectedRoute>} />
+        <Route path="lab-calendar" element={<LabCalendar />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

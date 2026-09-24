@@ -641,7 +641,7 @@ exports.updateProjectDetails = async (req, res, next) => {
   try {
     const { 
       owner, implementationStatus, progressPercentage, updateText, expectedBenefits, actualBenefits,
-      objectives, initiation, milestones, progressReports, financials, documents, issues, changeRequests, projectReviews, finalReport
+      objectives, initiation, milestones, progressReports, financials, documents, issues, changeRequests, projectReviews, finalReport, testMatrix, samples
     } = req.body;
 
     const submission = await Submission.findById(req.params.id);
@@ -670,6 +670,8 @@ exports.updateProjectDetails = async (req, res, next) => {
     if (changeRequests !== undefined) submission.projectDetails.changeRequests = changeRequests;
     if (projectReviews !== undefined) submission.projectDetails.projectReviews = projectReviews;
     if (finalReport !== undefined) submission.projectDetails.finalReport = finalReport;
+    if (testMatrix !== undefined) submission.projectDetails.testMatrix = testMatrix;
+    if (samples !== undefined) submission.projectDetails.samples = samples;
 
     if (updateText) {
       if (!submission.projectDetails.updates) submission.projectDetails.updates = [];
@@ -680,6 +682,7 @@ exports.updateProjectDetails = async (req, res, next) => {
       });
     }
 
+    submission.markModified('projectDetails');
     await submission.save();
 
     res.status(200).json(new ApiResponse(200, { submission }, 'Project details updated successfully'));
@@ -907,6 +910,130 @@ exports.completeMeeting = async (req, res, next) => {
     await submission.save();
 
     res.status(200).json(new ApiResponse(200, { submission }, 'Meeting marked as completed'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+const processFiles = (reqFiles) => {
+  if (!reqFiles || reqFiles.length === 0) return [];
+  return reqFiles.map((file) => ({
+    filename: file.originalname,
+    url: file.objectKey ? '' : `/uploads/${file.filename}`,
+    mimetype: file.mimetype,
+    size: file.size,
+    storageProvider: file.storageProvider || 'local',
+    objectKey: file.objectKey || null
+  }));
+};
+
+exports.addTestMatrix = async (req, res, next) => {
+  try {
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) return next(new ApiError(404, 'Submission not found'));
+    if (!submission.projectDetails) submission.projectDetails = {};
+    if (!submission.projectDetails.testMatrix) submission.projectDetails.testMatrix = [];
+
+    const {
+      testName, testDescription, relatedPhase, testObjective, sampleRef, sampleQuantity,
+      requiredEquipment, testProcedure, expectedResult, responsiblePerson, estimatedDuration,
+      requiredDate, priority, status, remarks, testId
+    } = req.body;
+
+    const attachments = processFiles(req.files);
+
+    if (testId) {
+      const existing = submission.projectDetails.testMatrix.id(testId);
+      if (existing) {
+        if (testName) existing.testName = testName;
+        if (testDescription) existing.testDescription = testDescription;
+        if (relatedPhase) existing.relatedPhase = relatedPhase;
+        if (testObjective) existing.testObjective = testObjective;
+        if (sampleRef) existing.sampleRef = sampleRef;
+        if (sampleQuantity) existing.sampleQuantity = sampleQuantity;
+        if (requiredEquipment) existing.requiredEquipment = requiredEquipment;
+        if (testProcedure) existing.testProcedure = testProcedure;
+        if (expectedResult) existing.expectedResult = expectedResult;
+        if (responsiblePerson) existing.responsiblePerson = responsiblePerson;
+        if (estimatedDuration) existing.estimatedDuration = estimatedDuration;
+        if (requiredDate) existing.requiredDate = requiredDate;
+        if (priority) existing.priority = priority;
+        if (status) existing.status = status;
+        if (remarks) existing.remarks = remarks;
+        if (attachments.length > 0) {
+          existing.attachments = [...existing.attachments, ...attachments];
+        }
+      }
+    } else {
+      submission.projectDetails.testMatrix.push({
+        testName, testDescription, relatedPhase, testObjective, sampleRef, sampleQuantity,
+        requiredEquipment, testProcedure, expectedResult, responsiblePerson, estimatedDuration,
+        requiredDate, priority, status, remarks, attachments
+      });
+    }
+
+    await submission.save();
+    res.status(200).json(new ApiResponse(200, { testMatrix: submission.projectDetails.testMatrix }, 'Test Matrix updated successfully'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateTestMatrixStatus = async (req, res, next) => {
+  try {
+    const { status, remarks } = req.body;
+    const submission = await Submission.findById(req.params.id);
+    if (!submission || !submission.projectDetails || !submission.projectDetails.testMatrix) {
+      return next(new ApiError(404, 'Test matrix not found'));
+    }
+
+    const testItem = submission.projectDetails.testMatrix.id(req.params.testId);
+    if (!testItem) return next(new ApiError(404, 'Test item not found'));
+
+    if (status) testItem.status = status;
+    if (remarks) testItem.remarks = remarks;
+
+    await submission.save();
+    res.status(200).json(new ApiResponse(200, { testItem }, 'Test Matrix status updated'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.addSample = async (req, res, next) => {
+  try {
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) return next(new ApiError(404, 'Submission not found'));
+    if (!submission.projectDetails) submission.projectDetails = {};
+    if (!submission.projectDetails.samples) submission.projectDetails.samples = [];
+
+    const {
+      sampleName, sampleType, quantity, source, status, remarks, sampleId
+    } = req.body;
+
+    const attachments = processFiles(req.files);
+
+    if (sampleId) {
+      const existing = submission.projectDetails.samples.id(sampleId);
+      if (existing) {
+        if (sampleName) existing.sampleName = sampleName;
+        if (sampleType) existing.sampleType = sampleType;
+        if (quantity) existing.quantity = quantity;
+        if (source) existing.source = source;
+        if (status) existing.status = status;
+        if (remarks) existing.remarks = remarks;
+        if (attachments.length > 0) {
+          existing.attachments = [...existing.attachments, ...attachments];
+        }
+      }
+    } else {
+      submission.projectDetails.samples.push({
+        sampleName, sampleType, quantity, source, status, remarks, attachments
+      });
+    }
+
+    await submission.save();
+    res.status(200).json(new ApiResponse(200, { samples: submission.projectDetails.samples }, 'Samples updated successfully'));
   } catch (err) {
     next(err);
   }
