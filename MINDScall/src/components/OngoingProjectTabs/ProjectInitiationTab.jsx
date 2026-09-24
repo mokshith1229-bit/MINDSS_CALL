@@ -283,7 +283,3 @@ const ProjectInitiationTab = ({ project, onUpdate }) => {
 };
 
 export default ProjectInitiationTab;
-  );
-};
-
-export default ProjectInitiationTab;
