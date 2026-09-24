@@ -1,5 +1,5 @@
 const express = require('express');
-const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionReview, exportSubmissionsCSV, deleteSubmission, assignSubmissionEmail, updateFinanceReview, updateProjectDetails, addProjectUpdate, scheduleMeeting, completeMeeting } = require('../controllers/admin.submission.controller');
+const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionReview, exportSubmissionsCSV, deleteSubmission, assignSubmissionEmail, updateFinanceReview, updateProjectDetails, addProjectUpdate, scheduleMeeting, completeMeeting, addTestMatrix, addSample, updateTestMatrixStatus } = require('../controllers/admin.submission.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const auditLog = require('../middlewares/audit.middleware');
 const upload = require('../middlewares/upload.middleware');
@@ -44,6 +44,28 @@ router.route('/:id/project-updates')
     upload.array('attachments', 5),
     uploadToS3,
     addProjectUpdate
+  );
+
+router.route('/:id/test-matrix')
+  .post(
+    auditLog('ADD_TEST_MATRIX', 'Submission'),
+    upload.array('attachments', 5),
+    uploadToS3,
+    addTestMatrix
+  );
+
+router.route('/:id/test-matrix/:testId/status')
+  .patch(
+    auditLog('UPDATE_TEST_MATRIX_STATUS', 'Submission'),
+    updateTestMatrixStatus
+  );
+
+router.route('/:id/samples')
+  .post(
+    auditLog('ADD_SAMPLE', 'Submission'),
+    upload.array('attachments', 5),
+    uploadToS3,
+    addSample
   );
 
 router.route('/:id/schedule-meeting')

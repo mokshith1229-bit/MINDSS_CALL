@@ -70,6 +70,12 @@ const navSections = [
     ],
   },
   {
+    sectionLabel: 'Laboratory',
+    items: [
+      { label: 'Lab Calendar', icon: <TimelineIcon fontSize="small" />, path: '/lab-calendar', featureKey: 'module.rd_ongoing_projects' },
+    ],
+  },
+  {
     sectionLabel: 'Analytics',
     items: [
       { label: 'Reports', icon: <ReportsIcon fontSize="small" />, path: '/reports', featureKey: 'module.reports' },

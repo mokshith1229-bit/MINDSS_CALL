@@ -592,6 +592,48 @@ export const formStore = {
     }
   },
 
+  async addTestMatrix(id, formData) {
+    try {
+      const res = await api.post(`/admin/submissions/${id}/test-matrix`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data && res.data.success) {
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          projectDetails: {
+            ...s.projectDetails,
+            testMatrix: res.data.data.testMatrix
+          }
+        } : s);
+        notify();
+      }
+    } catch (err) {
+      console.error('Failed to add test matrix:', err);
+      throw err;
+    }
+  },
+
+  async addSample(id, formData) {
+    try {
+      const res = await api.post(`/admin/submissions/${id}/samples`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data && res.data.success) {
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          projectDetails: {
+            ...s.projectDetails,
+            samples: res.data.data.samples
+          }
+        } : s);
+        notify();
+      }
+    } catch (err) {
+      console.error('Failed to add sample:', err);
+      throw err;
+    }
+  },
+
   async deleteSubmission(id){
     try {
       const res = await api.delete(`/admin/submissions/${id}`);

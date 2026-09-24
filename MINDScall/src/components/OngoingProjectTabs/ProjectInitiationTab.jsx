@@ -1,21 +1,42 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, TextField, Button, Divider } from '@mui/material';
+import { Box, Typography, Paper, TextField, Button, Divider, Switch, FormControlLabel, Alert } from '@mui/material';
 import { Save, Assignment } from '@mui/icons-material';
 
 const ProjectInitiationTab = ({ project, onUpdate }) => {
   const initData = project?.projectDetails?.initiation || {};
-  const [approvalDate, setApprovalDate] = useState(initData.approvalDate ? new Date(initData.approvalDate).toISOString().split('T')[0] : '');
-  const [kickoffDate, setKickoffDate] = useState(initData.kickoffDate ? new Date(initData.kickoffDate).toISOString().split('T')[0] : '');
+  const parsed = project?.parsedData || {};
+
+  const [approvalDate, setApprovalDate] = useState(
+    initData.approvalDate
+      ? new Date(initData.approvalDate).toISOString().split('T')[0]
+      : initData.startDate
+      ? new Date(initData.startDate).toISOString().split('T')[0]
+      : ''
+  );
+  const [kickoffDate, setKickoffDate] = useState(
+    initData.kickoffDate ? new Date(initData.kickoffDate).toISOString().split('T')[0] : ''
+  );
   const [sponsor, setSponsor] = useState(initData.sponsor || '');
-  const [remarks, setRemarks] = useState(initData.remarks || '');
+  const [remarks, setRemarks] = useState(initData.remarks || initData.workPlan || '');
+
+  const [piConfirmed, setPiConfirmed] = useState(initData.piConfirmed || false);
+  const [confirmedObjectives, setConfirmedObjectives] = useState(initData.confirmedObjectives || parsed.objectives || '');
+  const [confirmedExpectedOutcomes, setConfirmedExpectedOutcomes] = useState(initData.confirmedExpectedOutcomes || parsed.expectedOutcomes || '');
 
   const handleSave = () => {
     onUpdate({
       initiation: {
+        ...initData,
         approvalDate,
         kickoffDate,
         sponsor,
-        remarks
+        remarks,
+        piConfirmed,
+        confirmedObjectives,
+        confirmedExpectedOutcomes,
+        startDate: approvalDate,
+        workPlan: remarks,
+        status: piConfirmed ? 'SUBMITTED' : 'IN_PROGRESS'
       }
     });
   };
@@ -214,6 +235,14 @@ const ProjectInitiationTab = ({ project, onUpdate }) => {
               }}
             />
           </Box>
+
+          {/* Confirmation Switch */}
+          <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' }, pt: 1 }}>
+            <FormControlLabel
+              control={<Switch checked={piConfirmed} onChange={(e) => setPiConfirmed(e.target.checked)} color="primary" />}
+              label={<Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#0F172A' }}>I confirm these details and formally initiate this project.</Typography>}
+            />
+          </Box>
         </Box>
       </Box>
 
@@ -246,10 +275,14 @@ const ProjectInitiationTab = ({ project, onUpdate }) => {
             boxShadow: 'none'
           }}
         >
-          Save Initiation Details
+          {piConfirmed ? 'Submit Initiation' : 'Save Initiation Details'}
         </Button>
       </Box>
     </Paper>
+  );
+};
+
+export default ProjectInitiationTab;
   );
 };
 

@@ -6,6 +6,7 @@ const errorHandler = (err, req, res, next) => {
   // Log to console for dev
   if (process.env.NODE_ENV === 'development') {
     console.error(err);
+    require('fs').appendFileSync('error_log.txt', JSON.stringify({ message: err.message, stack: err.stack, name: err.name, errors: err.errors }) + '\n');
   }
 
   // Mongoose bad ObjectId

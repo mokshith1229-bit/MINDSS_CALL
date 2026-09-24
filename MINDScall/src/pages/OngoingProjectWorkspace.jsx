@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Box, Typography, Paper, Tabs, Tab, Button, Avatar, Chip, Grid, TextField,
-  Divider, LinearProgress, CircularProgress, Alert
+  Box, Typography, Paper, Button, Avatar, Chip, LinearProgress, CircularProgress, Alert
 } from '@mui/material';
 import {
-  ArrowBack, Description, Dashboard, RocketLaunch, Assignment, Timeline, AttachMoney,
-  FolderOpen, Group, Warning, Autorenew, CheckCircle, History,
-  Badge, AccountTree, Speed, ReceiptLong, Forum, WarningAmber, AssignmentTurnedIn
+  ArrowBack, Description, Assignment,
+  FolderOpen, Autorenew, History,
+  AccountTree, Speed, ReceiptLong, Forum, WarningAmber, AssignmentTurnedIn,
+  PictureAsPdf, GridOn, Science, FactCheck
 } from '@mui/icons-material';
 import { formStore } from '../store/formStore';
+import { exportProjectToPDF, exportProjectToExcel } from '../utils/exportReportUtils';
 import OverviewTab from '../components/OngoingProjectTabs/OverviewTab';
 import ProjectInitiationTab from '../components/OngoingProjectTabs/ProjectInitiationTab';
 import WorkPlanTab from '../components/OngoingProjectTabs/WorkPlanTab';
@@ -21,6 +22,8 @@ import ChangeRequestsTab from '../components/OngoingProjectTabs/ChangeRequestsTa
 import FinalReportTab from '../components/OngoingProjectTabs/FinalReportTab';
 import MeetingsTab from '../components/OngoingProjectTabs/MeetingsTab';
 import TimelineTab from '../components/OngoingProjectTabs/TimelineTab';
+import TestMatrixTab from '../components/OngoingProjectTabs/TestMatrixTab';
+import SamplesTab from '../components/OngoingProjectTabs/SamplesTab';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -80,9 +83,27 @@ const OngoingProjectWorkspace = () => {
     }
   };
 
+  const handleAddTestMatrix = async (formData) => {
+    try {
+      await formStore.addTestMatrix(project.id, formData);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddSample = async (formData) => {
+    try {
+      await formStore.addSample(project.id, formData);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const navItems = [
     { label: 'Overview & Objectives', icon: Description },
     { label: 'Project Initiation', icon: Assignment },
+    { label: 'Samples Inventory', icon: Science },
+    { label: 'Test Matrix', icon: FactCheck },
     { label: 'Work Plan & Milestones', icon: AccountTree },
     { label: 'Progress & Reports', icon: Speed },
     { label: 'Budget & Expenditure', icon: ReceiptLong },
@@ -108,107 +129,92 @@ const OngoingProjectWorkspace = () => {
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
           display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
-          alignItems: { xs: 'flex-start', md: 'center' },
           justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', md: 'center' },
           gap: 2
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, width: '100%', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 1.5, sm: 2 } }}>
+        {/* LEFT SIDE: BACK, ICON, TITLE, METADATA */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, flex: 1, minWidth: 0 }}>
           {/* BACK BUTTON */}
           <Button
-            startIcon={<ArrowBack sx={{ fontSize: 18, color: '#64748B' }} />}
-            onClick={() => navigate('/rd-ongoing-projects')}
+            startIcon={<ArrowBack sx={{ fontSize: 18 }} />}
+            onClick={() => navigate('/rd-ongoing')}
             sx={{
+              color: '#475569',
               textTransform: 'none',
-              color: '#64748B',
-              fontWeight: 600,
+              fontWeight: 500,
               fontSize: '0.875rem',
               p: 0.5,
               minWidth: 'auto',
-              flexShrink: 0,
-              '&:hover': {
-                bgcolor: 'transparent',
-                color: '#1E293B'
-              }
+              '&:hover': { bgcolor: '#F1F5F9', color: '#0F172A' }
             }}
           >
             Back
           </Button>
 
-          {/* PROJECT ICON */}
+          {/* PROJECT ICON BADGE */}
           <Box
             sx={{
-              width: 36,
-              height: 36,
-              borderRadius: '8px',
               bgcolor: '#10B981',
+              color: '#FFFFFF',
+              borderRadius: '8px',
+              p: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              flexShrink: 0,
-              color: '#ffffff'
+              flexShrink: 0
             }}
           >
-            <Description sx={{ fontSize: 20 }} />
+            <Assignment sx={{ fontSize: 24 }} />
           </Box>
 
           {/* TITLE & METADATA */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {/* TITLE & STATUS */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 0.75 }}>
               <Typography
                 variant="h6"
                 sx={{
                   fontWeight: 700,
-                  fontSize: { xs: '1rem', md: '1.125rem' },
+                  fontSize: { xs: '1.1rem', md: '1.25rem' },
                   color: '#0F172A',
                   lineHeight: 1.3
                 }}
               >
-                {project.parsedTitle || 'Untitled Project'}
+                {project.title}
               </Typography>
               <Chip
                 label={status}
                 size="small"
                 sx={{
-                  height: 22,
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
                   bgcolor: '#DBEAFE',
-                  color: '#2563EB',
-                  borderRadius: '6px',
-                  border: 'none',
+                  color: '#1D4ED8',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  borderRadius: '16px',
+                  height: 24,
                   px: 0.5
                 }}
               />
             </Box>
 
-            {/* METADATA ROW */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.5 }, flexWrap: 'wrap' }}>
+            {/* METADATA LINE */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', color: '#64748B', fontSize: '0.8125rem' }}>
+              <Typography component="span" sx={{ fontSize: 'inherit', color: 'inherit' }}>
+                <Box component="span" sx={{ fontWeight: 600 }}>ID:</Box> {project.trackingId || 'MCP-18FEF773B'}
+              </Typography>
+              <Typography component="span" sx={{ color: '#CBD5E1' }}>|</Typography>
+              <Typography component="span" sx={{ fontSize: 'inherit', color: 'inherit' }}>
+                <Box component="span" sx={{ fontWeight: 600 }}>WBS:</Box> {project.wbsCode || 'N/A'}
+              </Typography>
+              <Typography component="span" sx={{ color: '#CBD5E1' }}>|</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#64748B' }}>
-                  ID:
-                </Typography>
-                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155' }}>
-                  {project.trackingId || project.businessId || 'N/A'}
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#64748B' }}>
-                  WBS:
-                </Typography>
-                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155' }}>
-                  {project.wbsCode || 'N/A'}
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#64748B' }}>
+                <Typography component="span" sx={{ fontSize: 'inherit', color: 'inherit', fontWeight: 600 }}>
                   Type:
                 </Typography>
                 <Chip
-                  label={project.submissionType || 'Proposal'}
+                  label={project.proposalType || 'Proposal'}
                   size="small"
                   sx={{
                     height: 20,
@@ -225,17 +231,20 @@ const OngoingProjectWorkspace = () => {
           </Box>
         </Box>
 
-        {/* RIGHT SIDE: OWNER & OVERALL PROGRESS */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', md: 'flex-end' }, minWidth: { xs: '100%', md: 220 }, flexShrink: 0 }}>
-          {/* OWNER */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+        {/* RIGHT SIDE: EXPORTS, OWNER & OVERALL PROGRESS */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', md: 'flex-end' }, minWidth: { xs: '100%', md: 240 }, flexShrink: 0 }}>
+          {/* EXPORT BUTTONS & OWNER */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            <Button size="small" variant="outlined" startIcon={<PictureAsPdf />} onClick={() => exportProjectToPDF(project)} sx={{ textTransform: 'none', color: '#D32F2F', borderColor: '#D32F2F', fontSize: '0.75rem', '&:hover': { bgcolor: 'rgba(211, 47, 47, 0.04)', borderColor: '#D32F2F' } }}>PDF</Button>
+            <Button size="small" variant="outlined" startIcon={<GridOn />} onClick={() => exportProjectToExcel(project)} sx={{ textTransform: 'none', color: '#107C10', borderColor: '#107C10', fontSize: '0.75rem', '&:hover': { bgcolor: 'rgba(16, 124, 16, 0.04)', borderColor: '#107C10' } }}>Excel</Button>
             <Avatar
               sx={{
                 width: 22,
                 height: 22,
                 fontSize: '0.75rem',
                 fontWeight: 600,
-                bgcolor: '#0284C7'
+                bgcolor: '#0284C7',
+                ml: 0.5
               }}
             >
               {owner !== 'Unassigned' ? owner.charAt(0).toUpperCase() : '?'}
@@ -262,7 +271,7 @@ const OngoingProjectWorkspace = () => {
             variant="determinate"
             value={Number(progress) || 0}
             sx={{
-              width: { xs: '100%', md: 220 },
+              width: { xs: '100%', md: 240 },
               height: 6,
               borderRadius: 3,
               bgcolor: '#E2E8F0',
@@ -383,30 +392,36 @@ const OngoingProjectWorkspace = () => {
             <ProjectInitiationTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={2}>
-            <WorkPlanTab project={project} onUpdate={handleUpdate} />
+            <SamplesTab project={project} onUpdate={{ addSample: handleAddSample }} />
           </TabPanel>
           <TabPanel value={tabIndex} index={3}>
-            <ProgressUpdatesTab project={project} onUpdate={handleUpdate} />
+            <TestMatrixTab project={project} onUpdate={{ addTestMatrix: handleAddTestMatrix }} />
           </TabPanel>
           <TabPanel value={tabIndex} index={4}>
-            <BudgetTab project={project} onUpdate={handleUpdate} />
+            <WorkPlanTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={5}>
-            <DocumentsTab project={project} onUpdate={handleUpdate} />
+            <ProgressUpdatesTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={6}>
-            <MeetingsTab project={project} />
+            <BudgetTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={7}>
-            <IssuesTab project={project} onUpdate={handleUpdate} />
+            <DocumentsTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={8}>
-            <ChangeRequestsTab project={project} onUpdate={handleUpdate} />
+            <MeetingsTab project={project} />
           </TabPanel>
           <TabPanel value={tabIndex} index={9}>
-            <FinalReportTab project={project} onUpdate={handleUpdate} />
+            <IssuesTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
           <TabPanel value={tabIndex} index={10}>
+            <ChangeRequestsTab project={project} onUpdate={handleUpdate} />
+          </TabPanel>
+          <TabPanel value={tabIndex} index={11}>
+            <FinalReportTab project={project} onUpdate={handleUpdate} />
+          </TabPanel>
+          <TabPanel value={tabIndex} index={12}>
             <TimelineTab project={project} />
           </TabPanel>
         </Box>
