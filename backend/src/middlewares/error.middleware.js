@@ -1,11 +1,10 @@
 const ApiError = require('../utils/ApiError');
 
 const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
+  let error = err;
 
   // Log to console for dev
-  if (process.env.nNODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     console.error(err);
   }
 
@@ -38,9 +37,12 @@ const errorHandler = (err, req, res, next) => {
     error = new ApiError(401, message);
   }
 
-  res.status(error.statusCode || 500).json({
+  const statusCode = error.statusCode || err.statusCode || 500;
+  const message = error.message || err.message || 'Server Error';
+
+  res.status(statusCode).json({
     success: false,
-    error: error.message || 'Server Error',
+    error: message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };

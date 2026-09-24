@@ -245,22 +245,24 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          size="small"
-                          tabIndex={-1}
-                          sx={{ color: 'rgba(255,255,255,0.35)', '&:hover': { color: 'rgba(255,255,255,0.65)' } }}
-                        >
-                          {showPassword
-                            ? <VisibilityOff sx={{ fontSize: 17 }} />
-                            : <Visibility sx={{ fontSize: 17 }} />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            size="small"
+                            tabIndex={-1}
+                            sx={{ color: 'rgba(255,255,255,0.35)', '&:hover': { color: 'rgba(255,255,255,0.65)' } }}
+                          >
+                            {showPassword
+                              ? <VisibilityOff sx={{ fontSize: 17 }} />
+                              : <Visibility sx={{ fontSize: 17 }} />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }
                   }}
                   sx={{
                     '& .MuiOutlinedInput-root': {

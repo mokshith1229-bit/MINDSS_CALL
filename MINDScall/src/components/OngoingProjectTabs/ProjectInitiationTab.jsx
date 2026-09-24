@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Grid, TextField, Button, Divider, Alert } from '@mui/material';
-import { Save, RocketLaunch } from '@mui/icons-material';
+import { Box, Typography, Paper, TextField, Button, Divider } from '@mui/material';
+import { Save, Assignment } from '@mui/icons-material';
 
 const ProjectInitiationTab = ({ project, onUpdate }) => {
   const initData = project?.projectDetails?.initiation || {};
@@ -21,47 +21,235 @@ const ProjectInitiationTab = ({ project, onUpdate }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Paper sx={{ p: 4, border: '1px solid #EDEBE9', boxShadow: 'none', borderRadius: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <RocketLaunch sx={{ color: '#0078D4', fontSize: 32 }} />
+    <Paper
+      elevation={0}
+      sx={{
+        bgcolor: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+        overflow: 'hidden'
+      }}
+    >
+      {/* FORM CONTENT AREA */}
+      <Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
+        {/* HEADER TITLE & SUBTITLE WITH BLUE ICON BADGE */}
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 0.5 }}>
+            <Box
+              sx={{
+                bgcolor: '#0078D4',
+                color: '#FFFFFF',
+                borderRadius: '8px',
+                p: 0.6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Assignment sx={{ fontSize: 20 }} />
+            </Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                fontSize: '1.35rem',
+                color: '#0F172A'
+              }}
+            >
+              Project Initiation
+            </Typography>
+          </Box>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: '0.875rem',
+              color: '#64748B',
+              ml: 4.5
+            }}
+          >
+            Formalize the kickoff and document key sponsors.
+          </Typography>
+        </Box>
+
+        <Divider sx={{ mb: 3.5, borderColor: '#E2E8F0' }} />
+
+        {/* FORM LAYOUT */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            columnGap: 4,
+            rowGap: 3.5
+          }}
+        >
+          {/* Row 1 - Left Column: Formal Approval Date */}
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#323130' }}>Project Initiation</Typography>
-            <Typography variant="body2" sx={{ color: '#605E5C' }}>Formalize the kickoff and document key sponsors.</Typography>
+            <Typography
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#0F172A',
+                mb: 1,
+                display: 'block'
+              }}
+            >
+              Formal Approval Date
+            </Typography>
+            <TextField
+              type="date"
+              fullWidth
+              value={approvalDate}
+              onChange={e => setApprovalDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                bgcolor: '#FFFFFF',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  height: 48,
+                  '& fieldset': { borderColor: '#E2E8F0' },
+                  '&:hover fieldset': { borderColor: '#CBD5E1' },
+                  '&.Mui-focused fieldset': { borderColor: '#0078D4' }
+                }
+              }}
+            />
+          </Box>
+
+          {/* Row 1 - Right Column: Kickoff Meeting Date */}
+          <Box>
+            <Typography
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#0F172A',
+                mb: 1,
+                display: 'block'
+              }}
+            >
+              Kickoff Meeting Date
+            </Typography>
+            <TextField
+              type="date"
+              fullWidth
+              value={kickoffDate}
+              onChange={e => setKickoffDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                bgcolor: '#FFFFFF',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  height: 48,
+                  '& fieldset': { borderColor: '#E2E8F0' },
+                  '&:hover fieldset': { borderColor: '#CBD5E1' },
+                  '&.Mui-focused fieldset': { borderColor: '#0078D4' }
+                }
+              }}
+            />
+          </Box>
+
+          {/* Row 2 - Full Width: Project Sponsor / Champion */}
+          <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
+            <Typography
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#0F172A',
+                mb: 1,
+                display: 'block'
+              }}
+            >
+              Project Sponsor / Champion
+            </Typography>
+            <TextField
+              fullWidth
+              value={sponsor}
+              onChange={e => setSponsor(e.target.value)}
+              placeholder="e.g. John Doe (VP of R&D)"
+              sx={{
+                bgcolor: '#FFFFFF',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  height: 48,
+                  '& fieldset': { borderColor: '#E2E8F0' },
+                  '&:hover fieldset': { borderColor: '#CBD5E1' },
+                  '&.Mui-focused fieldset': { borderColor: '#0078D4' }
+                }
+              }}
+            />
+          </Box>
+
+          {/* Row 3 - Full Width: Initiation Remarks / Notes */}
+          <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
+            <Typography
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#0F172A',
+                mb: 1,
+                display: 'block'
+              }}
+            >
+              Initiation Remarks / Notes
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              value={remarks}
+              onChange={e => setRemarks(e.target.value)}
+              placeholder="Any special constraints or instructions given during kickoff..."
+              sx={{
+                bgcolor: '#FFFFFF',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  p: 1.5,
+                  '& fieldset': { borderColor: '#E2E8F0' },
+                  '&:hover fieldset': { borderColor: '#CBD5E1' },
+                  '&.Mui-focused fieldset': { borderColor: '#0078D4' }
+                }
+              }}
+            />
           </Box>
         </Box>
-        
-        <Divider sx={{ mb: 4 }} />
-        
-        <Alert severity="info" sx={{ mb: 4, '& .MuiAlert-message': { width: '100%' } }}>
-          Once the initiation details are saved, the project moves from 'Approved' state into 'Planning' or 'In Progress' execution tracks.
-        </Alert>
+      </Box>
 
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130', mb: 1 }}>Formal Approval Date</Typography>
-            <TextField type="date" size="small" fullWidth value={approvalDate} onChange={e => setApprovalDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130', mb: 1 }}>Kickoff Meeting Date</Typography>
-            <TextField type="date" size="small" fullWidth value={kickoffDate} onChange={e => setKickoffDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130', mb: 1 }}>Project Sponsor / Champion</Typography>
-            <TextField size="small" fullWidth value={sponsor} onChange={e => setSponsor(e.target.value)} placeholder="e.g. John Doe (VP of R&D)" />
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130', mb: 1 }}>Initiation Remarks / Notes</Typography>
-            <TextField fullWidth multiline rows={4} value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Any special constraints or instructions given during kickoff..." />
-          </Grid>
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button variant="contained" size="large" startIcon={<Save />} onClick={handleSave} sx={{ bgcolor: '#0078D4', boxShadow: 'none', textTransform: 'none', px: 4 }}>
-              Save Initiation Details
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-    </Box>
+      {/* BOTTOM ACTION BAR */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          px: { xs: 2.5, md: 3.5 },
+          py: 2,
+          bgcolor: '#F8FAFC',
+          borderTop: '1px solid #E2E8F0'
+        }}
+      >
+        <Button
+          variant="contained"
+          startIcon={<Save sx={{ fontSize: 18 }} />}
+          onClick={handleSave}
+          sx={{
+            height: 48,
+            minWidth: 210,
+            bgcolor: '#0078D4',
+            '&:hover': { bgcolor: '#006CBE' },
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            borderRadius: '8px',
+            px: 3,
+            boxShadow: 'none'
+          }}
+        >
+          Save Initiation Details
+        </Button>
+      </Box>
+    </Paper>
   );
 };
 

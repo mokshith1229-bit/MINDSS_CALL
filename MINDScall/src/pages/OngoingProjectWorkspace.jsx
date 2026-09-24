@@ -5,8 +5,9 @@ import {
   Divider, LinearProgress, CircularProgress, Alert
 } from '@mui/material';
 import {
-  ArrowBack, Dashboard, RocketLaunch, Assignment, Timeline, AttachMoney,
-  FolderOpen, Group, Warning, Autorenew, CheckCircle, History
+  ArrowBack, Description, Dashboard, RocketLaunch, Assignment, Timeline, AttachMoney,
+  FolderOpen, Group, Warning, Autorenew, CheckCircle, History,
+  Badge, AccountTree, Speed, ReceiptLong, Forum, WarningAmber, AssignmentTurnedIn
 } from '@mui/icons-material';
 import { formStore } from '../store/formStore';
 import OverviewTab from '../components/OngoingProjectTabs/OverviewTab';
@@ -79,76 +80,302 @@ const OngoingProjectWorkspace = () => {
     }
   };
 
+  const navItems = [
+    { label: 'Overview & Objectives', icon: Description },
+    { label: 'Project Initiation', icon: Assignment },
+    { label: 'Work Plan & Milestones', icon: AccountTree },
+    { label: 'Progress & Reports', icon: Speed },
+    { label: 'Budget & Expenditure', icon: ReceiptLong },
+    { label: 'Document Repository', icon: FolderOpen },
+    { label: 'Meetings & Comms', icon: Forum },
+    { label: 'Issues & Risks', icon: WarningAmber },
+    { label: 'Change Requests', icon: Autorenew },
+    { label: 'Final Report & Closure', icon: AssignmentTurnedIn },
+    { label: 'Timeline History', icon: History }
+  ];
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#F3F2F1' }}>
       {/* HEADER */}
-      <Paper sx={{ p: { xs: 2, md: 3 }, borderBottom: '1px solid #EDEBE9', borderRadius: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-          <Button startIcon={<ArrowBack />} onClick={() => navigate('/rd-ongoing-projects')} sx={{ textTransform: 'none', color: '#605E5C', mr: 2, mt: 0.5 }}>Back</Button>
-          <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: '#323130' }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, md: 2.5 },
+          mb: 2,
+          bgcolor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: '12px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { xs: 'flex-start', md: 'center' },
+          justifyContent: 'space-between',
+          gap: 2
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, width: '100%', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 1.5, sm: 2 } }}>
+          {/* BACK BUTTON */}
+          <Button
+            startIcon={<ArrowBack sx={{ fontSize: 18, color: '#64748B' }} />}
+            onClick={() => navigate('/rd-ongoing-projects')}
+            sx={{
+              textTransform: 'none',
+              color: '#64748B',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              p: 0.5,
+              minWidth: 'auto',
+              flexShrink: 0,
+              '&:hover': {
+                bgcolor: 'transparent',
+                color: '#1E293B'
+              }
+            }}
+          >
+            Back
+          </Button>
+
+          {/* PROJECT ICON */}
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '8px',
+              bgcolor: '#10B981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              color: '#ffffff'
+            }}
+          >
+            <Description sx={{ fontSize: 20 }} />
+          </Box>
+
+          {/* TITLE & METADATA */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {/* TITLE & STATUS */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '1rem', md: '1.125rem' },
+                  color: '#0F172A',
+                  lineHeight: 1.3
+                }}
+              >
                 {project.parsedTitle || 'Untitled Project'}
               </Typography>
-              <Chip label={status} size="small" sx={{ fontWeight: 600, bgcolor: status === 'Completed' ? '#D1FAE5' : '#DBEAFE', color: status === 'Completed' ? '#065F46' : '#1E40AF' }} />
+              <Chip
+                label={status}
+                size="small"
+                sx={{
+                  height: 22,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  bgcolor: '#DBEAFE',
+                  color: '#2563EB',
+                  borderRadius: '6px',
+                  border: 'none',
+                  px: 0.5
+                }}
+              />
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
-              <Typography variant="body2" sx={{ color: '#605E5C' }}><b>ID:</b> {project.trackingId || project.businessId}</Typography>
-              <Typography variant="body2" sx={{ color: '#605E5C' }}><b>WBS:</b> {project.wbsCode || 'N/A'}</Typography>
-              <Typography variant="body2" sx={{ color: '#605E5C' }}><b>Type:</b> {project.submissionType || 'Proposal'}</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#0078D4' }}>{owner.charAt(0)}</Avatar>
-                <Typography variant="body2" sx={{ color: '#323130', fontWeight: 500 }}>{owner}</Typography>
+
+            {/* METADATA ROW */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.5 }, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#64748B' }}>
+                  ID:
+                </Typography>
+                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155' }}>
+                  {project.trackingId || project.businessId || 'N/A'}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#64748B' }}>
+                  WBS:
+                </Typography>
+                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155' }}>
+                  {project.wbsCode || 'N/A'}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#64748B' }}>
+                  Type:
+                </Typography>
+                <Chip
+                  label={project.submissionType || 'Proposal'}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    bgcolor: '#DBEAFE',
+                    color: '#2563EB',
+                    borderRadius: '4px',
+                    px: 0.25
+                  }}
+                />
               </Box>
             </Box>
           </Box>
-          <Box sx={{ textAlign: 'right', minWidth: 200 }}>
-            <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600, mb: 0.5, display: 'block' }}>OVERALL PROGRESS: {progress}%</Typography>
-            <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4, bgcolor: '#EDEBE9', '& .MuiLinearProgress-bar': { bgcolor: '#10B981' } }} />
+        </Box>
+
+        {/* RIGHT SIDE: OWNER & OVERALL PROGRESS */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', md: 'flex-end' }, minWidth: { xs: '100%', md: 220 }, flexShrink: 0 }}>
+          {/* OWNER */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+            <Avatar
+              sx={{
+                width: 22,
+                height: 22,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                bgcolor: '#0284C7'
+              }}
+            >
+              {owner !== 'Unassigned' ? owner.charAt(0).toUpperCase() : '?'}
+            </Avatar>
+            <Typography component="span" sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155' }}>
+              {owner}
+            </Typography>
           </Box>
+
+          {/* OVERALL PROGRESS */}
+          <Typography
+            sx={{
+              color: '#64748B',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              mb: 0.75,
+              display: 'block'
+            }}
+          >
+            OVERALL PROGRESS: {progress}%
+          </Typography>
+          <LinearProgress
+            variant="determinate"
+            value={Number(progress) || 0}
+            sx={{
+              width: { xs: '100%', md: 220 },
+              height: 6,
+              borderRadius: 3,
+              bgcolor: '#E2E8F0',
+              '& .MuiLinearProgress-bar': {
+                bgcolor: '#10B981',
+                borderRadius: 3
+              }
+            }}
+          />
         </Box>
       </Paper>
 
       {/* WORKSPACE BODY */}
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', gap: { xs: 2, md: 2.5 } }}>
         {/* LEFT NAV TABS */}
-        <Box sx={{ width: 240, bgcolor: '#fff', borderRight: '1px solid #EDEBE9', display: 'flex', flexDirection: 'column' }}>
-          <Tabs
-            orientation="vertical"
-            variant="scrollable"
-            value={tabIndex}
-            onChange={(e, v) => setTabIndex(v)}
-            sx={{ 
-              borderRight: 1, borderColor: 'divider',
-              '& .MuiTab-root': { 
-                justifyContent: 'flex-start', 
-                textAlign: 'left', 
-                minHeight: 48, 
-                textTransform: 'none', 
-                fontWeight: 600, 
-                color: '#605E5C', 
-                borderBottom: '1px solid #FAFAFA',
-                px: 3 // Add some left padding for better aesthetics
-              },
-              '& .Mui-selected': { bgcolor: '#F3F2F1', color: '#0078D4' }
+        <Paper
+          elevation={0}
+          sx={{
+            width: { xs: '100%', md: 270 },
+            minWidth: { md: 270 },
+            maxWidth: { md: 270 },
+            bgcolor: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+            p: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            flexShrink: 0
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              color: '#94A3B8',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              px: 1.5,
+              py: 1,
+              mb: 0.5
             }}
           >
-            <Tab label="Overview & Objectives" />
-            <Tab label="Project Initiation" />
-            <Tab label="Work Plan & Milestones" />
-            <Tab label="Progress & Reports" />
-            <Tab label="Budget & Expenditure" />
-            <Tab label="Document Repository" />
-            <Tab label="Meetings & Comms" />
-            <Tab label="Issues & Risks" />
-            <Tab label="Change Requests" />
-            <Tab label="Final Report & Closure" />
-            <Tab label="Timeline History" />
-          </Tabs>
-        </Box>
+            PROJECT WORKSPACE
+          </Typography>
+
+          {navItems.map((item, index) => {
+            const IconComponent = item.icon;
+            const isActive = tabIndex === index;
+            return (
+              <Box
+                key={index}
+                onClick={() => setTabIndex(index)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 1.5,
+                  py: 1.25,
+                  mb: 0.5,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  bgcolor: isActive ? '#ECFDF5' : 'transparent',
+                  color: isActive ? '#10B981' : '#334155',
+                  fontWeight: isActive ? 600 : 500,
+                  fontSize: '0.875rem',
+                  transition: 'all 0.15s ease-in-out',
+                  borderLeft: isActive ? '3px solid #10B981' : '3px solid transparent',
+                  '&:hover': {
+                    bgcolor: isActive ? '#ECFDF5' : '#F8FAFC',
+                    color: isActive ? '#10B981' : '#0F172A',
+                    '& .nav-icon': {
+                      color: isActive ? '#10B981' : '#1E293B'
+                    }
+                  }
+                }}
+              >
+                <Box
+                  className="nav-icon"
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mr: 1.5,
+                    flexShrink: 0,
+                    color: isActive ? '#10B981' : '#64748B',
+                    transition: 'color 0.15s ease-in-out'
+                  }}
+                >
+                  <IconComponent sx={{ fontSize: 20 }} />
+                </Box>
+                <Typography
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 'inherit',
+                    color: 'inherit',
+                    lineHeight: 1.3,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
+                  {item.label}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Paper>
 
         {/* TAB CONTENT AREA */}
-        <Box sx={{ flex: 1, bgcolor: '#fff', overflowY: 'auto' }}>
+        <Box sx={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
           <TabPanel value={tabIndex} index={0}>
             <OverviewTab project={project} onUpdate={handleUpdate} />
           </TabPanel>
