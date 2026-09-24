@@ -49,6 +49,13 @@ const meetingRequestSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    storageProvider: {
+      type: String,
+      default: 'local',
+    },
+    objectKey: {
+      type: String,
+    },
     status: {
       type: String,
       enum: ['Pending Approval', 'Approved', 'Rejected', 'Rescheduled'],

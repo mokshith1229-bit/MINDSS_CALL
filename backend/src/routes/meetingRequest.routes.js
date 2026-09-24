@@ -7,6 +7,7 @@ const {
 } = require('../controllers/meetingRequest.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const upload = require('../middlewares/upload.middleware');
+const { uploadToS3 } = require('../middlewares/s3.middleware');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const router = express.Router();
 // Note: We use a specific prefix in server.js for these to avoid auth issues,
 // but we define them here in the same file for logical grouping.
 // /api/v1/public/meeting-requests
-router.post('/public', upload.single('attachment'), createMeetingRequest);
+router.post('/public', upload.single('attachment'), uploadToS3, createMeetingRequest);
 router.get('/public/:trackingId', getMeetingRequestStatus);
 
 // --- ADMIN ROUTES (Auth required) ---

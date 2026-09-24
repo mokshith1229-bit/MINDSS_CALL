@@ -98,7 +98,7 @@ const FinanceApproval = () => {
                   ['FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'REJECTED', 'EVALUATION_REJECTED'].includes(sub.status) ? 'Pending' : 'Other',
           priority: numAmount > 1500000 ? 'High' : numAmount > 500000 ? 'Medium' : 'Low',
           submittedOn: new Date(sub.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-          slaDays: sub.status === 'FINANCE_APPROVED' ? 2 : 0,
+          slaDays: sub.sla?.daysLeft !== undefined ? sub.sla.daysLeft : null,
           description: parsed.abstract,
           history: (parsed.timeline || []).map(h => ({
             user: h.actor || 'System',
@@ -188,8 +188,8 @@ const FinanceApproval = () => {
           </Tabs>
 
           {/* Table Header */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.8fr 0.9fr 0.7fr 0.6fr 0.8fr', gap: 1, px: 1.5, py: 1, bgcolor: '#F8FAFC', borderRadius: 1.5, mb: 0.5 }}>
-            {['Request ID', 'Title', 'Requester', 'Amount', 'Category', 'Priority', 'Action'].map(h => (
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr 1.2fr 1.2fr 0.8fr', gap: 1, px: 1.5, py: 1, bgcolor: '#F8FAFC', borderRadius: 1.5, mb: 0.5 }}>
+            {['Request ID', 'Title', 'Requester', 'Category', 'Action'].map(h => (
               <Typography key={h} variant="caption" sx={{ fontWeight: 800, color: '#546E7A', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.3 }}>{h}</Typography>
             ))}
           </Box>
@@ -203,7 +203,7 @@ const FinanceApproval = () => {
           ) : tableRows.map((row, i) => {
             const pm = PRIORITY_META[row.priority];
             return (
-              <Box key={row.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.8fr 0.9fr 0.7fr 0.6fr 0.8fr', gap: 1, px: 1.5, py: 1.5, borderBottom: i < tableRows.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', '&:hover': { bgcolor: '#F8FAFC', borderRadius: 1.5 }, transition: 'all 0.15s' }}>
+              <Box key={row.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr 1.2fr 1.2fr 0.8fr', gap: 1, px: 1.5, py: 1.5, borderBottom: i < tableRows.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', '&:hover': { bgcolor: '#F8FAFC', borderRadius: 1.5 }, transition: 'all 0.15s' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
                   <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#1565C0' }}>{row.trackingId || row.businessId}</Typography>
                   {row.wbsCode && <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#546E7A', fontSize: '0.65rem' }}>{row.wbsCode}</Typography>}
@@ -217,9 +217,7 @@ const FinanceApproval = () => {
                   <Avatar sx={{ width: 24, height: 24, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#1A2332' }}>{row.requester.split(' ').map(n => n[0]).join('')}</Avatar>
                   <Typography variant="caption" sx={{ fontWeight: 600 }} noWrap>{row.requester}</Typography>
                 </Box>
-                <Typography variant="body2" sx={{ fontWeight: 800, color: '#1A2332' }}>{row.amount}</Typography>
                 <Typography variant="caption" sx={{ color: '#546E7A', fontWeight: 500 }} noWrap>{row.category}</Typography>
-                <Chip label={row.priority} size="small" sx={{ bgcolor: pm.bg, color: pm.color, fontWeight: 700, fontSize: '0.68rem', height: 20 }} />
                 <Button size="small" variant="outlined" startIcon={<ViewIcon sx={{ fontSize: '13px !important' }} />} onClick={() => openDetail(row)} sx={{ fontSize: '0.72rem', borderColor: '#1565C0', color: '#1565C0', '&:hover': { bgcolor: '#E3F2FD' } }}>
                   Review
                 </Button>

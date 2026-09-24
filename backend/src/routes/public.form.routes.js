@@ -1,6 +1,7 @@
 const express = require('express');
 const { getPublicForm, submitForm, trackSubmission, previewWbsCode } = require('../controllers/public.form.controller');
 const upload = require('../middlewares/upload.middleware');
+const { uploadToS3 } = require('../middlewares/s3.middleware');
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ router.route('/:slug')
 router.route('/:slug/submit')
   .post(
     upload.array('attachments', 10), // Allow up to 10 files
+    uploadToS3,
     submitForm
   );
 

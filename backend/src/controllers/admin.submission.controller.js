@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const sendEmail = require('../utils/emailSender');
 const fs = require('fs');
 const path = require('path');
+const { deleteFile: deleteS3File } = require('../services/s3.service');
 
 // @desc    Get all submissions (with filtering)
 // @route   GET /api/v1/admin/submissions
@@ -262,8 +263,14 @@ exports.deleteSubmission = async (req, res, next) => {
 
     // Delete associated files
     if (submission.attachments && submission.attachments.length > 0) {
-      submission.attachments.forEach(file => {
-        if (file.url) {
+      submission.attachments.forEach(async file => {
+        if (file.storageProvider === 's3' && file.objectKey) {
+          try {
+            await deleteS3File(file.objectKey);
+          } catch (err) {
+            console.error(`Failed to delete S3 file ${file.objectKey}:`, err);
+          }
+        } else if (file.url) {
           const filePath = path.join(__dirname, '../../', file.url);
           fs.unlink(filePath, (err) => {
             if (err && err.code !== 'ENOENT') {
@@ -632,7 +639,10 @@ exports.autoAssignRM = async (req, res, next) => {
 // @access  Private (SUPER_ADMIN, ADMIN)
 exports.updateProjectDetails = async (req, res, next) => {
   try {
-    const { owner, implementationStatus, progressPercentage, updateText, expectedBenefits, actualBenefits } = req.body;
+    const { 
+      owner, implementationStatus, progressPercentage, updateText, expectedBenefits, actualBenefits,
+      objectives, initiation, milestones, progressReports, financials, documents, issues, changeRequests, projectReviews, finalReport
+    } = req.body;
 
     const submission = await Submission.findById(req.params.id);
     if (!submission) {
@@ -648,6 +658,18 @@ exports.updateProjectDetails = async (req, res, next) => {
     if (progressPercentage !== undefined) submission.projectDetails.progressPercentage = Number(progressPercentage);
     if (expectedBenefits !== undefined) submission.projectDetails.expectedBenefits = expectedBenefits;
     if (actualBenefits !== undefined) submission.projectDetails.actualBenefits = actualBenefits;
+    
+    // New Project Lifecycle Fields
+    if (objectives !== undefined) submission.projectDetails.objectives = objectives;
+    if (initiation !== undefined) submission.projectDetails.initiation = initiation;
+    if (milestones !== undefined) submission.projectDetails.milestones = milestones;
+    if (progressReports !== undefined) submission.projectDetails.progressReports = progressReports;
+    if (financials !== undefined) submission.projectDetails.financials = financials;
+    if (documents !== undefined) submission.projectDetails.documents = documents;
+    if (issues !== undefined) submission.projectDetails.issues = issues;
+    if (changeRequests !== undefined) submission.projectDetails.changeRequests = changeRequests;
+    if (projectReviews !== undefined) submission.projectDetails.projectReviews = projectReviews;
+    if (finalReport !== undefined) submission.projectDetails.finalReport = finalReport;
 
     if (updateText) {
       if (!submission.projectDetails.updates) submission.projectDetails.updates = [];
@@ -683,9 +705,11 @@ exports.addProjectUpdate = async (req, res, next) => {
     if (req.files && req.files.length > 0) {
       files = req.files.map((file) => ({
         filename: file.originalname,
-        url: `/uploads/${file.filename}`,
+        url: file.objectKey ? '' : `/uploads/${file.filename}`,
         mimetype: file.mimetype,
         size: file.size,
+        storageProvider: file.storageProvider || 'local',
+        objectKey: file.objectKey || null
       }));
     }
 

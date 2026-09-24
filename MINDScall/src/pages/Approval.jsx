@@ -14,6 +14,7 @@ import DiscussionBoard from '../components/DiscussionBoard';
 import api from '../utils/api';
 import { parseSubmissionFields, formatKey } from '../utils/submissionParser';
 import Timeline from '../components/Timeline';
+import { handleFileDownload } from '../utils/fileUtils';
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index}>{value === index && <Box sx={{ pt: 2 }}>{children}</Box>}</div>
@@ -65,7 +66,7 @@ const Approval = () => {
           status: sub.status === 'APPROVAL_COMMITTEE' ? 'Pending Approval' :
                   sub.status === 'APPROVED' ? 'Approved' :
                   sub.status === 'REJECTED' ? 'Rejected' : null,
-          slaDays: Math.floor((new Date() - new Date(sub.createdAt)) / (1000 * 60 * 60 * 24)),
+          slaDays: sub.sla?.daysLeft !== undefined ? sub.sla.daysLeft : null,
           slaStatus: 'On Track',
           comments: [],
           history: [],
@@ -235,7 +236,7 @@ const Approval = () => {
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Attachments</Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       {selectedApp.attachments.map((att, i) => (
-                        <Chip key={i} icon={<PdfIcon />} label={att.filename || 'Document'} variant="outlined" component="a" href={att.url?.startsWith('http') ? att.url : `${api.defaults.baseURL?.replace('/api/v1', '')}${att.url}`} target="_blank" clickable />
+                        <Chip key={i} icon={<PdfIcon />} label={att.filename || 'Document'} variant="outlined" onClick={() => handleFileDownload(att)} clickable />
                       ))}
                     </Box>
                   </Grid>

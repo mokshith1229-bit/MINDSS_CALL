@@ -14,8 +14,12 @@ exports.createMeetingRequest = async (req, res, next) => {
     }
 
     let attachmentUrl = '';
+    let storageProvider = 'local';
+    let objectKey = null;
     if (req.file) {
-      attachmentUrl = `/uploads/${req.file.filename}`;
+      attachmentUrl = req.file.objectKey ? '' : `/uploads/${req.file.filename}`;
+      storageProvider = req.file.storageProvider || 'local';
+      objectKey = req.file.objectKey || null;
     }
 
     const newRequest = await MeetingRequest.create({
@@ -27,7 +31,9 @@ exports.createMeetingRequest = async (req, res, next) => {
       preferredDate,
       preferredTime,
       description,
-      attachmentUrl
+      attachmentUrl,
+      storageProvider,
+      objectKey
     });
 
     res.status(201).json(new ApiResponse(201, { meetingRequest: newRequest }, 'Meeting request submitted successfully'));

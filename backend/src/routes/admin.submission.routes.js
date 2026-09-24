@@ -3,6 +3,7 @@ const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionR
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const auditLog = require('../middlewares/audit.middleware');
 const upload = require('../middlewares/upload.middleware');
+const { uploadToS3 } = require('../middlewares/s3.middleware');
 
 const router = express.Router();
 
@@ -41,6 +42,7 @@ router.route('/:id/project-updates')
   .post(
     auditLog('ADD_PROJECT_UPDATE', 'Submission'),
     upload.array('attachments', 5),
+    uploadToS3,
     addProjectUpdate
   );
 

@@ -23,12 +23,12 @@ const iconMap = {
 
 const DashboardCards = ({ dynamicStats = [] }) => {
   return (
-    <Grid container spacing={2.5} disableEqualOverflow sx={{ width: '100%', mx: 0, mb: 3 }}>
+    <Grid container spacing={2.5} sx={{ width: '100%', mx: 0, mb: 3 }}>
       {dynamicStats.map((stat) => {
         const IconComponent = iconMap[stat.icon] || LightbulbIcon;
         const isUp = stat.trend === 'up';
         return (
-          <Grid item xs={12} sm={6} lg={3} key={stat.id}>
+          <Grid xs={12} sm={6} lg={3} key={stat.id}>
             <Card
               elevation={0}
               sx={{

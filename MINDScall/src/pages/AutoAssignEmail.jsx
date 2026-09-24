@@ -86,6 +86,10 @@ const ProposalRow = ({ sub, isSelected, onToggle, accentColor = '#1565C0', showC
           <Chip label="RM ✓ Approved" size="small"
             sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700 }} />
         )}
+        {sub.sla && sub.sla.daysLeft !== null && (
+          <Chip label={`SLA: ${sub.sla.daysLeft} days left`} size="small"
+            sx={{ height: 18, fontSize: '0.6rem', bgcolor: sub.sla.daysLeft < 0 ? '#FEE2E2' : '#E0F2FE', color: sub.sla.daysLeft < 0 ? '#B91C1C' : '#0369A1', fontWeight: 700 }} />
+        )}
       </Box>
       <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }} noWrap>{sub.title}</Typography>
       <Typography variant="caption" sx={{ color: '#78909C' }} noWrap>
@@ -600,7 +604,7 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 RM Assignment
-                <Chip label={rmCounts.Unassigned} size="small"
+                <Chip label={rmCounts.All} size="small"
                   sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#FFF3E0', color: '#E65100', fontWeight: 700 }} />
               </Box>
             }
@@ -610,7 +614,7 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 Evaluation Committee
-                <Chip label={evalCounts.Unassigned} size="small"
+                <Chip label={evalCounts.All} size="small"
                   sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700 }} />
               </Box>
             }
@@ -620,7 +624,7 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 Finance Assignment
-                <Chip label={finCounts.Unassigned} size="small"
+                <Chip label={finCounts.All} size="small"
                   sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#E3F2FD', color: '#1565C0', fontWeight: 700 }} />
               </Box>
             }
@@ -630,7 +634,7 @@ MINDS Innovation Team — Cube Highways Innovation Centre`);
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 Approval Committee
-                <Chip label={approvalCounts.Unassigned} size="small"
+                <Chip label={approvalCounts.All} size="small"
                   sx={{ height: 18, fontSize: '0.65rem', bgcolor: '#FFF8E1', color: '#F57F17', fontWeight: 700 }} />
               </Box>
             }

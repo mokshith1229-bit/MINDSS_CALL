@@ -58,10 +58,9 @@ const RDReview = () => {
       const parsedSubs = subs.map(sub => {
         const parsed = parseSubmissionFields(sub);
         
-        // Distinguish Idea vs Proposal
+        // Use the actual parsed submission type, fallback to Idea if missing
+        const type = parsed.submissionType || 'Idea';
         const formTitle = sub.form?.title || '';
-        const isIdea = formTitle.toLowerCase().includes('idea');
-        const type = isIdea ? 'Idea' : 'Proposal';
 
         return { 
           ...sub, 

@@ -5,10 +5,11 @@ import {
   Select, MenuItem, InputLabel, FormControl, Chip, Checkbox, Snackbar, Alert, Fade
 } from '@mui/material';
 import { Close as CloseIcon, Email as EmailIcon, Group as GroupIcon, ViewList as ViewListIcon, Add as AddIcon } from '@mui/icons-material';
-import DataTable, { StatusChip, TypeBadge } from '../components/DataTable';
+import DataTable, { StatusChip, TypeBadge, SLACell } from '../components/DataTable';
 import api from '../utils/api';
 import { parseSubmissionFields, formatKey } from '../utils/submissionParser';
 import Timeline from '../components/Timeline';
+import { handleFileDownload } from '../utils/fileUtils';
 import ReviewBadge from '../components/ReviewBadge';
 
 function a11yProps(index) {
@@ -75,6 +76,7 @@ const Evaluation = () => {
             budget: parsed.budget,
             committeeBudget: parsed.committeeBudget,
             workflow: sub.workflow,
+            sla: sub.sla,
           };
         });
 
@@ -169,6 +171,9 @@ const Evaluation = () => {
         if (evalReview?.status) text = evalReview.status.replace(/_/g, ' ');
         return <Chip label={text} size="small" />;
     }},
+    { field: 'sla', headerName: 'SLA Status', renderCell: (row) => (
+        <SLACell days={row.sla?.daysLeft !== undefined ? row.sla.daysLeft : null} status="On Track" />
+    )},
     { field: 'actions', headerName: 'Actions', renderCell: (row) => (
       <Button size="small" variant="outlined" onClick={() => handleOpenDetails(row)}>View</Button>
     )}
@@ -397,7 +402,7 @@ const Evaluation = () => {
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#111827', mb: 1.5, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '2px solid #111827', display: 'inline-block', pb: 0.5 }}>Attachments</Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {selectedProposalData.attachments.map((att, i) => (
-                      <Chip key={i} label={att.filename || 'Document'} variant="outlined" component="a" href={att.url?.startsWith('http') ? att.url : `${api.defaults.baseURL?.replace('/api/v1', '')}${att.url}`} target="_blank" clickable />
+                      <Chip key={i} label={att.filename || 'Document'} variant="outlined" onClick={() => handleFileDownload(att)} clickable />
                     ))}
                   </Box>
                 </Box>

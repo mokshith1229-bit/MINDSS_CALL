@@ -17,12 +17,14 @@ const publicFormRoutes = require('./routes/public.form.routes');
 const publicSubmissionRoutes = require('./routes/public.submission.routes');
 const publicEvaluationRoutes = require('./routes/public.evaluation.routes');
 const publicFinanceRoutes = require('./routes/public.finance.routes');
+const publicApprovalRoutes = require('./routes/public.approval.routes');
 const meetingRoutes = require('./routes/meeting.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const reportsRoutes = require('./routes/reports.routes');
 const developerRoutes = require('./routes/developer.routes');
 const meetingRequestRoutes = require('./routes/meetingRequest.routes');
 const adminPilotRoutes = require('./routes/admin.pilot.routes');
+const fileRoutes = require('./routes/file.routes');
 
 const app = express();
 
@@ -32,17 +34,24 @@ app.use(helmet());
 // CORS Configuration
 const allowedOrigins = [
   'http://localhost:5173', 
+  'http://localhost:5174',
   'http://localhost:3000',
   'https://mindss-call-three.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 const corsOptions = {
-  origin: true,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  optionsSuccessStatus: 200, // Some legacy browsers and Vercel edge choke on 204
+  optionsSuccessStatus: 204, // Some legacy browsers and Vercel edge choke on 204
 };
 
 app.use(cors(corsOptions));
@@ -96,6 +105,7 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/admin/reports', reportsRoutes);
 app.use('/api/v1/developer', developerRoutes);
 app.use('/api/v1/admin/pilot-projects', adminPilotRoutes);
+app.use('/api/v1/files', fileRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -130,3 +140,4 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 module.exports = app;
+

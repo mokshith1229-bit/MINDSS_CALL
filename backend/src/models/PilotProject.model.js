@@ -45,6 +45,8 @@ const pilotProjectSchema = new mongoose.Schema(
             url: String,
             mimetype: String,
             size: Number,
+            storageProvider: { type: String, default: 'local' },
+            objectKey: String
           },
         ],
       },
@@ -58,6 +60,8 @@ const pilotProjectSchema = new mongoose.Schema(
         documentType: String,
         uploadedBy: String,
         uploadedAt: { type: Date, default: Date.now },
+        storageProvider: { type: String, default: 'local' },
+        objectKey: String
       },
     ],
     pilotStudy: {
@@ -75,6 +79,8 @@ const pilotProjectSchema = new mongoose.Schema(
           url: String,
           mimetype: String,
           size: Number,
+          storageProvider: { type: String, default: 'local' },
+          objectKey: String
         },
       ],
     },
@@ -94,6 +100,8 @@ const pilotProjectSchema = new mongoose.Schema(
           url: String,
           mimetype: String,
           size: Number,
+          storageProvider: { type: String, default: 'local' },
+          objectKey: String
         },
       ],
     },

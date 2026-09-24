@@ -52,9 +52,11 @@ exports.submitForm = async (req, res, next) => {
     if (req.files && req.files.length > 0) {
       files = req.files.map((file) => ({
         filename: file.originalname,
-        url: `/uploads/${file.filename}`,
+        url: file.objectKey ? '' : `/uploads/${file.filename}`,
         mimetype: file.mimetype,
         size: file.size,
+        storageProvider: file.storageProvider || 'local',
+        objectKey: file.objectKey || null
       }));
     }
 
@@ -180,6 +182,7 @@ exports.submitForm = async (req, res, next) => {
       submissionType,
       answers: parsedAnswers,
       formData,
+      attachments: files,
       submitterEmail: resolvedSubmitterEmail,
       timeline: [
         {

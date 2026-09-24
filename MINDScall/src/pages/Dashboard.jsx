@@ -268,10 +268,10 @@ const Dashboard = () => {
       {/* ── KPI Cards ── */}
       {isVisible('section.dashboard.kpi_cards') && <DashboardCards dynamicStats={dynamicStats} />}
 
-      <Grid container spacing={3} disableEqualOverflow sx={{ mt: 1, width: '100%', mx: 0 }}>
+      <Grid container spacing={3} sx={{ mt: 1, width: '100%', mx: 0 }}>
         {/* ── Activity Chart ── */}
         {isVisible('section.dashboard.charts') && (
-          <Grid item xs={12} lg={12}>
+          <Grid xs={12} lg={12}>
             <Card elevation={0} sx={{ 
               borderRadius: 3, 
               border: '1px solid #E5E7EB',
@@ -319,7 +319,7 @@ const Dashboard = () => {
 
         {/* ── Recent Activities Table ── */}
         {isVisible('section.dashboard.recent_activity') && (
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Card elevation={0} sx={{ 
               borderRadius: 3,
               border: '1px solid #E5E7EB',

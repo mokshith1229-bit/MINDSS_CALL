@@ -16,11 +16,13 @@ import PublicReview from '../pages/PublicReview';
 import PublicBatchReview from '../pages/PublicBatchReview';
 import RMBatchReview from '../pages/RMBatchReview';
 import PublicFinanceReview from '../pages/PublicFinanceReview';
+import PublicApprovalReview from '../pages/PublicApprovalReview';
 import PublicTracking from '../pages/PublicTracking';
 import Login from '../pages/Login';
 import RDOngoingProjects from '../pages/RDOngoingProjects';
 import PilotProjectsList from '../pages/PilotProjectsList';
 import PilotProjectWorkspace from '../pages/PilotProjectWorkspace';
+import OngoingProjectWorkspace from '../pages/OngoingProjectWorkspace';
 import PublicEvaluatorReview from '../pages/PublicEvaluatorReview';
 import { authStore } from '../store/authStore';
 import UserManagement from '../pages/UserManagement';
@@ -64,6 +66,7 @@ const AppRoutes = () => {
       <Route path="/batch-review/:token" element={<PublicBatchReview />} />
       <Route path="/rm-batch-review/:token" element={<RMBatchReview />} />
       <Route path="/finance-review/:token" element={<PublicFinanceReview />} />
+      <Route path="/approval-review/:token" element={<PublicApprovalReview />} />
       <Route path="/evaluator-review/:token" element={<PublicEvaluatorReview />} />
 
       {/* Admin routes — wrapped in MainLayout AND ProtectedRoute */}
@@ -78,6 +81,7 @@ const AppRoutes = () => {
         <Route path="meeting-requests" element={<MeetingRequestsAdmin />} />
         <Route path="approval" element={<Approval />} />
         <Route path="rd-ongoing-projects" element={<RDOngoingProjects />} />
+        <Route path="ongoing-projects/:id" element={<OngoingProjectWorkspace />} />
         <Route path="pilot-projects" element={<PilotProjectsList />} />
         <Route path="pilot-projects/:id" element={<PilotProjectWorkspace />} />
         <Route path="finance-approval" element={<FinanceApproval />} />

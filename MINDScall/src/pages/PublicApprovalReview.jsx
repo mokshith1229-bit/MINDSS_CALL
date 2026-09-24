@@ -9,8 +9,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import GavelIcon from '@mui/icons-material/Gavel';
 import axios from 'axios';
 import { formatKey } from '../utils/submissionParser';
 import { handleFileDownload } from '../utils/fileUtils';
@@ -18,12 +17,11 @@ import { handleFileDownload } from '../utils/fileUtils';
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const decisionMeta = {
-  APPROVED:       { label: 'Approve Budget',        color: '#2E7D32', bg: '#E8F5E9', icon: <CheckCircleIcon sx={{ fontSize: 18 }} /> },
-  REJECTED:       { label: 'Reject Budget',         color: '#C62828', bg: '#FFEBEE', icon: <CancelIcon sx={{ fontSize: 18 }} /> },
-  CLARIFICATION:  { label: 'Request Clarification', color: '#E65100', bg: '#FFF3E0', icon: <HelpOutlineIcon sx={{ fontSize: 18 }} /> },
+  APPROVED:       { label: 'Final Approval', color: '#2E7D32', bg: '#E8F5E9', icon: <CheckCircleIcon sx={{ fontSize: 18 }} /> },
+  REJECTED:       { label: 'Reject',         color: '#C62828', bg: '#FFEBEE', icon: <CancelIcon sx={{ fontSize: 18 }} /> },
 };
 
-const PublicFinanceReview = () => {
+const PublicApprovalReview = () => {
   const { token } = useParams();
 
   const [loading, setLoading]       = useState(true);
@@ -38,22 +36,21 @@ const PublicFinanceReview = () => {
 
   const fetchBatch = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/public/finance-reviews/${token}`);
+      const res = await axios.get(`${API_BASE}/public/approval-reviews/${token}`);
       const bData = res.data.data.batch;
       setBatch(bData);
 
       const init = {};
       bData.submissions.forEach(sub => {
         init[sub.id] = {
-          decision: sub.existingFinanceReview?.decision || 'APPROVED',
-          remarks: sub.existingFinanceReview?.remarks || '',
-          approvedBudget: sub.existingFinanceReview?.approvedBudget || '',
+          decision: 'APPROVED', // Default to APPROVED
+          remarks: '',
         };
       });
       setReviews(init);
       setLoading(false);
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid or expired finance review token');
+      setError(err.response?.data?.message || 'Invalid or expired approval review token');
       setLoading(false);
     }
   };
@@ -72,7 +69,6 @@ const PublicFinanceReview = () => {
       submissionId: id,
       decision: reviews[id].decision,
       remarks: reviews[id].remarks,
-      approvedBudget: reviews[id].approvedBudget,
     }));
 
     const pendingCount = formattedReviews.filter(r => !r.decision).length;
@@ -82,13 +78,13 @@ const PublicFinanceReview = () => {
 
     setSubmitting(true);
     try {
-      await axios.patch(`${API_BASE}/public/finance-reviews/${token}`, {
+      await axios.patch(`${API_BASE}/public/approval-reviews/${token}`, {
         reviews: formattedReviews,
         reviewerName: reviewerName.trim(),
       });
       setSubmitted(true);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to submit finance review.');
+      alert(err.response?.data?.message || 'Failed to submit approval review.');
     } finally {
       setSubmitting(false);
     }
@@ -111,9 +107,9 @@ const PublicFinanceReview = () => {
     <Box sx={{ minHeight: '100vh', bgcolor: '#F0F4F8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Box sx={{ textAlign: 'center', maxWidth: 460 }}>
         <CheckCircleIcon sx={{ fontSize: 72, color: '#2E7D32', mb: 2 }} />
-        <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>Finance Review Submitted!</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>Final Approval Submitted!</Typography>
         <Typography variant="body1" sx={{ color: '#546E7A' }}>
-          Thank you. Your finance review decisions have been recorded. The proposals will proceed to the Approval Committee queue.
+          Thank you. Your decisions have been recorded. The approved proposals will now move into implementation.
         </Typography>
       </Box>
     </Box>
@@ -124,28 +120,28 @@ const PublicFinanceReview = () => {
       <Container maxWidth="lg">
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-          <Avatar sx={{ bgcolor: '#1565C0', width: 52, height: 52 }}>
-            <AccountBalanceIcon />
+          <Avatar sx={{ bgcolor: '#4A148C', width: 52, height: 52 }}>
+            <GavelIcon />
           </Avatar>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 800, color: '#1A2332', lineHeight: 1.2 }}>
-              Finance Review Portal
+              Approval Committee Portal
             </Typography>
             <Typography variant="body2" sx={{ color: '#546E7A', mt: 0.5 }}>
-              Batch: <b>{batch.batchName}</b> &nbsp;•&nbsp; {batch.submissions.length} Proposal(s) for Finance Approval
+              Batch: <b>{batch.batchName}</b> &nbsp;•&nbsp; {batch.submissions.length} Proposal(s) Pending Final Approval
             </Typography>
           </Box>
         </Box>
 
         {/* Reviewer identity */}
-        <Card sx={{ borderRadius: 3, mb: 3, p: 2.5, border: '1px solid #BBDEFB', bgcolor: '#E3F2FD' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1565C0', mb: 1.5 }}>
+        <Card sx={{ borderRadius: 3, mb: 3, p: 2.5, border: '1px solid #E1BEE7', bgcolor: '#F3E5F5' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#6A1B9A', mb: 1.5 }}>
             Your Identity (Required)
           </Typography>
           <TextField
             size="small"
             label="Your Full Name"
-            placeholder="Enter your name as Finance Reviewer"
+            placeholder="Enter your name"
             value={reviewerName}
             onChange={e => setReviewerName(e.target.value)}
             sx={{ minWidth: 320, bgcolor: '#fff', borderRadius: 1 }}
@@ -167,7 +163,7 @@ const PublicFinanceReview = () => {
                 <Chip
                   label={`#${index + 1}`}
                   size="small"
-                  sx={{ bgcolor: '#1565C0', color: '#fff', fontWeight: 700, minWidth: 36 }}
+                  sx={{ bgcolor: '#4A148C', color: '#fff', fontWeight: 700, minWidth: 36 }}
                 />
                 <Box sx={{ flex: 1 }}>
                   <Typography sx={{ fontWeight: 700, color: '#1A2332' }}>{sub.title}</Typography>
@@ -195,29 +191,18 @@ const PublicFinanceReview = () => {
                   <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
                     <Box sx={{ flex: 1, p: 2, bgcolor: '#fff', borderRadius: 2, border: '1px solid #E8F5E9' }}>
                       <Typography variant="caption" sx={{ fontWeight: 700, color: '#2E7D32', display: 'block', mb: 0.5 }}>
-                        ✓ RM Decision
+                        ✓ Finance Decision
                       </Typography>
                       <Chip
-                        label={sub.rmDecision || 'N/A'}
+                        label={sub.existingFinanceReview?.decision || 'APPROVED'}
                         size="small"
-                        sx={{ bgcolor: sub.rmDecision === 'APPROVED' ? '#E8F5E9' : '#ECEFF1', color: sub.rmDecision === 'APPROVED' ? '#2E7D32' : '#546E7A', fontWeight: 700, fontSize: '0.7rem' }}
+                        sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', fontWeight: 700, fontSize: '0.7rem' }}
                       />
-                      {sub.rmRemarks && <Typography variant="caption" sx={{ display: 'block', color: '#546E7A', mt: 0.5, fontStyle: 'italic' }}>"{sub.rmRemarks}"</Typography>}
-                    </Box>
-                    <Box sx={{ flex: 1, p: 2, bgcolor: '#fff', borderRadius: 2, border: '1px solid #E3F2FD' }}>
-                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#1565C0', display: 'block', mb: 0.5 }}>
-                        ✓ Evaluation Committee
-                      </Typography>
-                      <Chip
-                        label={sub.evalDecision || 'N/A'}
-                        size="small"
-                        sx={{ bgcolor: sub.evalDecision === 'APPROVED' ? '#E3F2FD' : '#ECEFF1', color: sub.evalDecision === 'APPROVED' ? '#1565C0' : '#546E7A', fontWeight: 700, fontSize: '0.7rem' }}
-                      />
-                      {sub.evalRemarks && <Typography variant="caption" sx={{ display: 'block', color: '#546E7A', mt: 0.5, fontStyle: 'italic' }}>"{sub.evalRemarks}"</Typography>}
+                      {sub.existingFinanceReview?.remarks && <Typography variant="caption" sx={{ display: 'block', color: '#546E7A', mt: 0.5, fontStyle: 'italic' }}>"{sub.existingFinanceReview.remarks}"</Typography>}
                     </Box>
                   </Box>
 
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1976D2', mb: 1 }}>Proposal Details</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#6A1B9A', mb: 1 }}>Proposal Details</Typography>
                   <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: 2, border: '1px solid #E5E7EB', mb: 2 }}>
                     {Object.entries(sub.answers || {}).map(([key, value]) => {
                       if (typeof value === 'object' || value === '' || value == null) return null;
@@ -230,17 +215,17 @@ const PublicFinanceReview = () => {
                     })}
                   </Box>
 
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1976D2', mb: 1 }}>
-                    Estimated Budget (Submitted by Employee)
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#2E7D32', mb: 1 }}>
+                    Approved Budget (Finance Committee)
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 800, color: '#1A2332', mb: 2 }}>
-                    {sub.estimatedBudget || 'Not specified'}
+                    {sub.existingFinanceReview?.approvedBudget ? `₹ ${Number(sub.existingFinanceReview.approvedBudget).toLocaleString('en-IN')}` : (sub.estimatedBudget || 'Not specified')}
                   </Typography>
 
                   {/* Attachments */}
                   {sub.attachments && sub.attachments.length > 0 && (
                     <>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1976D2', mb: 1 }}>Attachments</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#6A1B9A', mb: 1 }}>Attachments</Typography>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         {sub.attachments.map((att, i) => {
                           const backendBase = (import.meta.env.VITE_API_URL || '').replace('/api/v1', '');
@@ -256,11 +241,11 @@ const PublicFinanceReview = () => {
                   )}
                 </Grid>
 
-                {/* Right — Finance Decision Panel */}
+                {/* Right — Approval Decision Panel */}
                 <Grid item xs={12} md={5}>
-                  <Card sx={{ p: 2.5, boxShadow: 'none', border: '2px solid #BBDEFB', borderRadius: 3, bgcolor: '#fff', position: 'sticky', top: 16 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, color: '#1565C0' }}>
-                      Finance Decision
+                  <Card sx={{ p: 2.5, boxShadow: 'none', border: '2px solid #E1BEE7', borderRadius: 3, bgcolor: '#fff', position: 'sticky', top: 16 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, color: '#6A1B9A' }}>
+                      Final Decision
                     </Typography>
 
                     {/* Decision Selector */}
@@ -274,38 +259,24 @@ const PublicFinanceReview = () => {
                         <MenuItem value="APPROVED">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CheckCircleIcon sx={{ color: '#2E7D32', fontSize: 18 }} />
-                            Budget Approved — Send to Approval Committee
+                            Final Approval — Send to Implementation
                           </Box>
                         </MenuItem>
 
                         <MenuItem value="REJECTED">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CancelIcon sx={{ color: '#C62828', fontSize: 18 }} />
-                            Budget Rejected — Reject
+                            Reject Proposal
                           </Box>
                         </MenuItem>
                       </Select>
                     </FormControl>
 
-                    {/* Approved Budget (shown for APPROVED decisions) */}
-                    {reviews[sub.id]?.decision === 'APPROVED' && (
-                      <TextField
-                        fullWidth size="small"
-                        label="Approved Budget (₹)"
-                        placeholder="Enter approved amount"
-                        type="number"
-                        value={reviews[sub.id]?.approvedBudget || ''}
-                        onChange={e => handleChange(sub.id, 'approvedBudget', e.target.value)}
-                        sx={{ mb: 2 }}
-                        InputProps={{ startAdornment: <Typography sx={{ mr: 0.5, color: '#546E7A' }}>₹</Typography> }}
-                      />
-                    )}
-
                     {/* Remarks */}
                     <TextField
                       fullWidth multiline rows={4} size="small"
-                      label="Finance Remarks"
-                      placeholder="Enter your remarks, budget justification, or clarification request..."
+                      label="Remarks (Optional)"
+                      placeholder="Enter your final remarks..."
                       value={reviews[sub.id]?.remarks || ''}
                       onChange={e => handleChange(sub.id, 'remarks', e.target.value)}
                       sx={{ mb: 1 }}
@@ -342,13 +313,13 @@ const PublicFinanceReview = () => {
             size="large"
             onClick={handleSubmit}
             disabled={submitting || !reviewerName.trim()}
-            startIcon={<AccountBalanceIcon />}
+            startIcon={<GavelIcon />}
             sx={{
               px: 5, py: 1.5, fontWeight: 700, borderRadius: 2,
-              bgcolor: '#1565C0', '&:hover': { bgcolor: '#0D47A1' }
+              bgcolor: '#6A1B9A', '&:hover': { bgcolor: '#4A148C' }
             }}
           >
-            {submitting ? 'Submitting...' : `Submit Finance Review (${batch.submissions.length} Proposals)`}
+            {submitting ? 'Submitting...' : `Submit Final Decisions (${batch.submissions.length} Proposals)`}
           </Button>
         </Box>
       </Container>
@@ -356,4 +327,4 @@ const PublicFinanceReview = () => {
   );
 };
 
-export default PublicFinanceReview;
+export default PublicApprovalReview;

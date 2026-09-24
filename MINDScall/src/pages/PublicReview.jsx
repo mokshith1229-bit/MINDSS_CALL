@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { CheckCircle as ApproveIcon, Cancel as RejectIcon, Help as ClarificationIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import api from '../utils/api';
+import { handleFileDownload } from '../utils/fileUtils';
 
 const PublicReview = () => {
   const { token } = useParams();
@@ -127,7 +128,7 @@ const PublicReview = () => {
                   {data.attachments.map((att, i) => {
                     const fullUrl = att.url ? (att.url.startsWith('http') ? att.url : `${api.defaults.baseURL.replace('/api/v1', '')}${att.url}`) : '#';
                     return (
-                      <Chip key={i} icon={<PdfIcon />} label={att.filename || 'Document'} variant="outlined" component="a" href={fullUrl} target="_blank" clickable />
+                      <Chip key={i} icon={<PdfIcon />} label={att.filename || 'Document'} variant="outlined" onClick={() => handleFileDownload(att)} clickable />
                     );
                   })}
                 </Box>
