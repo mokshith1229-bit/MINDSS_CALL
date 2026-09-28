@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, IconButton, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { Add, Science, Edit, AttachFile } from '@mui/icons-material';
+import { Add, Science, Edit, AttachFile, CalendarMonth } from '@mui/icons-material';
 import { handleFileDownload } from '../../utils/fileUtils';
+import ScheduleTestModal from '../LabCalendar/ScheduleTestModal';
 
 const TestMatrixTab = ({ project, onUpdate }) => {
   const testMatrix = project?.projectDetails?.testMatrix || [];
@@ -9,7 +10,9 @@ const TestMatrixTab = ({ project, onUpdate }) => {
   const samples = project?.projectDetails?.samples || [];
   
   const [open, setOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [scheduleItem, setScheduleItem] = useState(null);
 
   const [testName, setTestName] = useState('');
   const [testDescription, setTestDescription] = useState('');
@@ -123,7 +126,10 @@ const TestMatrixTab = ({ project, onUpdate }) => {
                       <Chip size="small" label={t.status} sx={{ fontWeight: 600 }} />
                     </TableCell>
                     <TableCell>
-                      <IconButton size="small" onClick={() => handleOpen(t)}><Edit fontSize="small" /></IconButton>
+                      <IconButton size="small" onClick={() => handleOpen(t)} title="Edit Test"><Edit fontSize="small" /></IconButton>
+                      <IconButton size="small" onClick={() => { setScheduleItem(t); setScheduleOpen(true); }} sx={{ color: '#0078D4' }} title="Request Lab Slot">
+                        <CalendarMonth fontSize="small" />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 );
@@ -211,6 +217,14 @@ const TestMatrixTab = ({ project, onUpdate }) => {
           <Button variant="contained" onClick={handleSave} disabled={!testName}>Save Test</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Schedule Test Modal */}
+      <ScheduleTestModal 
+        open={scheduleOpen} 
+        onClose={() => { setScheduleOpen(false); setScheduleItem(null); }} 
+        test={scheduleItem}
+        project={project}
+      />
     </Box>
   );
 };

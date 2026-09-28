@@ -46,6 +46,11 @@ const PublicTracking = () => {
     attachment: null,
   });
 
+  // Add Attachment States
+  const [attachmentModalOpen, setAttachmentModalOpen] = useState(false);
+  const [attachmentSubmitting, setAttachmentSubmitting] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState(null);
+
   useEffect(() => {
     if (searchParams.get('id')) {
       handleSearch();
@@ -116,6 +121,30 @@ const PublicTracking = () => {
       setSnackbar({ open: true, message: 'Failed to submit meeting request.', severity: 'error' });
     } finally {
       setMeetingSubmitting(false);
+    }
+  };
+
+  const handleAttachmentSubmit = async (e) => {
+    e.preventDefault();
+    if (!attachmentFile) return;
+    
+    setAttachmentSubmitting(true);
+    const formData = new FormData();
+    formData.append('attachments', attachmentFile);
+
+    try {
+      await axios.post(`${API_BASE}/public/forms/track/${result.trackingId}/attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setSnackbar({ open: true, message: 'Attachment Added Successfully', severity: 'success' });
+      setAttachmentModalOpen(false);
+      setAttachmentFile(null);
+      // Re-fetch tracking to get updated timeline
+      handleSearch();
+    } catch (err) {
+      setSnackbar({ open: true, message: 'Failed to add attachment.', severity: 'error' });
+    } finally {
+      setAttachmentSubmitting(false);
     }
   };
 
@@ -254,6 +283,33 @@ const PublicTracking = () => {
                       }}
                     >
                       Request Meeting
+                    </Button>
+                  </span>
+                </Tooltip>
+                
+                <Tooltip title={!result ? "Please track a submission first" : ""}>
+                  <span>
+                    <Button 
+                      variant="outlined" 
+                      disabled={!result}
+                      onClick={() => setAttachmentModalOpen(true)}
+                      sx={{ 
+                        borderColor: '#2563EB', 
+                        color: '#2563EB',
+                        '&:hover': { borderColor: '#1D4ED8', bgcolor: 'rgba(37, 99, 235, 0.04)' }, 
+                        minWidth: '160px', 
+                        height: '48px',
+                        borderRadius: 2,
+                        fontWeight: 600, 
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        '&.Mui-disabled': {
+                          borderColor: '#E2E8F0',
+                          color: '#94A3B8'
+                        }
+                      }}
+                    >
+                      Add Attachment
                     </Button>
                   </span>
                 </Tooltip>
@@ -558,6 +614,55 @@ const PublicTracking = () => {
               sx={{ bgcolor: '#2E7D32', '&:hover': { bgcolor: '#1B5E20' }, borderRadius: 2, px: 3 }}
             >
               {meetingSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Submit Request'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Add Attachment Modal */}
+      <Dialog 
+        open={attachmentModalOpen} 
+        onClose={() => setAttachmentModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h5" component="span" sx={{ fontWeight: 800, color: '#1E293B' }}>Add Attachment</Typography>
+          <IconButton onClick={() => setAttachmentModalOpen(false)} size="small"><CloseIcon /></IconButton>
+        </DialogTitle>
+        <form onSubmit={handleAttachmentSubmit}>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
+            
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+              If you forgot to attach a file during your initial submission, you can upload it here.
+            </Typography>
+
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<CloudUploadIcon />}
+              sx={{ alignSelf: 'center', textTransform: 'none', width: '100%', py: 3, borderStyle: 'dashed' }}
+            >
+              {attachmentFile ? attachmentFile.name : 'Click to Upload Document'}
+              <input
+                type="file"
+                hidden
+                required
+                onChange={(e) => setAttachmentFile(e.target.files[0])}
+              />
+            </Button>
+
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 0 }}>
+            <Button onClick={() => setAttachmentModalOpen(false)} sx={{ color: '#64748B', fontWeight: 600 }}>Cancel</Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={attachmentSubmitting || !attachmentFile}
+              sx={{ bgcolor: '#2563EB', '&:hover': { bgcolor: '#1D4ED8' }, borderRadius: 2, px: 3 }}
+            >
+              {attachmentSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Upload File'}
             </Button>
           </DialogActions>
         </form>

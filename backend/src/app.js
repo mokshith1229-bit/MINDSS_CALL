@@ -25,6 +25,8 @@ const developerRoutes = require('./routes/developer.routes');
 const meetingRequestRoutes = require('./routes/meetingRequest.routes');
 const adminPilotRoutes = require('./routes/admin.pilot.routes');
 const fileRoutes = require('./routes/file.routes');
+const labRoutes = require('./routes/admin.lab.routes');
+const scheduleRoutes = require('./routes/admin.schedule.routes');
 
 const app = express();
 
@@ -106,6 +108,8 @@ app.use('/api/v1/admin/reports', reportsRoutes);
 app.use('/api/v1/developer', developerRoutes);
 app.use('/api/v1/admin/pilot-projects', adminPilotRoutes);
 app.use('/api/v1/files', fileRoutes);
+app.use('/api/v1/labs', labRoutes);
+app.use('/api/v1/test-schedules', scheduleRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

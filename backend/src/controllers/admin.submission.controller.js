@@ -1,4 +1,35 @@
 const Submission = require('../models/Submission.model');
+
+async function presignSubmission(submission) {
+  const { generatePresignedDownloadUrl } = require('../services/s3.service');
+  const processAttachments = async (arr) => {
+    if (!arr || !arr.length) return;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i].storageProvider === 's3' && arr[i].objectKey) {
+        try {
+          const url = await generatePresignedDownloadUrl(arr[i].objectKey, 3600);
+          if (url) arr[i].url = url;
+        } catch(e) {}
+      }
+    }
+  };
+
+  if (!submission) return;
+  await processAttachments(submission.attachments);
+  if (submission.projectDetails) {
+    await processAttachments(submission.projectDetails.documents);
+    if (submission.projectDetails.updates) {
+      for (let u of submission.projectDetails.updates) await processAttachments(u.attachments);
+    }
+    if (submission.projectDetails.testMatrix) {
+      for (let t of submission.projectDetails.testMatrix) await processAttachments(t.attachments);
+    }
+    if (submission.projectDetails.samples) {
+      for (let s of submission.projectDetails.samples) await processAttachments(s.attachments);
+    }
+  }
+}
+
 const Form = require('../models/Form.model');
 const Batch = require('../models/Batch.model');
 const FinanceBatch = require('../models/FinanceBatch.model');
@@ -39,6 +70,9 @@ exports.getSubmissions = async (req, res, next) => {
       .populate('formVersion', 'schema')
       .sort('-createdAt');
 
+    if (submissions && submissions.length > 0) {
+      for (let s of submissions) await presignSubmission(s);
+    }
     res.status(200).json(new ApiResponse(200, { submissions }, 'Submissions retrieved successfully'));
   } catch (err) {
     next(err);
@@ -58,6 +92,7 @@ exports.getSubmission = async (req, res, next) => {
       return next(new ApiError(404, 'Submission not found'));
     }
 
+    await presignSubmission(submission);
     res.status(200).json(new ApiResponse(200, { submission }, 'Submission retrieved successfully'));
   } catch (err) {
     next(err);
@@ -111,6 +146,7 @@ exports.updateSubmissionStatus = async (req, res, next) => {
 
     await submission.save();
 
+    await presignSubmission(submission);
     res.status(200).json(new ApiResponse(200, { submission }, 'Submission status updated'));
   } catch (err) {
     next(err);
@@ -187,6 +223,7 @@ exports.updateSubmissionReview = async (req, res, next) => {
 
     await submission.save();
 
+    await presignSubmission(submission);
     res.status(200).json(new ApiResponse(200, { submission }, 'Submission review updated successfully'));
   } catch (err) {
     next(err);
@@ -453,6 +490,7 @@ exports.updateFinanceReview = async (req, res, next) => {
 
     await submission.save();
 
+    await presignSubmission(submission);
     res.status(200).json(new ApiResponse(200, { submission }, 'Finance review submitted successfully'));
   } catch (err) {
     next(err);
@@ -685,6 +723,7 @@ exports.updateProjectDetails = async (req, res, next) => {
     submission.markModified('projectDetails');
     await submission.save();
 
+    await presignSubmission(submission);
     res.status(200).json(new ApiResponse(200, { submission }, 'Project details updated successfully'));
   } catch (err) {
     next(err);
@@ -760,6 +799,7 @@ exports.addProjectUpdate = async (req, res, next) => {
 
     await submission.save();
 
+    await presignSubmission(submission);
     res.status(201).json(new ApiResponse(201, { submission }, 'Project update added successfully'));
   } catch (err) {
     next(err);
@@ -858,6 +898,7 @@ exports.scheduleMeeting = async (req, res, next) => {
       // We don't fail the request if email fails, but we should probably inform
     }
 
+    await presignSubmission(submission);
     res.status(200).json(new ApiResponse(200, { submission }, 'Meeting scheduled and invites sent'));
   } catch (err) {
     next(err);
@@ -909,6 +950,7 @@ exports.completeMeeting = async (req, res, next) => {
 
     await submission.save();
 
+    await presignSubmission(submission);
     res.status(200).json(new ApiResponse(200, { submission }, 'Meeting marked as completed'));
   } catch (err) {
     next(err);

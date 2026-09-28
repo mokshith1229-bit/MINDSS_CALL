@@ -15,21 +15,29 @@ const uploadToS3 = async (req, res, next) => {
     const folderId = trackingId || businessId || projectId || slug || Date.now().toString();
 
     for (const file of filesToUpload) {
+      // If multer-s3 already uploaded it directly, skip manual upload
+      if (file.location || file.storageProvider === 's3') {
+        file.storageProvider = 's3';
+        continue;
+      }
+
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       // Create a safe object key
       const safeOriginalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
       const objectKey = `uploads/${folderId}/${uniqueSuffix}-${safeOriginalName}`;
       
-      await uploadFile(file.path, objectKey, file.mimetype);
-      
-      // Augment the file object with S3 metadata
-      file.storageProvider = 's3';
-      file.objectKey = objectKey;
-      
-      // Delete the local file
-      fs.unlink(file.path, (err) => {
-        if (err) console.error(`Error deleting local file ${file.path}:`, err);
-      });
+      if (file.path) {
+        await uploadFile(file.path, objectKey, file.mimetype);
+        
+        // Augment the file object with S3 metadata
+        file.storageProvider = 's3';
+        file.objectKey = objectKey;
+        
+        // Delete the local file
+        fs.unlink(file.path, (err) => {
+          if (err) console.error(`Error deleting local file ${file.path}:`, err);
+        });
+      }
     }
 
     next();

@@ -17,9 +17,9 @@ exports.createMeetingRequest = async (req, res, next) => {
     let storageProvider = 'local';
     let objectKey = null;
     if (req.file) {
-      attachmentUrl = req.file.objectKey ? '' : `/uploads/${req.file.filename}`;
-      storageProvider = req.file.storageProvider || 'local';
-      objectKey = req.file.objectKey || null;
+      attachmentUrl = req.file.location ? req.file.location : `/uploads/${req.file.filename}`;
+      storageProvider = req.file.location ? 's3' : 'local';
+      objectKey = req.file.key || null;
     }
 
     const newRequest = await MeetingRequest.create({
@@ -75,6 +75,21 @@ exports.getMeetingRequestStatus = async (req, res, next) => {
 exports.getAllMeetingRequests = async (req, res, next) => {
   try {
     const meetingRequests = await MeetingRequest.find().sort({ createdAt: -1 }).lean();
+
+    const { generatePresignedDownloadUrl } = require('../services/s3.service');
+    if (meetingRequests && meetingRequests.length > 0) {
+      for (let i = 0; i < meetingRequests.length; i++) {
+        if (meetingRequests[i].storageProvider === 's3' && meetingRequests[i].objectKey) {
+          try {
+            const presignedUrl = await generatePresignedDownloadUrl(meetingRequests[i].objectKey, 3600);
+            if (presignedUrl) meetingRequests[i].attachmentUrl = presignedUrl;
+          } catch (e) {
+            console.error('Failed to generate presigned URL for', meetingRequests[i].objectKey);
+          }
+        }
+      }
+    }
+
     res.status(200).json(new ApiResponse(200, { meetingRequests }, 'Meeting requests retrieved successfully'));
   } catch (err) {
     next(err);

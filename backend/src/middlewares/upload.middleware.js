@@ -2,16 +2,48 @@ const multer = require('multer');
 const path = require('path');
 const ApiError = require('../utils/ApiError');
 
-// Storage config
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+const { S3Client } = require('@aws-sdk/client-s3');
+const multerS3 = require('multer-s3');
+
+// Configure S3 Client
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
 });
+
+let storage;
+
+const bucketName = process.env.AWS_BUCKET_NAME || process.env.AWS_S3_BUCKET;
+
+if (process.env.AWS_ACCESS_KEY_ID && bucketName) {
+  // S3 storage config
+  storage = multerS3({
+    s3: s3,
+    bucket: bucketName,
+    contentType: multerS3.AUTO_CONTENT_TYPE,
+    metadata: function (req, file, cb) {
+      cb(null, { fieldName: file.fieldname });
+    },
+    key: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, 'uploads/' + file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    },
+  });
+} else {
+  // Fallback to local disk storage
+  storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  });
+}
 
 // File filter
 const fileFilter = (req, file, cb) => {
