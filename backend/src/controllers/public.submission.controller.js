@@ -5,6 +5,36 @@ const ApiResponse = require('../utils/ApiResponse');
 const crypto = require('crypto');
 const sendEmail = require('../utils/emailSender');
 
+async function presignSubmission(submission) {
+  const { generatePresignedDownloadUrl } = require('../services/s3.service');
+  const processAttachments = async (arr) => {
+    if (!arr || !arr.length) return;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i].storageProvider === 's3' && arr[i].objectKey) {
+        try {
+          const url = await generatePresignedDownloadUrl(arr[i].objectKey, 3600);
+          if (url) arr[i].url = url;
+        } catch(e) {}
+      }
+    }
+  };
+
+  if (!submission) return;
+  await processAttachments(submission.attachments);
+  if (submission.projectDetails) {
+    await processAttachments(submission.projectDetails.documents);
+    if (submission.projectDetails.updates) {
+      for (let u of submission.projectDetails.updates) await processAttachments(u.attachments);
+    }
+    if (submission.projectDetails.testMatrix) {
+      for (let t of submission.projectDetails.testMatrix) await processAttachments(t.attachments);
+    }
+    if (submission.projectDetails.samples) {
+      for (let s of submission.projectDetails.samples) await processAttachments(s.attachments);
+    }
+  }
+}
+
 const sendHodEmail = (submission) => {
   const hodEmail = submission.answers?.hodEmail || '';
   if (!hodEmail) return;
@@ -56,6 +86,8 @@ exports.getReviewByToken = async (req, res, next) => {
     if (!submission) {
       return next(new ApiError(404, 'Invalid or expired review token'));
     }
+
+    await presignSubmission(submission);
 
     const isHodReview = submission.workflow.hodReviewToken === token;
     const reviewData = isHodReview ? (submission.workflow.hodReview || {}) : (submission.workflow.rmReview || {});
@@ -302,6 +334,10 @@ exports.getRmBatch = async (req, res, next) => {
 
     if (!submissions || submissions.length === 0) {
       return next(new ApiError(404, 'Batch not found or link expired'));
+    }
+
+    for (let s of submissions) {
+      await presignSubmission(s);
     }
 
     res.status(200).json(new ApiResponse(200, { submissions }, 'RM batch retrieved successfully'));
