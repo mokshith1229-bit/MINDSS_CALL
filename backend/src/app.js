@@ -101,6 +101,7 @@ app.use('/api/v1/public/forms', publicFormRoutes);
 app.use('/api/v1/public/reviews', publicSubmissionRoutes);
 app.use('/api/v1/public/evaluations', publicEvaluationRoutes);
 app.use('/api/v1/public/finance-reviews', publicFinanceRoutes);
+app.use('/api/v1/public/approval-reviews', publicApprovalRoutes);
 app.use('/api/v1/meetings', meetingRoutes);
 app.use('/api/v1/meeting-requests', meetingRequestRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
