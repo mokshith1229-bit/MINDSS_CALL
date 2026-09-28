@@ -196,7 +196,7 @@ function FileZone({ files, setFiles }) {
       'image/png': ['.png'],
       'image/jpeg': ['.jpg', '.jpeg'],
     },
-    maxSize: 10 * 1024 * 1024
+    maxSize: 100 * 1024 * 1024
   });
 
   const removeFile = (index) => setFiles(prev => prev.filter((_, i) => i !== index));
@@ -229,7 +229,7 @@ function FileZone({ files, setFiles }) {
           {isDragActive ? 'Drop your files here' : 'Click to upload or drag & drop'}
         </Typography>
         <Typography sx={{ color: '#667085', fontSize: '0.8rem' }}>
-          PDF, DOC, DOCX, PPT, PPTX, PNG, JPG (Max 10MB each)
+          PDF, DOC, DOCX, PPT, PPTX, PNG, JPG (Max 100MB each)
         </Typography>
       </Box>
 
