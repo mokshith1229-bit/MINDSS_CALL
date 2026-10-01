@@ -10,15 +10,15 @@ const AuditLog = require('../models/AuditLog.model');
 exports.getAllTrackingLinks = async (req, res) => {
   try {
     const submissions = await Submission.find({})
-      .select('trackingId submissionType status createdAt answers wbsCode submitterEmail projectDetails')
+      .select('trackingId submissionType status createdAt answers wbsCode submitterEmail projectDetails formData')
       .sort({ createdAt: -1 })
       .lean();
 
     // Map the raw submission data to the format required by the frontend
     const trackingData = submissions.map((sub) => {
       // Legacy compatibility for title/department
-      const submissionTitle = sub.answers?.submissionTitle || sub.answers?.ideaTitle || 'Untitled';
-      const employeeName = sub.answers?.name || sub.answers?.employeeName || 'Unknown';
+      const submissionTitle = sub.answers?.submissionTitle || sub.answers?.ideaTitle || sub.answers?.projectTitle || sub.answers?.title || 'Untitled';
+      const employeeName = sub.answers?.name || sub.answers?.employeeName || sub.answers?.fullName || 'Unknown';
       const employeeId = sub.answers?.employeeId || '';
       const department = sub.answers?.department || sub.answers?.departmentName || 'N/A';
 
@@ -48,6 +48,8 @@ exports.getAllTrackingLinks = async (req, res) => {
         workflowStage,
         status: sub.status,
         createdAt: sub.createdAt,
+        formData: sub.formData || {},
+        answers: sub.answers || {},
       };
     });
 

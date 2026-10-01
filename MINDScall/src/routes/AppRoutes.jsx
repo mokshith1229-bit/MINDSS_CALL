@@ -30,6 +30,13 @@ import FeatureManagement from '../pages/FeatureManagement';
 import MeetingRequestsAdmin from '../pages/MeetingRequestsAdmin';
 import TrackingManagement from '../pages/TrackingManagement';
 import LabCalendar from '../pages/LabCalendar';
+import SuperAdminDashboard from '../pages/dashboards/SuperAdminDashboard';
+import AdminDashboard from '../pages/dashboards/AdminDashboard';
+import EmployeeDashboard from '../pages/dashboards/EmployeeDashboard';
+import EvaluatorDashboard from '../pages/dashboards/EvaluatorDashboard';
+import HODDashboard from '../pages/dashboards/HODDashboard';
+import FinanceDashboard from '../pages/dashboards/FinanceDashboard';
+import DeveloperDashboard from '../pages/dashboards/DeveloperDashboard';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(authStore.getState().isAuthenticated);
@@ -92,6 +99,16 @@ const AppRoutes = () => {
         <Route path="feature-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><FeatureManagement /></ProtectedRoute>} />
         <Route path="tracking-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><TrackingManagement /></ProtectedRoute>} />
         <Route path="lab-calendar" element={<LabCalendar />} />
+        
+        {/* Role-specific Dashboards */}
+        <Route path="dashboards/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
+        <Route path="dashboards/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="dashboards/employee" element={<ProtectedRoute allowedRoles={['EMPLOYEE']}><EmployeeDashboard /></ProtectedRoute>} />
+        <Route path="dashboards/evaluator" element={<ProtectedRoute allowedRoles={['EVALUATOR']}><EvaluatorDashboard /></ProtectedRoute>} />
+        <Route path="dashboards/hod" element={<ProtectedRoute allowedRoles={['HOD']}><HODDashboard /></ProtectedRoute>} />
+        <Route path="dashboards/finance" element={<ProtectedRoute allowedRoles={['FINANCE']}><FinanceDashboard /></ProtectedRoute>} />
+        <Route path="dashboards/developer" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><DeveloperDashboard /></ProtectedRoute>} />
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

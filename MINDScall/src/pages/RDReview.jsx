@@ -24,6 +24,7 @@ import api from '../utils/api';
 import DataTable, { StatusChip } from '../components/DataTable';
 import { parseSubmissionFields, formatKey } from '../utils/submissionParser';
 import Timeline from '../components/Timeline';
+import { authStore } from '../store/authStore';
 
 const RDReview = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -45,6 +46,9 @@ const RDReview = () => {
   const submissionBrowserRef = useRef(null);
   const drawerContentRef = useRef(null);
 
+  const currentUser = authStore.getState().user;
+  const isDeveloper = currentUser?.role === 'DEVELOPER';
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -57,7 +61,17 @@ const RDReview = () => {
       
       const parsedSubs = subs.map(sub => {
         const parsed = parseSubmissionFields(sub);
-        
+        return { parsed, sub };
+      }).filter(({ parsed }) => {
+        if (currentUser && !['SUPER_ADMIN', 'ADMIN', 'DEVELOPER'].includes(currentUser.role)) {
+          const myEmail = (currentUser.email || '').toLowerCase().trim();
+          if (currentUser.role === 'HOD') {
+            const hEmail = (parsed.hodEmail || '').toLowerCase().trim();
+            if (hEmail !== myEmail) return false;
+          }
+        }
+        return true;
+      }).map(({ parsed, sub }) => {
         // Use the actual parsed submission type, fallback to Idea if missing
         const type = parsed.submissionType || 'Idea';
         const formTitle = sub.form?.title || '';
@@ -183,7 +197,9 @@ const RDReview = () => {
     { field: 'actions', headerName: 'Actions', width: 170, renderCell: (row) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button size="small" variant="outlined" onClick={() => handleOpenDetails(row)} sx={{ fontSize: '0.7rem' }}>Inspect</Button>
-          <Button size="small" variant="outlined" color="error" onClick={() => handleDeleteClick(row)} sx={{ fontSize: '0.7rem', borderColor: '#EF4444', color: '#EF4444', '&:hover': { bgcolor: '#FEF2F2', borderColor: '#DC2626' } }}>Delete</Button>
+          {isDeveloper && (
+            <Button size="small" variant="outlined" color="error" onClick={() => handleDeleteClick(row)} sx={{ fontSize: '0.7rem', borderColor: '#EF4444', color: '#EF4444', '&:hover': { bgcolor: '#FEF2F2', borderColor: '#DC2626' } }}>Delete</Button>
+          )}
         </Box>
       )
     },
@@ -216,9 +232,8 @@ const RDReview = () => {
           { label: 'Total Forms', count: totalForms, color: '#0288D1', bg: '#E1F5FE', icon: <FormIcon /> },
           { label: 'Total Ideas', count: totalIdeas, color: '#00897B', bg: '#E0F2F1', icon: <IdeaIcon /> },
           { label: 'Total Proposals', count: totalProposals, color: '#8E24AA', bg: '#F3E5F5', icon: <ProposalIcon /> },
-          { label: 'Pending Review', count: pendingReview, color: '#F57C00', bg: '#FFF3E0', icon: <PendingIcon /> },
         ].map((s) => (
-          <Grid item xs={6} sm={3} key={s.label}>
+          <Grid item xs={12} sm={4} key={s.label}>
             <Card sx={{ borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
               <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box sx={{ width: 48, height: 48, bgcolor: s.bg, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
@@ -234,7 +249,7 @@ const RDReview = () => {
         ))}
       </Grid>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
         {/* Left Sidebar - Forms */}
         <Grid item xs={12} md={3}>
           <Card sx={{ borderRadius: 3, height: '100%', minHeight: 400, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
@@ -279,10 +294,10 @@ const RDReview = () => {
         </Grid>
 
         {/* Right Content - Submissions */}
-        <Grid item xs={12} md={9}>
+        <Grid item xs={12} md={9} sx={{ minWidth: 0 }}>
           <Card sx={{ borderRadius: 3, height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
             <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Submission Browser</Typography>
                   <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5, fontWeight: 600 } }}>
@@ -319,7 +334,7 @@ const RDReview = () => {
               </Box>
 
               <Fade in={true} timeout={400}>
-                <Box ref={submissionBrowserRef}>
+                <Box ref={submissionBrowserRef} sx={{ width: '100%', overflowX: 'auto' }}>
                   <DataTable columns={columns} rows={filteredSubs} />
                 </Box>
               </Fade>
@@ -465,7 +480,9 @@ const RDReview = () => {
             {/* Drawer Footer with Actions */}
             <Box sx={{ p: 2.5, bgcolor: '#FFFFFF', borderTop: '1px solid #E0E0E0', display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
               <Button variant="outlined" color="inherit" onClick={() => setDrawerOpen(false)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>Close</Button>
-              <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => handleDeleteClick(selectedSub)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}>Delete Submission</Button>
+              {isDeveloper && (
+                <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => handleDeleteClick(selectedSub)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, bgcolor: '#EF4444', '&:hover': { bgcolor: '#DC2626' } }}>Delete Submission</Button>
+              )}
             </Box>
           </Box>
         )}

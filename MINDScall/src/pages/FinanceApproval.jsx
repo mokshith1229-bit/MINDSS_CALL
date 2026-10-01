@@ -343,14 +343,7 @@ const FinanceApproval = () => {
               </Card>
             </Box>
 
-            {/* Action Footer */}
-            {selected.status === 'Pending' && (
-              <Box ref={budgetRef} sx={{ p: 3, borderTop: '1px solid #E0E0E0', bgcolor: '#fff', display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                <Button fullWidth variant="contained" color="success" startIcon={<ApproveIcon />} onClick={() => openDialog('approve')} sx={{ fontWeight: 700 }}>Mark Budget Approved</Button>
-                <Button fullWidth variant="contained" color="error" startIcon={<RejectIcon />} onClick={() => openDialog('reject')} sx={{ fontWeight: 700 }}>Mark Budget Rejected</Button>
-                <Button fullWidth variant="outlined" color="warning" startIcon={<ReworkIcon />} onClick={() => openDialog('rework')} sx={{ fontWeight: 700, borderWidth: 2 }}>Request Clarification</Button>
-              </Box>
-            )}
+            {/* Action Footer Removed as per request */}
           </Box>
         )}
       </Drawer>

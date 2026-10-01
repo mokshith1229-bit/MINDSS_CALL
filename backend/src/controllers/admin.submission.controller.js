@@ -720,6 +720,13 @@ exports.updateProjectDetails = async (req, res, next) => {
       });
     }
 
+    if (
+      (implementationStatus === 'Completed') ||
+      (finalReport && finalReport.finalStatus === 'Completed')
+    ) {
+      submission.status = 'COMPLETED';
+    }
+
     submission.markModified('projectDetails');
     await submission.save();
 

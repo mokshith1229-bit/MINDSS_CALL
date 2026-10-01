@@ -478,22 +478,6 @@ function buildFinanceRows(submissions) {
   });
 }
 
-function buildBenefitsRows(submissions) {
-  return submissions.filter(s => s.projectDetails?.expectedBenefits || s.projectDetails?.actualBenefits).map(sub => ({
-    _id: sub._id,
-    trackingId:      sub.trackingId || sub.businessId || '',
-    title:           sub.answers?.title || '',
-    department:      sub.answers?.department || '',
-    owner:           sub.projectDetails?.owner || '',
-    rdStatus:        sub.projectDetails?.implementationStatus || '',
-    progress:        sub.projectDetails?.progressPercentage || 0,
-    expectedBenefits: sub.projectDetails?.expectedBenefits || '',
-    actualBenefits:  sub.projectDetails?.actualBenefits || '',
-    estSavings:      sub.answers?.estimatedSavings || '',
-    actualSavings:   sub.answers?.actualSavings || '',
-    bizImpact:       sub.answers?.businessImpact || '',
-  }));
-}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // COLUMN DEFS for each tab
@@ -571,20 +555,6 @@ const FINANCE_COLS = [
   { key: 'progress',       label: 'Progress',        width: 140, render: r => <ProgressBar value={r.progress} /> },
 ];
 
-const BENEFITS_COLS = [
-  { key: 'trackingId',       label: 'Tracking ID',     width: 160 },
-  { key: 'title',            label: 'Title',            width: 200, wrap: true },
-  { key: 'department',       label: 'Department',       width: 140 },
-  { key: 'owner',            label: 'Project Owner',    width: 150 },
-  { key: 'rdStatus',         label: 'R&D Status',       width: 140 },
-  { key: 'progress',         label: 'Progress',         width: 140, render: r => <ProgressBar value={r.progress} /> },
-  { key: 'expectedBenefits', label: 'Expected Benefits',width: 260, wrap: true },
-  { key: 'actualBenefits',   label: 'Actual Benefits',  width: 260, wrap: true },
-  { key: 'estSavings',       label: 'Est. Savings',     width: 130 },
-  { key: 'actualSavings',    label: 'Actual Savings',   width: 130 },
-  { key: 'bizImpact',        label: 'Business Impact',  width: 120 },
-];
-
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN REPORTS PAGE
 // ══════════════════════════════════════════════════════════════════════════════
@@ -635,7 +605,6 @@ const Reports = () => {
   const timelineRows = useMemo(() => buildTimelineRows(submissions), [submissions]);
   const rdRows       = useMemo(() => buildRdRows(submissions),       [submissions]);
   const financeRows  = useMemo(() => buildFinanceRows(submissions),  [submissions]);
-  const benefitRows  = useMemo(() => buildBenefitsRows(submissions), [submissions]);
 
   // ── KPI values ──────────────────────────────────────────────────────────────
   const kpis = summary?.kpis || {};
@@ -676,7 +645,6 @@ const Reports = () => {
     { label: 'Workflow Timeline',   icon: <CheckIcon  sx={{ fontSize: 14 }} />, count: timelineRows.length },
     { label: 'R&D Updates',         icon: <RdIcon     sx={{ fontSize: 14 }} />, count: rdRows.length },
     { label: 'Finance Report',      icon: <FinanceIcon sx={{ fontSize: 14 }} />, count: financeRows.length },
-    { label: 'Benefits Tracking',   icon: <StarIcon   sx={{ fontSize: 14 }} />, count: benefitRows.length },
   ];
 
   return (
@@ -775,7 +743,7 @@ const Reports = () => {
           {tab > 0 && (
             <Box sx={{ px: 2.5, py: 1.25, borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#FAFAFA' }}>
               <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>
-                {loading ? 'Loading…' : `${[masterRows, evalRows, timelineRows, rdRows, financeRows, benefitRows][tab - 1]?.length ?? 0} records`}
+                {loading ? 'Loading…' : `${[masterRows, evalRows, timelineRows, rdRows, financeRows][tab - 1]?.length ?? 0} records`}
               </Typography>
               <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', fontStyle: 'italic' }}>
                 Click column headers to sort · Use filters above to narrow results
@@ -789,7 +757,6 @@ const Reports = () => {
           {tab === 3 && <ReportTable columns={TIMELINE_COLS} rows={timelineRows} loading={loading} emptyLabel="No timeline events found" />}
           {tab === 4 && <ReportTable columns={RD_COLS}       rows={rdRows}       loading={loading} emptyLabel="No R&D update records found" />}
           {tab === 5 && <ReportTable columns={FINANCE_COLS}  rows={financeRows}  loading={loading} emptyLabel="No finance records found" />}
-          {tab === 6 && <ReportTable columns={BENEFITS_COLS} rows={benefitRows}  loading={loading} emptyLabel="No benefits data found — add expected/actual benefits in R&D Projects" />}
         </Box>
       </Card>
 

@@ -22,7 +22,7 @@ import {
 import api from '../utils/api';
 import { authStore } from '../store/authStore';
 
-const ROLES = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'EVALUATOR', 'HOD', 'FINANCE'];
+const ROLES = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'EVALUATOR', 'HOD', 'FINANCE', 'DEVELOPER'];
 const DEPARTMENTS = [
   'General', 'Engineering', 'Finance', 'Human Resources', 'Operations',
   'Research & Development', 'Legal', 'Marketing', 'Procurement',
@@ -35,6 +35,7 @@ const ROLE_META = {
   EVALUATOR:   { color: '#B45309', bg: '#FEF3C7', label: 'Evaluator' },
   HOD:         { color: '#0F766E', bg: '#CCFBF1', label: 'HOD' },
   FINANCE:     { color: '#C2410C', bg: '#FFEDD5', label: 'Finance' },
+  DEVELOPER:   { color: '#4B5563', bg: '#F3F4F6', label: 'Developer' },
 };
 
 const RoleBadge = ({ role }) => {
@@ -60,7 +61,7 @@ const getInitials = (name = '') =>
 
 const UserManagement = () => {
   const currentUser = authStore.getState().user;
-  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'DEVELOPER';
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);

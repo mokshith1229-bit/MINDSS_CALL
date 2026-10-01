@@ -22,9 +22,12 @@ const logActivity = async (projectId, action, user) => {
 // @access  Private (Admin)
 exports.getAllPilotProjects = async (req, res, next) => {
   try {
-    // 1. Get all submissions that are APPROVED or COMPLETED
+    // 1. Get all submissions that are completely closed in R&D Ongoing (COMPLETED)
     const submissions = await Submission.find({
-      status: { $in: ['APPROVED', 'COMPLETED'] }
+      $or: [
+        { status: 'COMPLETED' },
+        { status: 'APPROVED', 'projectDetails.implementationStatus': 'Completed' }
+      ]
     });
 
     // 2. Ensure PilotProject documents exist for all of them
@@ -36,18 +39,18 @@ exports.getAllPilotProjects = async (req, res, next) => {
       .filter(s => !existingMap.has(s._id.toString()))
       .map(s => ({
         submissionId: s._id,
-        currentPhase: s.status === 'COMPLETED' ? 'Completed' : 'Approved',
-        progress: s.status === 'COMPLETED' ? 100 : 0
+        currentPhase: 'Planning', // Pilot phase starts here
+        progress: 0
       }));
 
     if (newPilotsToCreate.length > 0) {
       await PilotProject.insertMany(newPilotsToCreate);
     }
 
-    // 3. Fetch all again and populate submission data
-    const allPilots = await PilotProject.find().populate({
+    // 3. Fetch only valid pilots again and populate submission data
+    const allPilots = await PilotProject.find({ submissionId: { $in: subIds } }).populate({
       path: 'submissionId',
-      select: 'businessId submissionType answers formData status createdAt'
+      select: 'businessId submissionType answers formData status createdAt projectDetails'
     });
 
     res.status(200).json(new ApiResponse(200, { projects: allPilots }, 'Pilot projects retrieved'));

@@ -133,16 +133,6 @@ const Dashboard = () => {
       color: '#D97706',
       bg: '#FFFBEB',
     },
-    {
-      id: 'rate',
-      title: 'Implementation Rate',
-      value: implementationRate + '%',
-      change: '+1.5%',
-      trend: 'up',
-      icon: 'TrendingUp',
-      color: '#7C3AED',
-      bg: '#F5F3FF',
-    },
   ];
 
   const recent = submissions.map((s) => ({

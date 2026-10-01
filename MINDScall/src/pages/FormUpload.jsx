@@ -29,13 +29,14 @@ import {
 } from '@mui/icons-material';
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+  AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer, Legend, LabelList,
 } from 'recharts';
 import { formStore, uid, slugify, FIELD_TYPE_COLORS, makeDefaultSections } from '../store/formStore';
 import FormBuilder from '../components/FormBuilder';
 import { useDropzone } from 'react-dropzone';
-import { formatKey } from '../utils/submissionParser';
+import { formatKey, parseSubmissionFields } from '../utils/submissionParser';
 import { DynamicSection } from './PublicForm';
 import Timeline from '../components/Timeline';
 
@@ -79,7 +80,7 @@ const useStore = () => {
 // ════════════════════════════════════════════════════════════════
 const AnalyticsTab = ({ forms, submissions, categories }) => {
   const total = submissions.length;
-  const pending = submissions.filter(s => s.status === 'pending').length;
+  const pending = submissions.filter(s => !['approved', 'rejected', 'completed', 'archived'].includes(s.status)).length;
   const approved = submissions.filter(s => s.status === 'approved').length;
   const rejected = submissions.filter(s => s.status === 'rejected').length;
 
@@ -161,67 +162,134 @@ const AnalyticsTab = ({ forms, submissions, categories }) => {
       </Grid>
 
       <Grid container spacing={3}>
-        {/* Monthly Trend */}
-        <Grid xs={12} md={7}>
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TrendIcon sx={{ color: '#2563EB' }} /> Monthly Submission Trends
+        {/* Submission Activity Card */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderRadius: '18px', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#fff', border: '1px solid #E5E7EB', boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.02)' }}>
+            <CardContent sx={{ p: '20px', '&:last-child': { pb: '20px' }, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#1E293B', fontSize: '0.85rem' }}>
+                <TrendIcon sx={{ color: '#2563EB', fontSize: 18 }} /> Submission Activity
               </Typography>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={monthlyTrendData} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 12, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <RechartTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }} />
-                  <Legend />
-                  <Bar dataKey="responses" name="Responses" fill="#2563EB" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="forms" name="Forms Created" fill="#059669" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <Box sx={{ flex: 1, minHeight: 180 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyTrendData} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} dy={10} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                    <RechartTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', fontSize: 12 }} />
+                    <Area type="monotone" dataKey="responses" name="Submissions" stroke="#2563EB" strokeWidth={2.5} fillOpacity={1} fill="url(#colorResponses)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Box>
+              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Total Period Submissions</Typography>
+                <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', fontWeight: 800 }}>{submissions.length}</Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Category Pie */}
-        <Grid xs={12} md={5}>
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PieIcon sx={{ color: '#7C3AED' }} /> Category Distribution
+        {/* Innovation Pipeline Card */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderRadius: '18px', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#fff', border: '1px solid #E5E7EB', boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.02)' }}>
+            <CardContent sx={{ p: '20px', '&:last-child': { pb: '20px' }, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#1E293B', fontSize: '0.85rem' }}>
+                <PieIcon sx={{ color: '#059669', fontSize: 18 }} /> Innovation Pipeline
               </Typography>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={catData} cx="50%" cy="50%" outerRadius={80} dataKey="value" labelLine={false} label={renderLabel}>
-                    {catData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                  </Pie>
-                  <RechartTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
-                {catData.map(c => (
-                  <Chip key={c.name} label={`${c.name}: ${c.value}`} size="small"
-                    sx={{ bgcolor: c.color + '18', color: c.color, fontWeight: 700, fontSize: '0.68rem' }} />
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pt: 1, pb: 1, minHeight: 180 }}>
+                {[
+                  { label: 'Drafts', count: forms.filter(f => f.status === 'draft').length, color: '#94A3B8' },
+                  { label: 'Submitted', count: submissions.filter(s => s.status === 'new' || s.status === 'pending').length, color: '#3B82F6' },
+                  { label: 'Reviewing', count: submissions.filter(s => ['awaiting_rm_review', 'rm_review', 'evaluation', 'reviewing'].includes(s.status)).length, color: '#F59E0B' },
+                  { label: 'Approved', count: submissions.filter(s => s.status === 'approved').length, color: '#10B981' }
+                ].map((stage, i, arr) => (
+                  <Box key={stage.label} sx={{ display: 'flex', alignItems: 'flex-start', position: 'relative', flex: 1 }}>
+                    {i !== arr.length - 1 && (
+                       <Box sx={{ position: 'absolute', left: '7px', top: '20px', bottom: '-4px', width: '2px', bgcolor: '#E2E8F0', zIndex: 0 }} />
+                    )}
+                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: stage.color, mt: 0.25, zIndex: 1, border: '3px solid #fff', boxShadow: '0 0 0 1px #E2E8F0' }} />
+                    <Box sx={{ ml: 2, display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', pr: 1 }}>
+                       <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.8rem' }}>{stage.label}</Typography>
+                       <Typography sx={{ fontWeight: 800, color: '#1E293B', fontSize: '0.9rem' }}>{stage.count}</Typography>
+                    </Box>
+                  </Box>
                 ))}
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Response trend line */}
-        <Grid xs={12}>
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2.5 }}>Response Velocity</Typography>
-              <ResponsiveContainer width="100%" height={160}>
-                <LineChart data={monthlyTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 12, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <RechartTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }} />
-                  <Line type="monotone" dataKey="responses" stroke="#2563EB" strokeWidth={3} dot={{ fill: '#2563EB', r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
+        {/* Workflow Bottlenecks Card */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderRadius: '18px', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#fff', border: '1px solid #E5E7EB', boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.02)' }}>
+            <CardContent sx={{ p: '20px', '&:last-child': { pb: '20px' }, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#1E293B', fontSize: '0.85rem' }}>
+                <StatsIcon sx={{ color: '#F97316', fontSize: 18 }} /> Workflow Bottlenecks
+              </Typography>
+              <Box sx={{ flex: 1, minHeight: 180 }}>
+                {(() => {
+                  const bottleneckData = [
+                    { step: 'RM Review', pending: submissions.filter(s => s.status === 'awaiting_rm_review' || s.status === 'rm_review' || s.status === 'reviewing').length },
+                    { step: 'HOD Review', pending: submissions.filter(s => s.status === 'awaiting_hod_review' || s.status === 'hod_review').length },
+                    { step: 'Evaluation', pending: submissions.filter(s => s.status === 'evaluation').length },
+                    { step: 'Approval', pending: submissions.filter(s => s.status === 'approval_committee').length },
+                  ].sort((a, b) => b.pending - a.pending);
+
+                  return (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={bottleneckData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#F1F5F9" />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="step" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569', fontWeight: 600 }} dx={-5} />
+                        <RechartTooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', fontSize: 12 }} />
+                        <Bar dataKey="pending" name="Pending Actions" fill="#F97316" radius={[0, 4, 4, 0]} barSize={16}>
+                          <LabelList dataKey="pending" position="right" style={{ fill: '#1E293B', fontWeight: 800, fontSize: 11 }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  );
+                })()}
+              </Box>
+              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Total Pending Actions</Typography>
+                <Typography sx={{ fontSize: '0.9rem', color: '#1E293B', fontWeight: 800 }}>
+                  {submissions.filter(s => ['awaiting_rm_review', 'rm_review', 'awaiting_hod_review', 'hod_review', 'evaluation', 'approval_committee', 'reviewing'].includes(s.status)).length}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={12}>
+          <Card sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <CardContent sx={{ p: 3, flex: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <HistoryIcon sx={{ color: '#10B981' }} /> Recent Activity
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: 220, overflowY: 'auto', pr: 2, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#E2E8F0', borderRadius: '4px' } }}>
+                {submissions.slice(0, 4).map(sub => {
+                  const parsed = parseSubmissionFields(sub);
+                  return (
+                  <Box key={sub._id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: '#F8FAFC', borderRadius: 2 }}>
+                    <Box>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#1E293B' }}>{parsed.title}</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#64748B', mt: 0.25 }}>{parsed.employeeName} • {new Date(sub.createdAt).toLocaleDateString()}</Typography>
+                    </Box>
+                    <Chip label={sub.status === 'new' ? 'Pending' : sub.status} size="small" sx={{ fontSize: '0.65rem', fontWeight: 700, height: 22, bgcolor: '#E2E8F0', color: '#475569', textTransform: 'capitalize' }} />
+                  </Box>
+                  );
+                })}
+                {submissions.length === 0 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <Typography sx={{ color: '#94A3B8', fontSize: '0.85rem' }}>No recent activity found.</Typography>
+                  </Box>
+                )}
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -1318,10 +1386,8 @@ const FormUpload = () => {
           { label: 'Published', value: forms.filter(f => f.status === 'published').length, color: '#059669', bg: '#ECFDF5', sub: 'Live & accepting' },
           { label: 'Drafts', value: forms.filter(f => f.status === 'draft').length, color: '#D97706', bg: '#FFFBEB', sub: 'In progress' },
           { label: 'Total Responses', value: submissions.length, color: '#7C3AED', bg: '#F5F3FF', sub: '+5 this week' },
-          { label: 'Pending Review', value: submissions.filter(s => s.status === 'pending').length, color: '#DC2626', bg: '#FEF2F2', sub: 'Need attention' },
-          { label: 'Categories', value: categories.filter(c => c.enabled).length, color: '#0891B2', bg: '#E0F2FE', sub: `${categories.length} total` },
         ].map(s => (
-          <Grid xs={6} sm={4} md={2} key={s.label}>
+          <Grid xs={6} sm={6} md={3} key={s.label}>
             <Card sx={{ borderRadius: 2.5, border: `1px solid ${s.color}18`, transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: `0 6px 20px ${s.color}18` } }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                 <Typography variant="h4" sx={{ fontWeight: 900, color: s.color, lineHeight: 1, mb: 0.25 }}>{s.value}</Typography>

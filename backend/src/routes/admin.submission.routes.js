@@ -8,38 +8,41 @@ const { uploadToS3 } = require('../middlewares/s3.middleware');
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('SUPER_ADMIN', 'ADMIN'));
+
+const allInternalRoles = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'EVALUATOR', 'HOD', 'FINANCE', 'DEVELOPER'];
+const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'DEVELOPER'];
 
 router.route('/')
-  .get(getSubmissions);
+  .get(authorize(...allInternalRoles), getSubmissions);
 
 router.route('/export/:formId')
-  .get(auditLog('EXPORT_SUBMISSIONS_CSV', 'Submission'), exportSubmissionsCSV);
+  .get(authorize(...adminRoles), auditLog('EXPORT_SUBMISSIONS_CSV', 'Submission'), exportSubmissionsCSV);
 
 router.route('/auto-assign-rm')
-  .post(auditLog('AUTO_ASSIGN_RM', 'Submission'), require('../controllers/admin.submission.controller').autoAssignRM);
+  .post(authorize(...adminRoles), auditLog('AUTO_ASSIGN_RM', 'Submission'), require('../controllers/admin.submission.controller').autoAssignRM);
 
 router.route('/:id')
-  .get(getSubmission)
-  .delete(auditLog('DELETE_SUBMISSION', 'Submission'), deleteSubmission);
+  .get(authorize(...allInternalRoles), getSubmission)
+  .delete(authorize(...adminRoles), auditLog('DELETE_SUBMISSION', 'Submission'), deleteSubmission);
 
 router.route('/:id/status')
-  .patch(auditLog('UPDATE_SUBMISSION_STATUS', 'Submission'), updateSubmissionStatus);
+  .patch(authorize(...adminRoles), auditLog('UPDATE_SUBMISSION_STATUS', 'Submission'), updateSubmissionStatus);
 
 router.route('/:id/review')
-  .patch(auditLog('UPDATE_SUBMISSION_REVIEW', 'Submission'), updateSubmissionReview);
+  .patch(authorize(...allInternalRoles), auditLog('UPDATE_SUBMISSION_REVIEW', 'Submission'), updateSubmissionReview);
 
 router.route('/:id/assign-email')
-  .patch(auditLog('ASSIGN_SUBMISSION_EMAIL', 'Submission'), assignSubmissionEmail);
+  .patch(authorize(...adminRoles), auditLog('ASSIGN_SUBMISSION_EMAIL', 'Submission'), assignSubmissionEmail);
 
 router.route('/:id/finance-review')
-  .patch(auditLog('UPDATE_FINANCE_REVIEW', 'Submission'), updateFinanceReview);
+  .patch(authorize(...allInternalRoles), auditLog('UPDATE_FINANCE_REVIEW', 'Submission'), updateFinanceReview);
 
 router.route('/:id/project-details')
-  .patch(auditLog('UPDATE_PROJECT_DETAILS', 'Submission'), updateProjectDetails);
+  .patch(authorize(...allInternalRoles), auditLog('UPDATE_PROJECT_DETAILS', 'Submission'), updateProjectDetails);
 
 router.route('/:id/project-updates')
   .post(
+    authorize(...allInternalRoles),
     auditLog('ADD_PROJECT_UPDATE', 'Submission'),
     upload.array('attachments', 5),
     uploadToS3,
@@ -48,6 +51,7 @@ router.route('/:id/project-updates')
 
 router.route('/:id/test-matrix')
   .post(
+    authorize(...allInternalRoles),
     auditLog('ADD_TEST_MATRIX', 'Submission'),
     upload.array('attachments', 5),
     uploadToS3,
@@ -56,12 +60,14 @@ router.route('/:id/test-matrix')
 
 router.route('/:id/test-matrix/:testId/status')
   .patch(
+    authorize(...allInternalRoles),
     auditLog('UPDATE_TEST_MATRIX_STATUS', 'Submission'),
     updateTestMatrixStatus
   );
 
 router.route('/:id/samples')
   .post(
+    authorize(...allInternalRoles),
     auditLog('ADD_SAMPLE', 'Submission'),
     upload.array('attachments', 5),
     uploadToS3,
@@ -69,9 +75,9 @@ router.route('/:id/samples')
   );
 
 router.route('/:id/schedule-meeting')
-  .post(auditLog('SCHEDULE_MEETING', 'Submission'), scheduleMeeting);
+  .post(authorize(...allInternalRoles), auditLog('SCHEDULE_MEETING', 'Submission'), scheduleMeeting);
 
 router.route('/:id/complete-meeting')
-  .post(auditLog('COMPLETE_MEETING', 'Submission'), completeMeeting);
+  .post(authorize(...allInternalRoles), auditLog('COMPLETE_MEETING', 'Submission'), completeMeeting);
 
 module.exports = router;

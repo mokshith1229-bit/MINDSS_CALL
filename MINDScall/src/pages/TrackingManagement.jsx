@@ -14,9 +14,10 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { parseSubmissionFields } from '../utils/submissionParser';
 
 const API_BASE = import.meta.env.VITE_API_URL;
-const TRACKING_BASE_URL = window.location.origin + '/public-tracking?id=';
+const TRACKING_BASE_URL = window.location.origin + '/track?id=';
 
 const TrackingManagement = () => {
   const navigate = useNavigate();
@@ -41,7 +42,16 @@ const TrackingManagement = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
-        setData(res.data.data.trackingData);
+        const enrichedData = res.data.data.trackingData.map(row => {
+          const parsed = parseSubmissionFields(row);
+          return {
+            ...row,
+            submissionTitle: parsed.title && parsed.title !== 'Untitled Submission' ? parsed.title : row.submissionTitle,
+            employeeName: parsed.employeeName && parsed.employeeName !== 'Unknown' ? parsed.employeeName : row.employeeName,
+            department: parsed.dept && parsed.dept !== 'Unknown' ? parsed.dept : row.department
+          };
+        });
+        setData(enrichedData);
         setKpis(res.data.data.kpis);
       }
     } catch (err) {
@@ -86,7 +96,7 @@ const TrackingManagement = () => {
 
   const handleExportCSV = () => {
     const headers = [
-      'Tracking ID', 'Submission Type', 'Submission Title', 'Employee Name', 
+      'Tracking ID', 'Submission Type', 'Title', 'Employee Name', 
       'Department', 'Workflow Stage', 'Status', 'Tracking Link', 'Created Date'
     ];
     
@@ -153,7 +163,7 @@ const TrackingManagement = () => {
   const columns = [
     { field: 'trackingId', headerName: 'Tracking ID', width: 150, renderCell: (params) => (<strong>{params.value}</strong>) },
     { field: 'submissionType', headerName: 'Type', width: 100 },
-    { field: 'submissionTitle', headerName: 'Submission Title', width: 250 },
+    { field: 'submissionTitle', headerName: 'Title', width: 250 },
     { field: 'employeeName', headerName: 'Submitted By', width: 150 },
     { field: 'department', headerName: 'Department', width: 130 },
     { field: 'workflowStage', headerName: 'Workflow Stage', width: 180 },
@@ -192,11 +202,6 @@ const TrackingManagement = () => {
           <Tooltip title="Open Tracking Page">
             <IconButton size="small" onClick={() => handleOpenLink(params.row.trackingId)} sx={{ color: '#2563EB' }}>
               <OpenIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="View Submission">
-            <IconButton size="small" onClick={() => handleViewSubmission(params.row._id, params.row.trackingId)} sx={{ color: '#2E7D32' }}>
-              <ViewIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>

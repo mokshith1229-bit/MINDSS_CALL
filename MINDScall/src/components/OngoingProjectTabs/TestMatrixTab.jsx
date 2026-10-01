@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, IconButton, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { Add, Science, Edit, AttachFile, CalendarMonth } from '@mui/icons-material';
+import { Add, Science, Edit, AttachFile, CalendarMonth, Delete } from '@mui/icons-material';
 import { handleFileDownload } from '../../utils/fileUtils';
 import ScheduleTestModal from '../LabCalendar/ScheduleTestModal';
 
@@ -82,6 +82,15 @@ const TestMatrixTab = ({ project, onUpdate }) => {
     handleClose();
   };
 
+  const handleDelete = (testId) => {
+    if (window.confirm('Are you sure you want to delete this test?')) {
+      const updatedMatrix = testMatrix.filter(t => t._id !== testId);
+      if (onUpdate && onUpdate.updateProjectDetails) {
+        onUpdate.updateProjectDetails({ testMatrix: updatedMatrix });
+      }
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -103,14 +112,13 @@ const TestMatrixTab = ({ project, onUpdate }) => {
               <TableCell sx={{ fontWeight: 600, color: '#605E5C' }}>Req. Date</TableCell>
               <TableCell sx={{ fontWeight: 600, color: '#605E5C' }}>Duration</TableCell>
               <TableCell sx={{ fontWeight: 600, color: '#605E5C' }}>Priority</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#605E5C' }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 600, color: '#605E5C' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {testMatrix.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 3, color: '#605E5C' }}>No tests added to the matrix.</TableCell>
+                <TableCell colSpan={6} align="center" sx={{ py: 3, color: '#605E5C' }}>No tests added to the matrix.</TableCell>
               </TableRow>
             ) : (
               testMatrix.map((t, i) => {
@@ -123,12 +131,12 @@ const TestMatrixTab = ({ project, onUpdate }) => {
                     <TableCell>{t.estimatedDuration} hrs</TableCell>
                     <TableCell>{t.priority}</TableCell>
                     <TableCell>
-                      <Chip size="small" label={t.status} sx={{ fontWeight: 600 }} />
-                    </TableCell>
-                    <TableCell>
                       <IconButton size="small" onClick={() => handleOpen(t)} title="Edit Test"><Edit fontSize="small" /></IconButton>
                       <IconButton size="small" onClick={() => { setScheduleItem(t); setScheduleOpen(true); }} sx={{ color: '#0078D4' }} title="Request Lab Slot">
                         <CalendarMonth fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDelete(t._id)} color="error" title="Delete Test">
+                        <Delete fontSize="small" />
                       </IconButton>
                     </TableCell>
                   </TableRow>

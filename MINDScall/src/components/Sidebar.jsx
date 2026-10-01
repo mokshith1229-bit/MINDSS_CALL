@@ -46,6 +46,18 @@ const navSections = [
     ],
   },
   {
+    sectionLabel: 'Role Dashboards',
+    items: [
+      { label: 'Super Admin', icon: <DashboardIcon fontSize="small" />, path: '/dashboards/super-admin', featureKey: 'module.dashboard_super_admin' },
+      { label: 'Admin', icon: <DashboardIcon fontSize="small" />, path: '/dashboards/admin', featureKey: 'module.dashboard_admin' },
+      { label: 'Employee', icon: <DashboardIcon fontSize="small" />, path: '/dashboards/employee', featureKey: 'module.dashboard_employee' },
+      { label: 'Evaluator', icon: <DashboardIcon fontSize="small" />, path: '/dashboards/evaluator', featureKey: 'module.dashboard_evaluator' },
+      { label: 'HOD', icon: <DashboardIcon fontSize="small" />, path: '/dashboards/hod', featureKey: 'module.dashboard_hod' },
+      { label: 'Finance', icon: <DashboardIcon fontSize="small" />, path: '/dashboards/finance', featureKey: 'module.dashboard_finance' },
+      { label: 'Developer', icon: <DashboardIcon fontSize="small" />, path: '/dashboards/developer', featureKey: 'module.dashboard_developer' },
+    ],
+  },
+  {
     sectionLabel: 'Innovation',
     items: [
       { label: 'Form Upload', icon: <UploadIcon fontSize="small" />, path: '/form-upload', featureKey: 'module.form_upload' },

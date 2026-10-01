@@ -139,7 +139,7 @@ const OngoingProjectWorkspace = () => {
           {/* BACK BUTTON */}
           <Button
             startIcon={<ArrowBack sx={{ fontSize: 18 }} />}
-            onClick={() => navigate('/rd-ongoing')}
+            onClick={() => navigate('/rd-ongoing-projects')}
             sx={{
               color: '#475569',
               textTransform: 'none',
@@ -182,7 +182,7 @@ const OngoingProjectWorkspace = () => {
                   lineHeight: 1.3
                 }}
               >
-                {project.title}
+                {project.parsedTitle || 'Untitled Project'}
               </Typography>
               <Chip
                 label={status}
@@ -395,7 +395,7 @@ const OngoingProjectWorkspace = () => {
             <SamplesTab project={project} onUpdate={{ addSample: handleAddSample }} />
           </TabPanel>
           <TabPanel value={tabIndex} index={3}>
-            <TestMatrixTab project={project} onUpdate={{ addTestMatrix: handleAddTestMatrix }} />
+            <TestMatrixTab project={project} onUpdate={{ addTestMatrix: handleAddTestMatrix, updateProjectDetails: handleUpdate }} />
           </TabPanel>
           <TabPanel value={tabIndex} index={4}>
             <WorkPlanTab project={project} onUpdate={handleUpdate} />

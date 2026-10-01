@@ -84,6 +84,7 @@ const DataTable = ({ columns, rows, rowsPerPageDefault = 7, searchable = false }
           borderRadius: 2,
           overflow: 'hidden',
           border: '1px solid #E5E7EB',
+          width: '100%',
         }}
       >
         <TableContainer sx={{ maxHeight: 520 }}>
