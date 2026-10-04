@@ -54,10 +54,13 @@ const IssuesTab = ({ project, onUpdate }) => {
 
     setIssues(updated);
     setOpen(false);
+    onUpdate({ issues: updated });
   };
 
   const handleDelete = (index) => {
-    setIssues(issues.filter((_, i) => i !== index));
+    const updated = issues.filter((_, i) => i !== index);
+    setIssues(updated);
+    onUpdate({ issues: updated });
   };
 
   const handleSaveToProject = () => {
@@ -136,14 +139,10 @@ const IssuesTab = ({ project, onUpdate }) => {
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 600, borderBottom: '1px solid #EDEBE9' }}>{editIndex >= 0 ? 'Edit Issue' : 'Log New Issue'}</DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField label="Issue/Risk Title" size="small" fullWidth value={title} onChange={e => setTitle(e.target.value)} required />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Description & Impact" size="small" fullWidth multiline rows={3} value={desc} onChange={e => setDesc(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <TextField label="Issue/Risk Title" size="small" fullWidth value={title} onChange={e => setTitle(e.target.value)} required />
+            <TextField label="Description & Impact" size="small" fullWidth multiline rows={3} value={desc} onChange={e => setDesc(e.target.value)} />
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <FormControl size="small" fullWidth required>
                 <InputLabel>Severity</InputLabel>
                 <Select value={severity} label="Severity" onChange={e => setSeverity(e.target.value)}>
@@ -153,8 +152,6 @@ const IssuesTab = ({ project, onUpdate }) => {
                   <MenuItem value="Critical">Critical</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <FormControl size="small" fullWidth required>
                 <InputLabel>Status</InputLabel>
                 <Select value={status} label="Status" onChange={e => setStatus(e.target.value)}>
@@ -164,11 +161,9 @@ const IssuesTab = ({ project, onUpdate }) => {
                   <MenuItem value="Closed">Closed</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Date Reported" type="date" size="small" fullWidth value={reportedDate} onChange={e => setReportedDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-            </Grid>
-          </Grid>
+            </Box>
+            <TextField label="Date Reported" type="date" size="small" fullWidth value={reportedDate} onChange={e => setReportedDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid #EDEBE9' }}>
           <Button onClick={() => setOpen(false)} sx={{ textTransform: 'none', color: '#605E5C' }}>Cancel</Button>

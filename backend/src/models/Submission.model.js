@@ -118,7 +118,7 @@ const submissionSchema = new mongoose.Schema(
       }
     ],
     projectDetails: {
-      owner: { type: String, default: null },
+      owner: { type: String, default: 'chtech.in' },
       implementationStatus: { 
         type: String, 
         enum: ['Approved', 'Not Started', 'Planning', 'In Progress', 'Pilot Testing', 'Near Completion', 'Completed', 'On Hold'],
@@ -182,6 +182,12 @@ const submissionSchema = new mongoose.Schema(
         completionPercentage: { type: Number, default: 0 }
       }],
       initiation: {
+        // Frontend fields
+        approvalDate: Date,
+        kickoffDate: Date,
+        sponsor: String,
+        remarks: String,
+        
         startDate: Date,
         teamConfirmation: Boolean,
         piConfirmed: { type: Boolean, default: false },
@@ -235,7 +241,9 @@ const submissionSchema = new mongoose.Schema(
         responsiblePerson: String,
         expectedDeliverable: String,
         completionPercentage: { type: Number, default: 0 },
-        status: { type: String, enum: ['NOT STARTED', 'IN PROGRESS', 'COMPLETED', 'DELAYED'], default: 'NOT STARTED' },
+        status: { type: String, default: 'Not Started' },
+        plannedManHours: { type: Number, default: 0 },
+        actualManHours: { type: Number, default: 0 },
         documents: [{
           filename: String,
           url: String,
@@ -247,7 +255,7 @@ const submissionSchema = new mongoose.Schema(
           responsiblePerson: String,
           startDate: Date,
           dueDate: Date,
-          status: { type: String, enum: ['NOT STARTED', 'IN PROGRESS', 'COMPLETED', 'DELAYED'], default: 'NOT STARTED' },
+          status: { type: String, default: 'Not Started' },
           completionPercentage: { type: Number, default: 0 },
           attachments: [{ filename: String, url: String, mimetype: String, storageProvider: { type: String, default: 'local' }, objectKey: String }],
           notes: String
@@ -270,7 +278,17 @@ const submissionSchema = new mongoose.Schema(
         attachments: [{ filename: String, url: String, mimetype: String, storageProvider: { type: String, default: 'local' }, objectKey: String }]
       }],
       financials: {
-        amountReleased: { type: Number, default: 0 },
+        totalBudget: { type: Number, default: 0 },
+        spentToDate: { type: Number, default: 0 },
+        remainingBudget: { type: Number, default: 0 },
+        expenditureLogs: [{
+          category: String,
+          amount: Number,
+          description: String,
+          date: { type: Date, default: Date.now },
+          addedBy: String
+        }],
+        amountReleased: { type: Number, default: 0 }, // Kept for backward compatibility
         amountSpent: { type: Number, default: 0 },
         committedAmount: { type: Number, default: 0 },
         expenditures: [{
@@ -298,19 +316,28 @@ const submissionSchema = new mongoose.Schema(
         proposedSolution: String,
         responsiblePerson: String,
         targetResolutionDate: Date,
-        status: { type: String, enum: ['OPEN', 'IN PROGRESS', 'RESOLVED', 'CLOSED'], default: 'OPEN' },
+        status: String, // Removed strict enum to allow frontend status like 'Open', 'Mitigated', etc.
         reportedAt: { type: Date, default: Date.now },
-        reportedBy: String
+        reportedBy: String,
+        // Added frontend fields
+        title: String,
+        description: String,
+        severity: String,
+        reportedDate: Date,
+        resolutionDate: Date
       }],
       changeRequests: [{
-        type: String,
+        type: { type: String },
         description: String,
         requestedBy: String,
         requestedAt: { type: Date, default: Date.now },
-        status: { type: String, enum: ['DRAFT', 'SUBMITTED', 'UNDER REVIEW', 'APPROVED', 'REJECTED'], default: 'SUBMITTED' },
+        status: String, // Removed strict enum to allow frontend status like 'Pending'
         reviewedAt: Date,
         reviewedBy: String,
-        comments: String
+        comments: String,
+        // Added frontend fields
+        requestDate: Date,
+        resolutionDate: Date
       }],
       projectReviews: [{
         reviewDate: { type: Date, default: Date.now },
@@ -328,6 +355,12 @@ const submissionSchema = new mongoose.Schema(
       }],
       finalReport: {
         summary: String,
+        commercializationPlan: String,
+        finalStatus: String,
+        deliverablesConfirmed: Boolean,
+        submissionDate: Date,
+        
+        // Old backend fields
         objectives: String,
         methodology: String,
         results: String,

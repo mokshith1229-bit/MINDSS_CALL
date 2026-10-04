@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Grid, TextField, Button, Avatar, Chip, Slider, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Grid, TextField, Button, Avatar, Chip, Slider, CircularProgress, IconButton } from '@mui/material';
 import { Send, CloudUpload, AttachFile, Chat, CheckCircle } from '@mui/icons-material';
 import { formStore } from '../../store/formStore';
+import { authStore } from '../../store/authStore';
 import { handleFileDownload } from '../../utils/fileUtils';
+import { Delete } from '@mui/icons-material';
 
 const ProgressUpdatesTab = ({ project, onUpdate }) => {
   const [title, setTitle] = useState('');
@@ -11,7 +13,25 @@ const ProgressUpdatesTab = ({ project, onUpdate }) => {
   const [files, setFiles] = useState([]);
   const [posting, setPosting] = useState(false);
 
+  const user = authStore.getState().user;
+  const isPrivileged = ['SUPER_ADMIN', 'ADMIN', 'DEVELOPER'].includes(user?.role?.toUpperCase());
+
   const updates = project?.projectDetails?.updates || [];
+
+  const handleDeleteUpdate = async (indexToDel) => {
+    if (!window.confirm('Are you sure you want to delete this update?')) return;
+    
+    // Reverse index calculation because array is reversed on display
+    const realIndex = updates.length - 1 - indexToDel;
+    const newUpdates = [...updates];
+    newUpdates.splice(realIndex, 1);
+    
+    try {
+      await formStore.updateProjectDetails(project.id, { updates: newUpdates });
+    } catch (err) {
+      console.error('Failed to delete update:', err);
+    }
+  };
 
   const handlePostUpdate = async () => {
     if (!title.trim() || !desc.trim()) return;
@@ -87,9 +107,16 @@ const ProgressUpdatesTab = ({ project, onUpdate }) => {
                     <Typography variant="caption" sx={{ color: '#605E5C' }}>{(update.updatedBy || update.user)} • {new Date(update.timestamp).toLocaleString()}</Typography>
                   </Box>
                 </Box>
-                {update.progressPercentage !== undefined && (
-                  <Chip label={`${update.progressPercentage}% Progress`} size="small" sx={{ bgcolor: '#E0E7FF', color: '#4338CA', fontWeight: 600 }} />
-                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {update.progressPercentage !== undefined && (
+                    <Chip label={`${update.progressPercentage}% Progress`} size="small" sx={{ bgcolor: '#E0E7FF', color: '#4338CA', fontWeight: 600 }} />
+                  )}
+                  {isPrivileged && (
+                    <IconButton size="small" color="error" onClick={() => handleDeleteUpdate(idx)}>
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  )}
+                </Box>
               </Box>
               <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: '#323130', pl: 5.5, mb: 2 }}>{update.description || update.text}</Typography>
               

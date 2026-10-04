@@ -160,14 +160,12 @@ const BudgetTab = ({ project, onUpdate }) => {
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 600, borderBottom: '1px solid #EDEBE9' }}>Log Expense</DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Amount (₹)" type="number" size="small" fullWidth value={newLogAmt} onChange={e => setNewLogAmt(e.target.value)} required />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField label="Date" type="date" size="small" fullWidth value={newLogDate} onChange={e => setNewLogDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12}>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <FormControl size="small" fullWidth required>
                 <InputLabel>Category</InputLabel>
                 <Select value={newLogCat} label="Category" onChange={e => setNewLogCat(e.target.value)}>
@@ -178,11 +176,9 @@ const BudgetTab = ({ project, onUpdate }) => {
                   <MenuItem value="Other">Other</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12}>
               <TextField label="Description" size="small" fullWidth value={newLogDesc} onChange={e => setNewLogDesc(e.target.value)} required />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid #EDEBE9' }}>
           <Button onClick={() => setOpen(false)} sx={{ textTransform: 'none', color: '#605E5C' }}>Cancel</Button>

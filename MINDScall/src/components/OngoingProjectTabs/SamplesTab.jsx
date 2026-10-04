@@ -107,37 +107,34 @@ const SamplesTab = ({ project, onUpdate }) => {
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editItem ? 'Edit Sample' : 'Add New Sample'}</DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Sample Name" fullWidth size="small" value={sampleName} onChange={e => setSampleName(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField label="Sample Type" fullWidth size="small" value={sampleType} onChange={e => setSampleType(e.target.value)} placeholder="e.g. Biological, Chemical" />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Quantity" fullWidth size="small" value={quantity} onChange={e => setQuantity(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField label="Source" fullWidth size="small" value={source} onChange={e => setSource(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Status" select fullWidth size="small" value={status} onChange={e => setStatus(e.target.value)}>
                 {['PENDING', 'RECEIVED', 'IN TESTING', 'CONSUMED', 'RETURNED'].map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
               </TextField>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Remarks" fullWidth multiline rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} />
-            </Grid>
-            <Grid item xs={12}>
+              <Box sx={{ flex: 1 }} />
+            </Box>
+            <TextField label="Remarks" fullWidth multiline rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} />
+            <Box>
               <Button variant="outlined" component="label" startIcon={<AttachFile />}>
                 Upload Document
                 <input type="file" hidden multiple onChange={e => setFiles(Array.from(e.target.files))} />
               </Button>
-              <Box sx={{ mt: 1 }}>
-                {files.map(f => <Chip key={f.name} label={f.name} size="small" sx={{ mr: 1, mb: 1 }} />)}
-              </Box>
-            </Grid>
-          </Grid>
+              {files.length > 0 && (
+                <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {files.map(f => <Chip key={f.name} label={f.name} size="small" />)}
+                </Box>
+              )}
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>

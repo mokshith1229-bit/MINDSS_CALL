@@ -50,10 +50,13 @@ const ChangeRequestsTab = ({ project, onUpdate }) => {
 
     setRequests(updated);
     setOpen(false);
+    onUpdate({ changeRequests: updated });
   };
 
   const handleDelete = (index) => {
-    setRequests(requests.filter((_, i) => i !== index));
+    const updated = requests.filter((_, i) => i !== index);
+    setRequests(updated);
+    onUpdate({ changeRequests: updated });
   };
 
   const handleSaveToProject = () => {
@@ -119,8 +122,8 @@ const ChangeRequestsTab = ({ project, onUpdate }) => {
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 600, borderBottom: '1px solid #EDEBE9' }}>{editIndex >= 0 ? 'Edit Change Request' : 'New Change Request'}</DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <FormControl size="small" fullWidth required>
                 <InputLabel>Type</InputLabel>
                 <Select value={reqType} label="Type" onChange={e => setReqType(e.target.value)}>
@@ -130,24 +133,18 @@ const ChangeRequestsTab = ({ project, onUpdate }) => {
                   <MenuItem value="Other">Other</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField label="Request Date" type="date" size="small" fullWidth value={reqDate} onChange={e => setReqDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Justification & Description" size="small" fullWidth multiline rows={4} value={desc} onChange={e => setDesc(e.target.value)} required />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl size="small" fullWidth required>
-                <InputLabel>Status</InputLabel>
-                <Select value={status} label="Status" onChange={e => setStatus(e.target.value)}>
-                  <MenuItem value="Pending">Pending Review</MenuItem>
-                  <MenuItem value="Approved">Approved</MenuItem>
-                  <MenuItem value="Rejected">Rejected</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+            </Box>
+            <TextField label="Justification & Description" size="small" fullWidth multiline rows={4} value={desc} onChange={e => setDesc(e.target.value)} required />
+            <FormControl size="small" fullWidth required>
+              <InputLabel>Status</InputLabel>
+              <Select value={status} label="Status" onChange={e => setStatus(e.target.value)}>
+                <MenuItem value="Pending">Pending Review</MenuItem>
+                <MenuItem value="Approved">Approved</MenuItem>
+                <MenuItem value="Rejected">Rejected</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid #EDEBE9' }}>
           <Button onClick={() => setOpen(false)} sx={{ textTransform: 'none', color: '#605E5C' }}>Cancel</Button>

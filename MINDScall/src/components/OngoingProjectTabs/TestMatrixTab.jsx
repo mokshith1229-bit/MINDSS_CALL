@@ -150,75 +150,61 @@ const TestMatrixTab = ({ project, onUpdate }) => {
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>{editItem ? 'Edit Test' : 'Add New Test'}</DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Test Name" fullWidth size="small" value={testName} onChange={e => setTestName(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField label="Related Phase (Milestone)" select fullWidth size="small" value={relatedPhase} onChange={e => setRelatedPhase(e.target.value)}>
                 <MenuItem value="">None</MenuItem>
                 {phases.map(p => <MenuItem key={p._id} value={p._id}>{p.name}</MenuItem>)}
               </TextField>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Test Description" fullWidth multiline rows={2} value={testDescription} onChange={e => setTestDescription(e.target.value)} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Test Objective" fullWidth multiline rows={2} value={testObjective} onChange={e => setTestObjective(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Box>
+            
+            <TextField label="Test Description" fullWidth multiline rows={2} value={testDescription} onChange={e => setTestDescription(e.target.value)} />
+            <TextField label="Test Objective" fullWidth multiline rows={2} value={testObjective} onChange={e => setTestObjective(e.target.value)} />
+            
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Sample" select fullWidth size="small" value={sampleRef} onChange={e => setSampleRef(e.target.value)}>
                 <MenuItem value="">None</MenuItem>
                 {samples.map(s => <MenuItem key={s._id} value={s._id}>{s.sampleName}</MenuItem>)}
               </TextField>
-            </Grid>
-            <Grid item xs={12} sm={4}>
               <TextField label="Sample Quantity" type="number" fullWidth size="small" value={sampleQuantity} onChange={e => setSampleQuantity(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
               <TextField label="Priority" select fullWidth size="small" value={priority} onChange={e => setPriority(e.target.value)}>
                 {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
               </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Required Equipment / Facility" fullWidth size="small" value={requiredEquipment} onChange={e => setRequiredEquipment(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField label="Responsible Person" fullWidth size="small" value={responsiblePerson} onChange={e => setResponsiblePerson(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Estimated Duration (Hrs)" type="number" fullWidth size="small" value={estimatedDuration} onChange={e => setEstimatedDuration(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
               <TextField label="Required Date" type="date" fullWidth size="small" value={requiredDate} onChange={e => setRequiredDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
               <TextField label="Status" select fullWidth size="small" value={status} onChange={e => setStatus(e.target.value)}>
                 {['DRAFT', 'SUBMITTED', 'UNDER REVIEW', 'APPROVED', 'CHANGES REQUIRED', 'SCHEDULED', 'IN PROGRESS', 'COMPLETED'].map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
               </TextField>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Test Procedure / Method" fullWidth multiline rows={3} value={testProcedure} onChange={e => setTestProcedure(e.target.value)} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Expected Result / Output" fullWidth multiline rows={2} value={expectedResult} onChange={e => setExpectedResult(e.target.value)} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Remarks" fullWidth multiline rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} />
-            </Grid>
-            <Grid item xs={12}>
+            </Box>
+
+            <TextField label="Test Procedure / Method" fullWidth multiline rows={3} value={testProcedure} onChange={e => setTestProcedure(e.target.value)} />
+            <TextField label="Expected Result / Output" fullWidth multiline rows={2} value={expectedResult} onChange={e => setExpectedResult(e.target.value)} />
+            <TextField label="Remarks" fullWidth multiline rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} />
+            
+            <Box>
               <Button variant="outlined" component="label" startIcon={<AttachFile />}>
                 Upload Document
                 <input type="file" hidden multiple onChange={e => setFiles(Array.from(e.target.files))} />
               </Button>
-              <Box sx={{ mt: 1 }}>
-                {files.map(f => <Chip key={f.name} label={f.name} size="small" sx={{ mr: 1, mb: 1 }} />)}
-                {editItem && editItem.attachments && editItem.attachments.map((att, aIdx) => (
-                  <Chip key={aIdx} icon={<AttachFile fontSize="small" />} label={att.filename} size="small" variant="outlined" onClick={() => handleFileDownload(att)} clickable sx={{ mr: 1, mb: 1 }} />
-                ))}
-              </Box>
-            </Grid>
-          </Grid>
+              {(files.length > 0 || (editItem && editItem.attachments && editItem.attachments.length > 0)) && (
+                <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {files.map(f => <Chip key={f.name} label={f.name} size="small" />)}
+                  {editItem && editItem.attachments && editItem.attachments.map((att, aIdx) => (
+                    <Chip key={aIdx} icon={<AttachFile fontSize="small" />} label={att.filename} size="small" variant="outlined" onClick={() => handleFileDownload(att)} clickable />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>

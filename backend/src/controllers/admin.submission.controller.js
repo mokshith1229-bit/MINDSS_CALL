@@ -679,7 +679,7 @@ exports.updateProjectDetails = async (req, res, next) => {
   try {
     const { 
       owner, implementationStatus, progressPercentage, updateText, expectedBenefits, actualBenefits,
-      objectives, initiation, milestones, progressReports, financials, documents, issues, changeRequests, projectReviews, finalReport, testMatrix, samples
+      objectives, initiation, milestones, progressReports, financials, documents, issues, changeRequests, projectReviews, finalReport, testMatrix, samples, updates
     } = req.body;
 
     const submission = await Submission.findById(req.params.id);
@@ -710,6 +710,7 @@ exports.updateProjectDetails = async (req, res, next) => {
     if (finalReport !== undefined) submission.projectDetails.finalReport = finalReport;
     if (testMatrix !== undefined) submission.projectDetails.testMatrix = testMatrix;
     if (samples !== undefined) submission.projectDetails.samples = samples;
+    if (updates !== undefined) submission.projectDetails.updates = updates;
 
     if (updateText) {
       if (!submission.projectDetails.updates) submission.projectDetails.updates = [];

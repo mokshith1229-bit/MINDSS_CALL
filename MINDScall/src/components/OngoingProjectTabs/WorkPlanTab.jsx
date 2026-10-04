@@ -13,20 +13,30 @@ const WorkPlanTab = ({ project, onUpdate }) => {
   const [mDesc, setMDesc] = useState('');
   const [mTargetDate, setMTargetDate] = useState('');
   const [mStatus, setMStatus] = useState('Not Started');
+  const [mPlannedHours, setMPlannedHours] = useState('');
+  const [mActualHours, setMActualHours] = useState('');
+  const [mTasks, setMTasks] = useState([]);
 
   const handleOpenDialog = (index = -1) => {
     setEditIndex(index);
     if (index >= 0) {
       const m = milestones[index];
-      setMTitle(m.title || '');
+      setMTitle(m.title || m.name || '');
       setMDesc(m.description || '');
-      setMTargetDate(m.targetDate ? new Date(m.targetDate).toISOString().split('T')[0] : '');
+      const date = m.targetDate || m.plannedCompletionDate;
+      setMTargetDate(date ? new Date(date).toISOString().split('T')[0] : '');
       setMStatus(m.status || 'Not Started');
+      setMPlannedHours(m.plannedManHours || '');
+      setMActualHours(m.actualManHours || '');
+      setMTasks(m.tasks || []);
     } else {
       setMTitle('');
       setMDesc('');
       setMTargetDate('');
       setMStatus('Not Started');
+      setMPlannedHours('');
+      setMActualHours('');
+      setMTasks([]);
     }
     setOpen(true);
   };
@@ -38,11 +48,15 @@ const WorkPlanTab = ({ project, onUpdate }) => {
   const handleSaveMilestone = () => {
     if (!mTitle.trim()) return;
     const newM = {
-      title: mTitle,
+      name: mTitle,
+      title: mTitle, // Keep for backward compatibility with frontend
       description: mDesc,
-      targetDate: mTargetDate,
+      plannedCompletionDate: mTargetDate,
+      targetDate: mTargetDate, // Keep for backward compatibility
       status: mStatus,
-      tasks: editIndex >= 0 ? milestones[editIndex].tasks || [] : []
+      plannedManHours: mPlannedHours ? Number(mPlannedHours) : 0,
+      actualManHours: mActualHours ? Number(mActualHours) : 0,
+      tasks: mTasks
     };
 
     let updated;
@@ -55,10 +69,13 @@ const WorkPlanTab = ({ project, onUpdate }) => {
 
     setMilestones(updated);
     setOpen(false);
+    onUpdate({ milestones: updated });
   };
 
   const handleDelete = (index) => {
-    setMilestones(milestones.filter((_, i) => i !== index));
+    const updated = milestones.filter((_, i) => i !== index);
+    setMilestones(updated);
+    onUpdate({ milestones: updated });
   };
 
   const handleSaveToProject = () => {
@@ -198,7 +215,7 @@ const WorkPlanTab = ({ project, onUpdate }) => {
                   color: '#64748B',
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
-                  width: '30%',
+                  width: '25%',
                   py: 1.75
                 }}
               >
@@ -211,12 +228,26 @@ const WorkPlanTab = ({ project, onUpdate }) => {
                   color: '#64748B',
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
-                  width: '18%',
+                  width: '15%',
                   py: 1.75
                 }}
               >
                 Target Date
               </TableCell>
+              <TableCell
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  color: '#64748B',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  width: '15%',
+                  py: 1.75
+                }}
+              >
+                Man Hours (P/A)
+              </TableCell>
+
               <TableCell
                 sx={{
                   fontWeight: 700,
@@ -237,7 +268,7 @@ const WorkPlanTab = ({ project, onUpdate }) => {
                   color: '#64748B',
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
-                  width: '15%',
+                  width: '10%',
                   py: 1.75
                 }}
               >
@@ -251,7 +282,7 @@ const WorkPlanTab = ({ project, onUpdate }) => {
                   color: '#64748B',
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
-                  width: '22%',
+                  width: '15%',
                   py: 1.75
                 }}
               >
@@ -320,10 +351,19 @@ const WorkPlanTab = ({ project, onUpdate }) => {
                 return (
                   <TableRow key={idx} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                     <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>{m.title}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>{m.title || m.name}</Typography>
                       {m.description && <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mt: 0.5 }}>{m.description}</Typography>}
                     </TableCell>
-                    <TableCell sx={{ color: '#334155', fontSize: '0.875rem' }}>{m.targetDate ? new Date(m.targetDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell sx={{ color: '#334155', fontSize: '0.875rem' }}>
+                      {(m.targetDate || m.plannedCompletionDate) ? new Date(m.targetDate || m.plannedCompletionDate).toLocaleDateString() : 'N/A'}
+                    </TableCell>
+                    <TableCell sx={{ color: '#334155', fontSize: '0.875rem' }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>P: {m.plannedManHours || 0}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#059669' }}>A: {m.actualManHours || 0}</Typography>
+                      </Box>
+                    </TableCell>
+
                     <TableCell>
                       <Chip size="small" label={m.status || 'Not Started'} sx={{ bgcolor: colors.bg, color: colors.color, fontWeight: 600, borderRadius: '6px' }} />
                     </TableCell>
@@ -341,6 +381,7 @@ const WorkPlanTab = ({ project, onUpdate }) => {
                 );
               })
             )}
+
           </TableBody>
         </Table>
       </TableContainer>
@@ -349,17 +390,14 @@ const WorkPlanTab = ({ project, onUpdate }) => {
       <Dialog open={open} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 600, borderBottom: '1px solid #E2E8F0', color: '#0F172A' }}>{editIndex >= 0 ? 'Edit Milestone' : 'Add Milestone'}</DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
-              <TextField label="Title" size="small" fullWidth value={mTitle} onChange={e => setMTitle(e.target.value)} required />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Description" size="small" fullWidth multiline rows={2} value={mDesc} onChange={e => setMDesc(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <TextField label="Title" size="small" fullWidth value={mTitle} onChange={e => setMTitle(e.target.value)} required />
+            
+            <TextField label="Description" size="small" fullWidth multiline rows={2} value={mDesc} onChange={e => setMDesc(e.target.value)} />
+            
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField label="Target Date" type="date" size="small" fullWidth value={mTargetDate} onChange={e => setMTargetDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+              
               <FormControl size="small" fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select value={mStatus} label="Status" onChange={e => setMStatus(e.target.value)}>
@@ -369,8 +407,31 @@ const WorkPlanTab = ({ project, onUpdate }) => {
                   <MenuItem value="Delayed">Delayed</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-          </Grid>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+              <TextField label="Planned Man Hours" type="number" size="small" fullWidth value={mPlannedHours} onChange={e => setMPlannedHours(e.target.value)} />
+              <TextField label="Actual Man Hours" type="number" size="small" fullWidth value={mActualHours} onChange={e => setMActualHours(e.target.value)} />
+            </Box>
+
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0F172A' }}>Tasks for this Milestone</Typography>
+            {mTasks.map((t, i) => (
+              <Box key={i} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                <TextField size="small" fullWidth value={t.name || ''} onChange={e => {
+                  const newTasks = [...mTasks];
+                  newTasks[i] = { ...newTasks[i], name: e.target.value };
+                  setMTasks(newTasks);
+                }} placeholder="Enter task description or title..." />
+                <IconButton size="small" onClick={() => {
+                  setMTasks(mTasks.filter((_, idx) => idx !== i));
+                }} color="error"><Delete fontSize="small" /></IconButton>
+              </Box>
+            ))}
+            <Button size="small" variant="outlined" startIcon={<Add />} onClick={() => setMTasks([...mTasks, { name: '' }])} sx={{ alignSelf: 'flex-start', textTransform: 'none' }}>
+              Add Task
+            </Button>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid #E2E8F0' }}>
           <Button onClick={handleCloseDialog} sx={{ textTransform: 'none', color: '#64748B' }}>Cancel</Button>

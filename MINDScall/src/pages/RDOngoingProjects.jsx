@@ -84,13 +84,13 @@ const RDOngoingProjects = () => {
     )},
     { field: 'parsedTitle', headerName: 'Project Title', flex: 1, minWidth: 250, renderCell: (params) => <Typography variant="body2" sx={{ fontWeight: 600, color: '#323130' }}>{params.value || 'Untitled'}</Typography> },
     { field: 'projectOwner', headerName: 'Owner', width: 180, renderCell: (params) => {
-      const owner = params.row.projectDetails?.owner || 'Unassigned';
+      const owner = 'chtech.in';
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar sx={{ width: 24, height: 24, bgcolor: owner === 'Unassigned' ? '#e1dfdd' : '#0078D4', fontSize: '0.75rem' }}>
-            {owner === 'Unassigned' ? '?' : owner.charAt(0)}
+          <Avatar sx={{ width: 24, height: 24, bgcolor: '#0078D4', fontSize: '0.75rem' }}>
+            {owner.charAt(0).toUpperCase()}
           </Avatar>
-          <Typography variant="body2" sx={{ color: owner === 'Unassigned' ? '#a19f9d' : '#323130' }}>{owner}</Typography>
+          <Typography variant="body2" sx={{ color: '#323130' }}>{owner}</Typography>
         </Box>
       );
     }},

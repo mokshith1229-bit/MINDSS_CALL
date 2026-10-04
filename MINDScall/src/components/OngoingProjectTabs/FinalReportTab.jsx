@@ -38,19 +38,19 @@ const FinalReportTab = ({ project, onUpdate }) => {
         
         <Divider sx={{ mb: 4 }} />
 
-        <Grid container spacing={4}>
-          <Grid item xs={12}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130', mb: 1 }}>Executive Summary of Outcomes</Typography>
             <TextField fullWidth multiline rows={4} value={summary} onChange={e => setSummary(e.target.value)} placeholder="Summarize the final results, what worked, what didn't..." />
-          </Grid>
+          </Box>
           
-          <Grid item xs={12}>
+          <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#323130', mb: 1 }}>Commercialization / Next Phase Plan</Typography>
             <TextField fullWidth multiline rows={4} value={commercializationPlan} onChange={e => setCommercializationPlan(e.target.value)} placeholder="Describe the path to production, handover, or scaling..." />
-          </Grid>
+          </Box>
           
-          <Grid item xs={12} sm={4}>
-            <FormControl size="small" fullWidth>
+          <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' } }}>
+            <FormControl size="small" sx={{ flex: 1 }}>
               <InputLabel>Final Closure Status</InputLabel>
               <Select value={finalStatus} label="Final Closure Status" onChange={e => setFinalStatus(e.target.value)}>
                 <MenuItem value="Pending">Pending / Incomplete</MenuItem>
@@ -59,25 +59,22 @@ const FinalReportTab = ({ project, onUpdate }) => {
                 <MenuItem value="Transferred">Transferred to Ops</MenuItem>
               </Select>
             </FormControl>
-          </Grid>
 
-          <Grid item xs={12} sm={4}>
-            <TextField label="Closure Date" type="date" size="small" fullWidth value={submissionDate} onChange={e => setSubmissionDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-          </Grid>
+            <TextField label="Closure Date" type="date" size="small" sx={{ flex: 1 }} value={submissionDate} onChange={e => setSubmissionDate(e.target.value)} InputLabelProps={{ shrink: true }} />
 
-          <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
             <FormControlLabel
               control={<Switch checked={deliverablesConfirmed} onChange={e => setDeliverablesConfirmed(e.target.checked)} color="primary" />}
               label={<Typography variant="body2" sx={{ fontWeight: 600, color: '#323130' }}>All Deliverables Met</Typography>}
+              sx={{ flex: 1 }}
             />
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 1 }}>
             <Button variant="contained" size="large" startIcon={<Save />} onClick={handleSave} sx={{ bgcolor: finalStatus === 'Completed' ? '#10B981' : '#0078D4', boxShadow: 'none', textTransform: 'none', px: 4 }}>
               Submit Final Report
             </Button>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
     </Box>
   );
