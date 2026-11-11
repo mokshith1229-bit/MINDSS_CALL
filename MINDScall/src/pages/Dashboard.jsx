@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Box, Grid, Typography, Card, CardContent, Chip, Divider,
-  LinearProgress, IconButton, Tooltip,
+  LinearProgress, IconButton, Tooltip, Skeleton,
 } from '@mui/material';
 import {
   MoreVert as MoreIcon,
@@ -200,6 +200,26 @@ const Dashboard = () => {
     fontSize: 12,
     fontFamily: '"Inter", sans-serif',
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ width: '100%', minWidth: 0 }}>
+        <Skeleton variant="rectangular" height={100} sx={{ mb: 4, borderRadius: 3 }} />
+        <Grid container spacing={2.5} sx={{ mb: 4 }}>
+          {[1, 2, 3].map(i => (
+            <Grid item xs={12} md={4} key={i}>
+              <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 3 }} />
+            </Grid>
+          ))}
+        </Grid>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 3 }} />
+          </Grid>
+        </Grid>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ width: '100%', minWidth: 0 }}>

@@ -29,14 +29,14 @@ const COLLAPSED_WIDTH = 68;
 
 // Brand green extracted from MINDS logo
 const BRAND_GREEN = '#2E7D32';
-const BRAND_GREEN_BG = 'rgba(46, 125, 50, 0.14)';
-const BRAND_GREEN_HOVER = 'rgba(46, 125, 50, 0.08)';
-const SIDEBAR_BG = '#111C2D';
-const SIDEBAR_SECTION_LABEL = 'rgba(255,255,255,0.32)';
+const BRAND_GREEN_BG = 'rgba(46, 125, 50, 0.1)';
+const BRAND_GREEN_HOVER = 'rgba(255, 255, 255, 0.04)';
+const SIDEBAR_BG = '#1E293B'; // Softer navy/slate
+const SIDEBAR_SECTION_LABEL = 'rgba(255,255,255,0.4)';
 const NAV_TEXT_ACTIVE = '#FFFFFF';
-const NAV_TEXT_DEFAULT = 'rgba(255,255,255,0.58)';
-const NAV_ICON_ACTIVE = '#5EC265';
-const NAV_ICON_DEFAULT = 'rgba(255,255,255,0.42)';
+const NAV_TEXT_DEFAULT = 'rgba(255,255,255,0.7)';
+const NAV_ICON_ACTIVE = '#4CAF50';
+const NAV_ICON_DEFAULT = 'rgba(255,255,255,0.5)';
 
 const navSections = [
   {

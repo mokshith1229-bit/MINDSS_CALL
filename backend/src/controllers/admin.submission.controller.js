@@ -31,6 +31,8 @@ async function presignSubmission(submission) {
 }
 
 const Form = require('../models/Form.model');
+const FormVersion = require('../models/FormVersion.model');
+const Counter = require('../models/Counter.model');
 const Batch = require('../models/Batch.model');
 const FinanceBatch = require('../models/FinanceBatch.model');
 const ApiError = require('../utils/ApiError');
@@ -696,6 +698,13 @@ exports.updateProjectDetails = async (req, res, next) => {
     if (progressPercentage !== undefined) submission.projectDetails.progressPercentage = Number(progressPercentage);
     if (expectedBenefits !== undefined) submission.projectDetails.expectedBenefits = expectedBenefits;
     if (actualBenefits !== undefined) submission.projectDetails.actualBenefits = actualBenefits;
+    if (req.body.abstract !== undefined) {
+      if (!submission.answers) submission.answers = {};
+      submission.answers.abstract = req.body.abstract;
+      submission.answers.description = req.body.abstract;
+      if (!submission.formData) submission.formData = {};
+      submission.formData['Abstract'] = { value: req.body.abstract, type: 'textarea', section: 'Overview' };
+    }
     
     // New Project Lifecycle Fields
     if (objectives !== undefined) submission.projectDetails.objectives = objectives;
@@ -1084,6 +1093,162 @@ exports.addSample = async (req, res, next) => {
 
     await submission.save();
     res.status(200).json(new ApiResponse(200, { samples: submission.projectDetails.samples }, 'Samples updated successfully'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Create project manually directly in ongoing projects
+// @route   POST /api/v1/admin/submissions/manual
+// @access  Private (Internal roles)
+exports.createManualProject = async (req, res, next) => {
+  try {
+    const {
+      title,
+      submissionType = 'Proposal',
+      projectOwner,
+      employeeName,
+      department,
+      abstract,
+      implementationStatus = 'Approved',
+      wbsCode: customWbsCode,
+      submitterEmail
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return next(new ApiError(400, 'Project title is required'));
+    }
+
+    const type = submissionType.toLowerCase().includes('idea') ? 'Idea' : 'Proposal';
+    const counterId = type === 'Proposal' ? 'PROP' : 'IDEA';
+
+    // Gap-filling businessId
+    const existing = await Submission.find(
+      { businessId: { $regex: `^${counterId}-` } },
+      { businessId: 1, _id: 0 }
+    ).lean();
+    const usedNums = new Set(
+      existing.map((s) => {
+        const parts = s.businessId?.split('-');
+        return parts && parts[1] ? parseInt(parts[1], 10) : null;
+      }).filter((n) => n !== null && !isNaN(n))
+    );
+    let nextSeq = 1;
+    while (usedNums.has(nextSeq)) nextSeq++;
+    const businessId = `${counterId}-${String(nextSeq).padStart(3, '0')}`;
+    await Counter.findByIdAndUpdate(
+      { _id: counterId },
+      { $set: { seq: nextSeq } },
+      { upsert: true }
+    );
+
+    // Tracking ID
+    const trackingId = `${type === 'Proposal' ? 'MCP' : 'MCI'}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+
+    // WBS Code
+    let wbsCode = customWbsCode && customWbsCode.trim() ? customWbsCode.trim() : null;
+    if (!wbsCode && type === 'Proposal') {
+      const wbsCounter = await Counter.findByIdAndUpdate(
+        { _id: 'WBS-MCP' },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      wbsCode = `MCP-${String(wbsCounter.seq).padStart(3, '0')}`;
+    }
+
+    // Find or fallback Form & FormVersion
+    let form = await Form.findOne().sort({ createdAt: 1 });
+    let formVersion = null;
+    if (form) {
+      formVersion = await FormVersion.findOne({ form: form._id }).sort({ versionNumber: -1 });
+    }
+
+    if (!form) {
+      form = await Form.create({
+        title: 'R&D Innovation Form',
+        description: 'Internal project management form',
+        slug: `rd-form-${Date.now()}`,
+        status: 'PUBLISHED',
+        category: 'Innovation'
+      });
+      formVersion = await FormVersion.create({
+        form: form._id,
+        versionNumber: 1,
+        schema: []
+      });
+    }
+
+    const resolvedOwner = projectOwner || 'chtech.in';
+    const resolvedEmployeeName = employeeName || req.user?.name || 'R&D Team';
+    const resolvedDept = department || 'R&D';
+    const resolvedEmail = submitterEmail || req.user?.email || '';
+
+    const answers = {
+      title: title.trim(),
+      projectTitle: title.trim(),
+      proposalTitle: title.trim(),
+      abstract: abstract || '',
+      description: abstract || '',
+      employeeName: resolvedEmployeeName,
+      name: resolvedEmployeeName,
+      department: resolvedDept,
+      dept: resolvedDept,
+      submissionType: type,
+      category: resolvedDept,
+    };
+
+    const formData = {
+      'Project Title': { value: title.trim(), type: 'text', section: 'Overview' },
+      'Abstract': { value: abstract || '', type: 'textarea', section: 'Overview' },
+      'Full Name': { value: resolvedEmployeeName, type: 'text', section: 'Employee Information' },
+      'Department': { value: resolvedDept, type: 'text', section: 'Employee Information' },
+    };
+
+    const submission = await Submission.create({
+      form: form._id,
+      formVersion: formVersion ? formVersion._id : form._id,
+      businessId,
+      trackingId,
+      wbsCode: wbsCode || 'N/A',
+      submissionType: type,
+      submitterEmail: resolvedEmail,
+      status: 'APPROVED',
+      answers,
+      formData,
+      attachments: [],
+      projectDetails: {
+        owner: resolvedOwner,
+        implementationStatus: implementationStatus || 'Approved',
+        progressPercentage: 0,
+        expectedBenefits: '',
+        actualBenefits: '',
+        updates: [],
+        objectives: [],
+        initiation: {
+          startDate: new Date(),
+          approvalDate: new Date(),
+          remarks: abstract || '',
+          status: 'IN_PROGRESS'
+        }
+      },
+      timeline: [
+        {
+          stage: 'Manual Creation',
+          actionBy: req.user?.name || req.user?.email || 'Admin',
+          role: req.user?.role || 'Admin',
+          remarks: 'Project created manually in R&D Ongoing Projects.',
+          timestamp: new Date()
+        }
+      ]
+    });
+
+    const populated = await Submission.findById(submission._id)
+      .populate('form', 'title slug')
+      .populate('formVersion', 'schema');
+
+    await presignSubmission(populated);
+
+    res.status(201).json(new ApiResponse(201, { submission: populated }, 'Project created successfully'));
   } catch (err) {
     next(err);
   }

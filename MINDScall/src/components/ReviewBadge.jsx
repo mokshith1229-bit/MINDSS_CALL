@@ -11,8 +11,8 @@ export default function ReviewBadge({ decision }) {
 
   let config = {
     label: 'Pending',
-    color: '#9E9E9E',
-    bgcolor: '#F5F5F5',
+    color: '#64748B',
+    bgcolor: '#F8FAFC',
     icon: <PendingIcon sx={{ fontSize: 16 }} />
   };
 
@@ -21,16 +21,16 @@ export default function ReviewBadge({ decision }) {
     case 'APPROVED':
       config = {
         label: 'Accepted',
-        color: '#2E7D32',
-        bgcolor: '#E8F5E9',
+        color: '#166534',
+        bgcolor: '#F0FDF4',
         icon: <CheckCircleIcon sx={{ fontSize: 16 }} />
       };
       break;
     case 'REJECTED':
       config = {
         label: 'Rejected',
-        color: '#D32F2F',
-        bgcolor: '#FFEBEE',
+        color: '#991B1B',
+        bgcolor: '#FEF2F2',
         icon: <CancelIcon sx={{ fontSize: 16 }} />
       };
       break;
@@ -38,8 +38,8 @@ export default function ReviewBadge({ decision }) {
     case 'CLARIFICATION REQUESTED':
       config = {
         label: 'Clarification Req.',
-        color: '#ED6C02',
-        bgcolor: '#FFF3E0',
+        color: '#92400E',
+        bgcolor: '#FFFBEB',
         icon: <HelpIcon sx={{ fontSize: 16 }} />
       };
       break;
@@ -58,8 +58,8 @@ export default function ReviewBadge({ decision }) {
         color: config.color,
         fontWeight: 700,
         fontSize: '0.75rem',
-        borderRadius: '8px',
-        border: `1px solid ${config.color}40`, // 40% opacity border
+        borderRadius: '6px',
+        border: `1px solid ${config.color}30`, // 30% opacity border
         '& .MuiChip-icon': {
           color: config.color
         }

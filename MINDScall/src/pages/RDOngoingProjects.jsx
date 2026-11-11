@@ -1,20 +1,79 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, TextField, InputAdornment, Button, Chip, Grid, ToggleButtonGroup, ToggleButton,
-  LinearProgress, IconButton, Avatar, Paper, Badge
+  LinearProgress, IconButton, Avatar, Paper, Badge, Dialog, DialogTitle, DialogContent, DialogActions,
+  FormControl, InputLabel, Select, MenuItem, CircularProgress, Alert
 } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import {
-  Search as SearchIcon, Visibility as ViewIcon, BusinessCenter as ProjectIcon, CheckCircle, PlayArrow, Error, Star, Receipt, Chat, Event
+  Search as SearchIcon, Visibility as ViewIcon, BusinessCenter as ProjectIcon, CheckCircle, PlayArrow,
+  Error, Star, Receipt, Chat, Event, Add as AddIcon, Close as CloseIcon
 } from '@mui/icons-material';
 import { formStore } from '../store/formStore';
+import { authStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 
 const RDOngoingProjects = () => {
   const [submissions, setSubmissions] = useState([]);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const navigate = useNavigate();
+
+  const currentUser = authStore.getState()?.user;
+
+  const defaultProjectData = {
+    title: '',
+    submissionType: 'Proposal',
+    projectOwner: 'chtech.in',
+    employeeName: currentUser?.name || '',
+    department: currentUser?.department || 'R&D',
+    submitterEmail: currentUser?.email || '',
+    implementationStatus: 'Approved',
+    wbsCode: '',
+    abstract: ''
+  };
+
+  const [newProjectData, setNewProjectData] = useState(defaultProjectData);
+
+  const handleOpenDialog = () => {
+    const user = authStore.getState()?.user;
+    setNewProjectData({
+      ...defaultProjectData,
+      employeeName: user?.name || '',
+      department: user?.department || 'R&D',
+      submitterEmail: user?.email || '',
+    });
+    setAttemptedSubmit(false);
+    setCreateError('');
+    setOpenCreateDialog(true);
+  };
+
+  const handleCreateProject = async () => {
+    if (!newProjectData.title.trim()) {
+      setAttemptedSubmit(true);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setCreateError('');
+      const created = await formStore.createManualProject(newProjectData);
+      setOpenCreateDialog(false);
+      setNewProjectData(defaultProjectData);
+      if (created && created.id) {
+        navigate(`/ongoing-projects/${created.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to create project:', err);
+      setCreateError(err.response?.data?.message || err.message || 'Failed to create project.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     formStore.init();
@@ -119,13 +178,33 @@ const RDOngoingProjects = () => {
     <Box sx={{ p: { xs: 2, md: 4 }, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#FAFAFA' }}>
       
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, color: '#323130', fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif', mb: 1 }}>
-          R&D Ongoing Projects
-        </Typography>
-        <Typography variant="body1" sx={{ color: '#605E5C' }}>
-          Track implementation progress and lifecycle of all approved R&D initiatives.
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 600, color: '#323130', fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif', mb: 1 }}>
+            R&D Ongoing Projects
+          </Typography>
+          <Typography variant="body1" sx={{ color: '#605E5C' }}>
+            Track implementation progress and lifecycle of all approved R&D initiatives.
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleOpenDialog}
+          sx={{
+            bgcolor: '#0078D4',
+            '&:hover': { bgcolor: '#006CBE' },
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            borderRadius: '6px',
+            px: 2.5,
+            py: 1,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}
+        >
+          Add New Project
+        </Button>
       </Box>
 
       {/* KPI Cards */}
@@ -194,6 +273,185 @@ const RDOngoingProjects = () => {
           }}
         />
       </Paper>
+
+      {/* Create New Project Dialog */}
+      <Dialog
+        open={openCreateDialog}
+        onClose={() => !isSubmitting && setOpenCreateDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: '12px', p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                bgcolor: '#EBF3FC',
+                color: '#0078D4',
+                borderRadius: '8px',
+                p: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <ProjectIcon sx={{ fontSize: 24 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1E293B' }}>
+                Add New R&D Project
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Enter initial details. Full workspace and tabs will be available immediately.
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton onClick={() => setOpenCreateDialog(false)} disabled={isSubmitting} size="small">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2.5 }}>
+          {createError && (
+            <Alert severity="error" onClose={() => setCreateError('')}>
+              {createError}
+            </Alert>
+          )}
+
+          <TextField
+            autoFocus
+            label="Project Title"
+            placeholder="e.g., High-Efficiency Heat Exchanger Redesign"
+            required
+            fullWidth
+            size="small"
+            value={newProjectData.title}
+            onChange={(e) => setNewProjectData({ ...newProjectData, title: e.target.value })}
+            error={!newProjectData.title.trim() && attemptedSubmit}
+            helperText={!newProjectData.title.trim() && attemptedSubmit ? 'Project Title is required' : ''}
+          />
+
+          <Grid container spacing={2}>
+            <Grid xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel id="submission-type-label">Submission Type</InputLabel>
+                <Select
+                  labelId="submission-type-label"
+                  label="Submission Type"
+                  value={newProjectData.submissionType}
+                  onChange={(e) => setNewProjectData({ ...newProjectData, submissionType: e.target.value })}
+                >
+                  <MenuItem value="Proposal">Proposal</MenuItem>
+                  <MenuItem value="Idea">Idea</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel id="initial-status-label">Initial Status</InputLabel>
+                <Select
+                  labelId="initial-status-label"
+                  label="Initial Status"
+                  value={newProjectData.implementationStatus}
+                  onChange={(e) => setNewProjectData({ ...newProjectData, implementationStatus: e.target.value })}
+                >
+                  <MenuItem value="Approved">Approved</MenuItem>
+                  <MenuItem value="Planning">Planning</MenuItem>
+                  <MenuItem value="In Progress">In Progress</MenuItem>
+                  <MenuItem value="Pilot Testing">Pilot Testing</MenuItem>
+                  <MenuItem value="Not Started">Not Started</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={2}>
+            <Grid xs={12} sm={6}>
+              <TextField
+                label="Department"
+                placeholder="e.g., Process Development"
+                fullWidth
+                size="small"
+                value={newProjectData.department}
+                onChange={(e) => setNewProjectData({ ...newProjectData, department: e.target.value })}
+              />
+            </Grid>
+            <Grid xs={12} sm={6}>
+              <TextField
+                label="Project Owner / Lead"
+                placeholder="e.g., chtech.in"
+                fullWidth
+                size="small"
+                value={newProjectData.projectOwner}
+                onChange={(e) => setNewProjectData({ ...newProjectData, projectOwner: e.target.value })}
+              />
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={2}>
+            <Grid xs={12} sm={6}>
+              <TextField
+                label="Submitter / Lead Name"
+                placeholder="e.g., Dr. Rajesh Kumar"
+                fullWidth
+                size="small"
+                value={newProjectData.employeeName}
+                onChange={(e) => setNewProjectData({ ...newProjectData, employeeName: e.target.value })}
+              />
+            </Grid>
+            <Grid xs={12} sm={6}>
+              <TextField
+                label="WBS Code (Optional)"
+                placeholder="Auto-generated if blank (e.g. MCP-012)"
+                fullWidth
+                size="small"
+                value={newProjectData.wbsCode}
+                onChange={(e) => setNewProjectData({ ...newProjectData, wbsCode: e.target.value })}
+              />
+            </Grid>
+          </Grid>
+
+          <TextField
+            label="Initial Abstract / Overview (Optional)"
+            placeholder="Brief summary of the initiative, background, or goals..."
+            multiline
+            rows={3}
+            fullWidth
+            size="small"
+            value={newProjectData.abstract}
+            onChange={(e) => setNewProjectData({ ...newProjectData, abstract: e.target.value })}
+          />
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenCreateDialog(false)}
+            disabled={isSubmitting}
+            sx={{ textTransform: 'none', color: '#64748B' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateProject}
+            disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={18} color="inherit" /> : <AddIcon />}
+            sx={{
+              bgcolor: '#0078D4',
+              '&:hover': { bgcolor: '#006CBE' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '6px',
+              px: 2.5
+            }}
+          >
+            {isSubmitting ? 'Creating...' : 'Create & Open Workspace'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

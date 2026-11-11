@@ -4,7 +4,7 @@ import {
   Button, Drawer, IconButton, Chip, Tabs, Tab, Divider, CircularProgress,
   List, ListItem, ListItemButton, ListItemText, Tooltip, Avatar, Fade,
   FormControl, InputLabel, Select, MenuItem,
-  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, Skeleton
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -211,7 +211,32 @@ const RDReview = () => {
   const pendingReview = submissions.filter(s => s.status === 'NEW').length;
 
   if (loading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><CircularProgress /></Box>;
+    return (
+      <Box sx={{ width: '100%', minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+          <Skeleton variant="circular" width={48} height={48} />
+          <Box>
+            <Skeleton variant="text" width={200} height={32} />
+            <Skeleton variant="text" width={350} height={20} />
+          </Box>
+        </Box>
+        <Grid container spacing={2.5} sx={{ mb: 4 }}>
+          {[1, 2, 3].map((i) => (
+            <Grid item xs={12} sm={4} key={i}>
+              <Skeleton variant="rectangular" height={90} sx={{ borderRadius: 3 }} />
+            </Grid>
+          ))}
+        </Grid>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={3}>
+            <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 3 }} />
+          </Grid>
+          <Grid item xs={12} md={9}>
+            <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 3 }} />
+          </Grid>
+        </Grid>
+      </Box>
+    );
   }
 
   return (

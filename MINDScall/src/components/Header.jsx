@@ -117,7 +117,8 @@ const Header = ({ sidebarOpen }) => {
       sx={{
         backgroundColor: '#ffffff',
         color: '#111827',
-        borderBottom: '1px solid #E5E7EB',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
         zIndex: (theme) => theme.zIndex.drawer + 1,
         width: '100%',
       }}
@@ -267,7 +268,8 @@ const Header = ({ sidebarOpen }) => {
             mt: 1,
             borderRadius: 2,
             boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            border: '1px solid #E5E7EB',
+            border: '1px solid',
+            borderColor: 'divider',
           },
         }}
       >
@@ -275,7 +277,8 @@ const Header = ({ sidebarOpen }) => {
           sx={{
             px: 2.5,
             py: 1.75,
-            borderBottom: '1px solid #E5E7EB',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -370,7 +373,8 @@ const Header = ({ sidebarOpen }) => {
             borderRadius: 2,
             minWidth: 220,
             boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            border: '1px solid #E5E7EB',
+            border: '1px solid',
+            borderColor: 'divider',
           },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}

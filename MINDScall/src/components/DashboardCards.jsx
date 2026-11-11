@@ -32,16 +32,17 @@ const DashboardCards = ({ dynamicStats = [] }) => {
             <Card
               elevation={0}
               sx={{
-                borderRadius: 3,
-                border: '1px solid #E5E7EB',
-                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+                borderRadius: 2,
+                border: '1px solid #E2E8F0',
+                boxShadow: '0px 1px 2px rgba(15, 23, 42, 0.04), 0px 1px 3px rgba(15, 23, 42, 0.02)',
                 position: 'relative',
                 overflow: 'hidden',
                 cursor: 'default',
-                transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                transition: 'box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
                 '&:hover': {
-                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
-                  borderColor: '#D1D5DB',
+                  boxShadow: '0px 4px 6px rgba(15, 23, 42, 0.05), 0px 10px 15px rgba(15, 23, 42, 0.03)',
+                  borderColor: '#CBD5E1',
+                  transform: 'translateY(-2px)',
                 },
                 // Colored top accent bar
                 '&::before': {
@@ -56,7 +57,7 @@ const DashboardCards = ({ dynamicStats = [] }) => {
                 },
               }}
             >
-              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography

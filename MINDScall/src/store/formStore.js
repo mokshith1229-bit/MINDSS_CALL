@@ -501,6 +501,62 @@ export const formStore = {
     notify();
   },
 
+  async createManualProject(projectData){
+    try {
+      const res = await api.post('/admin/submissions/manual', projectData);
+      if (res.data && res.data.success) {
+        const s = res.data.data.submission;
+        const parsed = parseSubmissionFields(s);
+        const formattedSub = {
+          id: s._id,
+          formId: s.form?._id || s.form,
+          formTitle: s.form?.title || 'R&D Project',
+          answers: s.answers || {},
+          formData: s.formData || {},
+          formVersion: s.formVersion || {},
+          parsedTitle: parsed.title,
+          employeeName: parsed.employeeName,
+          employeeCode: parsed.employeeCode,
+          dept: parsed.dept,
+          abstract: parsed.abstract,
+          benefits: parsed.benefits,
+          rmValue: parsed.rmValue,
+          hodValue: parsed.hodValue,
+          rmEmail: parsed.rmEmail,
+          rmName: parsed.rmName,
+          hodEmail: parsed.hodEmail,
+          hodName: parsed.hodName,
+          budget: parsed.budget,
+          submitterEmail: s.submitterEmail || '',
+          status: s.status ? s.status.toLowerCase() : 'approved',
+          businessId: parsed.businessId,
+          trackingId: s.trackingId || '',
+          wbsCode: s.wbsCode || '',
+          submissionType: parsed.submissionType,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+          attachments: s.attachments || [],
+          timeline: s.timeline || [],
+          workflow: s.workflow || {},
+          projectDetails: parsed.projectDetails || {
+            owner: 'chtech.in',
+            implementationStatus: 'Approved',
+            progressPercentage: 0,
+            updates: [],
+            expectedBenefits: '',
+            actualBenefits: ''
+          },
+        };
+        _submissions = [formattedSub, ..._submissions];
+        notify();
+        return formattedSub;
+      }
+    } catch (err) {
+      console.error('Failed to create manual project:', err);
+      throw err;
+    }
+  },
+
   async updateSubmissionStatus(id,status){
     try {
       const res = await api.patch(`/admin/submissions/${id}/status`, {

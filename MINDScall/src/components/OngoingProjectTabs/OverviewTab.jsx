@@ -5,7 +5,7 @@ import {
   IconButton, Divider
 } from '@mui/material';
 import {
-  Add, Delete, Save, Description, TrackChanges, BarChart
+  Add, Delete, Save, Description, TrackChanges, BarChart, Edit
 } from '@mui/icons-material';
 
 const OverviewTab = ({ project, onUpdate }) => {
@@ -14,6 +14,9 @@ const OverviewTab = ({ project, onUpdate }) => {
   const [newObj, setNewObj] = useState('');
   const [expBenefits, setExpBenefits] = useState(pDetails.expectedBenefits || project?.benefits || '');
   const [actBenefits, setActBenefits] = useState(pDetails.actualBenefits || '');
+  const rawAbstract = project?.abstract || project?.answers?.abstract || project?.projectDetails?.abstract || '';
+  const [abstractText, setAbstractText] = useState(rawAbstract);
+  const [isEditingAbstract, setIsEditingAbstract] = useState(false);
 
   const handleAddObjective = () => {
     if (!newObj.trim()) return;
@@ -37,7 +40,6 @@ const OverviewTab = ({ project, onUpdate }) => {
     ? `${project?.employeeName || 'Unknown'}${project?.employeeCode ? ` (${project.employeeCode})` : ' (Unknown)'}`
     : 'Unknown (Unknown)';
   const department = project?.dept || 'Unknown';
-  const rawAbstract = project?.abstract || project?.answers?.abstract || project?.projectDetails?.abstract || '';
   const abstractParagraphs = rawAbstract ? rawAbstract.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean) : [];
 
   return (
@@ -99,48 +101,100 @@ const OverviewTab = ({ project, onUpdate }) => {
         </Box>
 
         {/* Abstract / Proposal Details Header */}
-        <Typography variant="subtitle2" sx={{ color: '#1E293B', fontWeight: 600, fontSize: '0.8125rem', mb: 1.25 }}>
-          Abstract / Proposal Details
-        </Typography>
-
-        {/* Abstract Content Box */}
-        <Box
-          sx={{
-            p: 2.5,
-            bgcolor: '#F8FAFC',
-            border: '1px solid #F1F5F9',
-            borderRadius: '8px'
-          }}
-        >
-          {abstractParagraphs.length > 0 ? (
-            abstractParagraphs.map((para, idx) => (
-              <Typography
-                key={idx}
-                variant="body2"
-                sx={{
-                  color: '#334155',
-                  fontSize: '0.875rem',
-                  lineHeight: 1.65,
-                  mb: idx < abstractParagraphs.length - 1 ? 2 : 0
-                }}
-              >
-                {para}
-              </Typography>
-            ))
-          ) : (
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#334155',
-                fontSize: '0.875rem',
-                lineHeight: 1.65,
-                whiteSpace: 'pre-wrap'
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.25 }}>
+          <Typography variant="subtitle2" sx={{ color: '#1E293B', fontWeight: 600, fontSize: '0.8125rem' }}>
+            Abstract / Proposal Details
+          </Typography>
+          {!isEditingAbstract ? (
+            <Button
+              size="small"
+              startIcon={<Edit sx={{ fontSize: 14 }} />}
+              onClick={() => {
+                setAbstractText(rawAbstract);
+                setIsEditingAbstract(true);
               }}
+              sx={{ textTransform: 'none', fontSize: '0.75rem', p: 0.5, color: '#0078D4' }}
             >
-              {rawAbstract || 'No abstract provided.'}
-            </Typography>
+              Edit
+            </Button>
+          ) : (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setAbstractText(rawAbstract);
+                  setIsEditingAbstract(false);
+                }}
+                sx={{ textTransform: 'none', fontSize: '0.75rem', color: '#64748B' }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => {
+                  onUpdate({ abstract: abstractText });
+                  setIsEditingAbstract(false);
+                }}
+                sx={{ textTransform: 'none', fontSize: '0.75rem', bgcolor: '#0078D4', '&:hover': { bgcolor: '#006CBE' } }}
+              >
+                Save
+              </Button>
+            </Box>
           )}
         </Box>
+
+        {/* Abstract Content Box */}
+        {isEditingAbstract ? (
+          <TextField
+            multiline
+            rows={4}
+            fullWidth
+            size="small"
+            value={abstractText}
+            onChange={(e) => setAbstractText(e.target.value)}
+            placeholder="Enter proposal or project details..."
+            sx={{ bgcolor: '#fff', mb: 1 }}
+          />
+        ) : (
+          <Box
+            sx={{
+              p: 2.5,
+              bgcolor: '#F8FAFC',
+              border: '1px solid #F1F5F9',
+              borderRadius: '8px'
+            }}
+          >
+            {abstractParagraphs.length > 0 ? (
+              abstractParagraphs.map((para, idx) => (
+                <Typography
+                  key={idx}
+                  variant="body2"
+                  sx={{
+                    color: '#334155',
+                    fontSize: '0.875rem',
+                    lineHeight: 1.65,
+                    mb: idx < abstractParagraphs.length - 1 ? 2 : 0
+                  }}
+                >
+                  {para}
+                </Typography>
+              ))
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: '#64748B',
+                  fontSize: '0.875rem',
+                  lineHeight: 1.65,
+                  fontStyle: 'italic'
+                }}
+              >
+                No abstract or details provided yet. Click 'Edit' to add project details.
+              </Typography>
+            )}
+          </Box>
+        )}
       </Paper>
 
       {/* PROJECT OBJECTIVES */}

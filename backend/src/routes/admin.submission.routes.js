@@ -1,5 +1,5 @@
 const express = require('express');
-const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionReview, exportSubmissionsCSV, deleteSubmission, assignSubmissionEmail, updateFinanceReview, updateProjectDetails, addProjectUpdate, scheduleMeeting, completeMeeting, addTestMatrix, addSample, updateTestMatrixStatus } = require('../controllers/admin.submission.controller');
+const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionReview, exportSubmissionsCSV, deleteSubmission, assignSubmissionEmail, updateFinanceReview, updateProjectDetails, addProjectUpdate, scheduleMeeting, completeMeeting, addTestMatrix, addSample, updateTestMatrixStatus, createManualProject } = require('../controllers/admin.submission.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const auditLog = require('../middlewares/audit.middleware');
 const upload = require('../middlewares/upload.middleware');
@@ -20,6 +20,9 @@ router.route('/export/:formId')
 
 router.route('/auto-assign-rm')
   .post(authorize(...adminRoles), auditLog('AUTO_ASSIGN_RM', 'Submission'), require('../controllers/admin.submission.controller').autoAssignRM);
+
+router.route('/manual')
+  .post(authorize(...allInternalRoles), auditLog('CREATE_MANUAL_PROJECT', 'Submission'), createManualProject);
 
 router.route('/:id')
   .get(authorize(...allInternalRoles), getSubmission)

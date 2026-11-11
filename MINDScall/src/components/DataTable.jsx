@@ -81,13 +81,13 @@ const DataTable = ({ columns, rows, rowsPerPageDefault = 7, searchable = false }
       <Paper
         elevation={0}
         sx={{
-          borderRadius: 2,
+          borderRadius: 3,
           overflow: 'hidden',
-          border: '1px solid #E5E7EB',
+          border: '1px solid #E2E8F0',
           width: '100%',
         }}
       >
-        <TableContainer sx={{ maxHeight: 520 }}>
+        <TableContainer sx={{ maxHeight: 520, border: 'none' }}>
           <Table stickyHeader size="medium">
             <TableHead>
               <TableRow>
@@ -98,13 +98,13 @@ const DataTable = ({ columns, rows, rowsPerPageDefault = 7, searchable = false }
                     sx={{
                       py: 1.5,
                       px: 2,
-                      bgcolor: '#F9FAFB',
-                      fontWeight: 700,
-                      color: '#374151',
-                      fontSize: '0.72rem',
+                      bgcolor: '#F8FAFC',
+                      fontWeight: 600,
+                      color: '#64748B',
+                      fontSize: '0.75rem',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.6px',
-                      borderBottom: '2px solid #E5E7EB',
+                      letterSpacing: '0.04em',
+                      borderBottom: '1px solid #E2E8F0',
                       whiteSpace: 'nowrap',
                       width: col.width || 'auto',
                     }}
@@ -120,18 +120,18 @@ const DataTable = ({ columns, rows, rowsPerPageDefault = 7, searchable = false }
                   key={row.id || idx}
                   sx={{
                     '&:hover': {
-                      backgroundColor: '#F8FAFF',
+                      backgroundColor: '#F8FAFC',
                     },
                     '&:last-child td': { border: 0 },
-                    borderBottom: '1px solid #F3F4F6',
-                    transition: 'background-color 0.12s ease',
+                    borderBottom: '1px solid #F1F5F9',
+                    transition: 'background-color 0.15s ease',
                   }}
                 >
                   {columns.map((col) => (
                     <TableCell
                       key={col.field}
                       align={col.align || 'left'}
-                      sx={{ py: 1.5, px: 2, borderBottom: '1px solid #F3F4F6' }}
+                      sx={{ py: 1.5, px: 2, borderBottom: '1px solid #F1F5F9' }}
                     >
                       {col.renderCell ? col.renderCell(row) : (
                         <Typography sx={{ fontSize: '0.875rem', color: '#374151' }}>

@@ -214,7 +214,7 @@ const OngoingProjectWorkspace = () => {
                   Type:
                 </Typography>
                 <Chip
-                  label={project.proposalType || 'Proposal'}
+                  label={project.submissionType || project.proposalType || 'Proposal'}
                   size="small"
                   sx={{
                     height: 20,

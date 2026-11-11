@@ -8,7 +8,7 @@ const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#F4F6F8' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen((prev) => !prev)} />
       <Box
         component="main"
@@ -41,8 +41,9 @@ const MainLayout = () => {
         <Box
           component="footer"
           sx={{
-            borderTop: '1px solid #E5E7EB',
-            bgcolor: '#ffffff',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
             py: 1.5,
             px: 3,
             display: 'flex',
@@ -64,12 +65,12 @@ const MainLayout = () => {
             >
               MINDS
             </Typography>
-            <Divider orientation="vertical" flexItem sx={{ borderColor: '#E5E7EB', height: 14, alignSelf: 'center' }} />
-            <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', fontWeight: 500 }}>
+            <Divider orientation="vertical" flexItem sx={{ borderColor: 'divider', height: 14, alignSelf: 'center' }} />
+            <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', fontWeight: 500 }}>
               Enterprise Innovation Management Platform
             </Typography>
-            <Divider orientation="vertical" flexItem sx={{ borderColor: '#E5E7EB', height: 14, alignSelf: 'center', display: { xs: 'none', md: 'block' } }} />
-            <Typography sx={{ fontSize: '0.72rem', color: '#9CA3AF', display: { xs: 'none', md: 'block' } }}>
+            <Divider orientation="vertical" flexItem sx={{ borderColor: 'divider', height: 14, alignSelf: 'center', display: { xs: 'none', md: 'block' } }} />
+            <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', display: { xs: 'none', md: 'block' } }}>
               Powered by Cube Highways Innovation Centre
             </Typography>
           </Box>
