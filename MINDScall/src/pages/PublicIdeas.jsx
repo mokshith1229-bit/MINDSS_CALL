@@ -66,7 +66,6 @@ const PublicIdeas = () => {
   const [ideas, setIdeas] = useState([]);
   const [categories, setCategories] = useState([]);
   const [innovationTypes, setInnovationTypes] = useState([]);
-  const [totalIdeaSubmissions, setTotalIdeaSubmissions] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -93,9 +92,6 @@ const PublicIdeas = () => {
       const res = await axios.get(`${API_BASE}/public/ideas`, { params });
       if (res.data && res.data.success) {
         setIdeas(res.data.data.ideas || []);
-        if (res.data.data.totalIdeaSubmissions !== undefined) {
-          setTotalIdeaSubmissions(res.data.data.totalIdeaSubmissions);
-        }
         if (res.data.data.categories?.length) {
           setCategories(res.data.data.categories);
         }
@@ -310,138 +306,6 @@ const PublicIdeas = () => {
           >
             Explore innovation ideas that can create meaningful change across our organization.
           </Typography>
-
-          {/* ── Total Idea Submissions & Impact Stats ── */}
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: { xs: 2, sm: 3 },
-              mt: 3.5,
-              flexWrap: 'wrap'
-            }}
-          >
-            {/* Total Idea Submissions Metric */}
-            <Box
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
-                borderRadius: 2.5,
-                px: { xs: 2.5, sm: 3.5 },
-                py: 1.25,
-                textAlign: 'center',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
-              }}
-            >
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: { xs: '1.75rem', sm: '2.15rem' },
-                  color: '#86EFAC',
-                  lineHeight: 1.1,
-                  mb: 0.25
-                }}
-              >
-                {totalIdeaSubmissions}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.95)',
-                  fontWeight: 700,
-                  fontSize: '0.75rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  display: 'block'
-                }}
-              >
-                Total Idea Submissions
-              </Typography>
-            </Box>
-
-            {/* Published Ideas Metric */}
-            <Box
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.08)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: 2.5,
-                px: { xs: 2, sm: 3 },
-                py: 1.25,
-                textAlign: 'center'
-              }}
-            >
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: { xs: '1.75rem', sm: '2.15rem' },
-                  color: '#FFFFFF',
-                  lineHeight: 1.1,
-                  mb: 0.25
-                }}
-              >
-                {ideas.length}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontWeight: 600,
-                  fontSize: '0.75rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'block'
-                }}
-              >
-                Featured Ideas
-              </Typography>
-            </Box>
-
-            {/* Innovation Sectors Metric */}
-            {categories.length > 0 && (
-              <Box
-                sx={{
-                  bgcolor: 'rgba(255, 255, 255, 0.08)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: 2.5,
-                  px: { xs: 2, sm: 3 },
-                  py: 1.25,
-                  textAlign: 'center'
-                }}
-              >
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: { xs: '1.75rem', sm: '2.15rem' },
-                    color: '#FFFFFF',
-                    lineHeight: 1.1,
-                    mb: 0.25
-                  }}
-                >
-                  {categories.length}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontWeight: 600,
-                    fontSize: '0.75rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    display: 'block'
-                  }}
-                >
-                  Focus Sectors
-                </Typography>
-              </Box>
-            )}
-          </Box>
         </Container>
       </Box>
 
@@ -474,12 +338,14 @@ const PublicIdeas = () => {
               placeholder="Search ideas by title or keyword..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#94A3B8' }} />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: '#94A3B8' }} />
+                    </InputAdornment>
+                  ),
+                }
               }}
               sx={{
                 bgcolor: '#F8FAFC',
@@ -624,23 +490,6 @@ const PublicIdeas = () => {
               We are preparing a collection of innovative ideas. Check back soon to explore them.
             </Typography>
 
-            {totalIdeaSubmissions > 0 && (
-              <Box sx={{ mb: 3 }}>
-                <Chip
-                  label={`Total Idea Submissions to Date: ${totalIdeaSubmissions}`}
-                  sx={{
-                    bgcolor: '#F0FDF4',
-                    color: BRAND_GREEN_DARK,
-                    fontWeight: 700,
-                    border: '1px solid #BBF7D0',
-                    px: 1.5,
-                    py: 2.25,
-                    fontSize: '0.875rem'
-                  }}
-                />
-              </Box>
-            )}
-
             {(search || selectedCategory !== 'All' || selectedType !== 'All') && (
               <Button
                 variant="outlined"
@@ -664,33 +513,10 @@ const PublicIdeas = () => {
         ) : (
           /* ── Ideas Grid ── */
           <>
-            <Box
-              sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 2,
-                mb: 3
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                <Chip
-                  label={`Total Idea Submissions: ${totalIdeaSubmissions}`}
-                  size="small"
-                  sx={{
-                    bgcolor: '#ECFDF5',
-                    color: '#065F46',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    border: '1px solid #A7F3D0'
-                  }}
-                />
-                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
-                  Showing <b>{ideas.length}</b> published idea{ideas.length === 1 ? '' : 's'}
-                  {(search || selectedCategory !== 'All' || selectedType !== 'All') ? ' matching filters' : ''}
-                </Typography>
-              </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
+                Showing <b>{ideas.length}</b> published idea{ideas.length === 1 ? '' : 's'}
+              </Typography>
             </Box>
 
             <Grid container spacing={3}>

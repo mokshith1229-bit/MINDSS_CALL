@@ -18,7 +18,10 @@ import {
   Person as PersonIcon,
   Science as ScienceIcon,
   Delete as DeleteIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  Public as PublicIcon,
+  CheckCircle as CheckCircleIcon,
+  OpenInNew as OpenInNewIcon
 } from '@mui/icons-material';
 import api from '../utils/api';
 import DataTable, { StatusChip } from '../components/DataTable';
@@ -91,7 +94,8 @@ const RDReview = () => {
           formName: formTitle,
           formId: sub.form?._id,
           submissionId: `SUB-${sub._id.toString().substring(18).toUpperCase()}`,
-          submissionDate: new Date(sub.createdAt).toLocaleDateString()
+          submissionDate: new Date(sub.createdAt).toLocaleDateString(),
+          publicVisibility: sub.publicVisibility || { status: 'Draft' }
         };
       }).filter(sub => sub.formId);
       
@@ -127,6 +131,55 @@ const RDReview = () => {
     setSelectedSub(row);
     setDrawerOpen(true);
     setTimeout(() => drawerContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  };
+
+  const handleTogglePublicVisibility = async (row) => {
+    try {
+      const currentStatus = row.publicVisibility?.status || 'Draft';
+      const newStatus = currentStatus === 'Published' ? 'Unpublished' : 'Published';
+      
+      const res = await api.patch(`/admin/public-ideas/${row._id}/visibility`, { status: newStatus });
+      if (res.data?.success) {
+        setSnack({ 
+          open: true, 
+          msg: newStatus === 'Published' 
+            ? 'Idea successfully published to /public/ideas!' 
+            : 'Idea unpublished from /public/ideas.', 
+          type: 'success' 
+        });
+        
+        setSubmissions(prev => prev.map(s => {
+          if (s._id === row._id) {
+            return {
+              ...s,
+              publicVisibility: {
+                ...(s.publicVisibility || {}),
+                status: newStatus,
+                publishedAt: newStatus === 'Published' ? new Date().toISOString() : s.publicVisibility?.publishedAt
+              }
+            };
+          }
+          return s;
+        }));
+
+        setSelectedSub(prev => {
+          if (prev && prev._id === row._id) {
+            return {
+              ...prev,
+              publicVisibility: {
+                ...(prev.publicVisibility || {}),
+                status: newStatus,
+                publishedAt: newStatus === 'Published' ? new Date().toISOString() : prev.publicVisibility?.publishedAt
+              }
+            };
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle public visibility', err);
+      setSnack({ open: true, msg: 'Failed to update public visibility status.', type: 'error' });
+    }
   };
 
   const handleFormSelect = (id) => {
@@ -194,6 +247,46 @@ const RDReview = () => {
     )},
     { field: 'submissionDate', headerName: 'Date' },
     { field: 'status', headerName: 'Status', renderCell: (row) => <StatusChip status={row.status === 'NEW' ? 'Pending' : row.status} /> },
+    { 
+      field: 'publicPortal', 
+      headerName: 'Public Portal', 
+      width: 150,
+      renderCell: (row) => {
+        if (row.type !== 'Idea') {
+          return (
+            <Typography variant="caption" sx={{ color: '#9E9E9E', fontStyle: 'italic', fontSize: '0.75rem' }}>
+              Internal Only
+            </Typography>
+          );
+        }
+        const isPublished = row.publicVisibility?.status === 'Published';
+        return (
+          <Tooltip title={isPublished ? "Published live to /public/ideas. Click to unpublish." : "Click to publish this idea live to /public/ideas"}>
+            <Chip
+              size="small"
+              icon={isPublished ? <CheckCircleIcon sx={{ fontSize: '1rem !important' }} /> : <PublicIcon sx={{ fontSize: '1rem !important' }} />}
+              label={isPublished ? 'Published' : 'Publish'}
+              color={isPublished ? 'success' : 'primary'}
+              variant={isPublished ? 'filled' : 'outlined'}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTogglePublicVisibility(row);
+              }}
+              sx={{ 
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.72rem',
+                height: 26,
+                '&:hover': {
+                  opacity: 0.9,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                }
+              }}
+            />
+          </Tooltip>
+        );
+      }
+    },
     { field: 'actions', headerName: 'Actions', width: 170, renderCell: (row) => (
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button size="small" variant="outlined" onClick={() => handleOpenDetails(row)} sx={{ fontSize: '0.7rem' }}>Inspect</Button>
@@ -350,8 +443,14 @@ const RDReview = () => {
                     placeholder="Search title, ID, or employee..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      }
                     }}
                     sx={{ width: 250 }}
                   />
@@ -394,6 +493,61 @@ const RDReview = () => {
 
             <Box ref={drawerContentRef} sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
               <Grid container spacing={3}>
+                {selectedSub.type === 'Idea' && (
+                  <Grid item xs={12}>
+                    <Card sx={{ p: 2.5, borderRadius: 2, border: '1px solid #BAE6FD', bgcolor: '#F0F9FF', boxShadow: 'none' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar sx={{ bgcolor: selectedSub.publicVisibility?.status === 'Published' ? '#DCFCE7' : '#E2E8F0', color: selectedSub.publicVisibility?.status === 'Published' ? '#16A34A' : '#64748B', width: 42, height: 42 }}>
+                            <PublicIcon />
+                          </Avatar>
+                          <Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                                Public Ideas Portal
+                              </Typography>
+                              <Chip 
+                                size="small" 
+                                label={selectedSub.publicVisibility?.status === 'Published' ? 'LIVE ON /public/ideas' : 'NOT PUBLISHED'} 
+                                color={selectedSub.publicVisibility?.status === 'Published' ? 'success' : 'default'}
+                                sx={{ fontWeight: 700, fontSize: '0.65rem' }}
+                              />
+                            </Box>
+                            <Typography variant="caption" sx={{ color: '#475569', display: 'block' }}>
+                              {selectedSub.publicVisibility?.status === 'Published'
+                                ? 'This idea is published and visible on the public portal (/public/ideas) without login.'
+                                : 'This idea is currently internal. Publish it to make it visible on the public ideas portal.'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                          {selectedSub.publicVisibility?.status === 'Published' && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              href="/public/ideas"
+                              target="_blank"
+                              endIcon={<OpenInNewIcon fontSize="small" />}
+                              sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#0288D1', color: '#0288D1' }}
+                            >
+                              View /public/ideas
+                            </Button>
+                          )}
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color={selectedSub.publicVisibility?.status === 'Published' ? 'warning' : 'primary'}
+                            onClick={() => handleTogglePublicVisibility(selectedSub)}
+                            sx={{ textTransform: 'none', fontWeight: 600 }}
+                          >
+                            {selectedSub.publicVisibility?.status === 'Published' ? 'Unpublish Idea' : 'Publish to /public/ideas'}
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Card>
+                  </Grid>
+                )}
+
                 <Grid item xs={12}>
                   <Card sx={{ p: 3, borderRadius: 2, border: '1px solid #E0E0E0', boxShadow: 'none' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>

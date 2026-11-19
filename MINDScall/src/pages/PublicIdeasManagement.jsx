@@ -348,8 +348,10 @@ const PublicIdeasManagement = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') fetchIdeas(); }}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#94A3B8' }} /></InputAdornment>
+            slotProps={{
+              input: {
+                startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: '#94A3B8' }} /></InputAdornment>
+              }
             }}
             sx={{ minWidth: { xs: '100%', sm: 260 }, bgcolor: '#FFFFFF' }}
           />

@@ -66,13 +66,15 @@ const DataTable = ({ columns, rows, rowsPerPageDefault = 7, searchable = false }
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
             sx={{ width: 280 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#9CA3AF', fontSize: 18 }} />
-                </InputAdornment>
-              ),
-              sx: { bgcolor: '#F9FAFB', borderRadius: 2 },
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#9CA3AF', fontSize: 18 }} />
+                  </InputAdornment>
+                ),
+                sx: { bgcolor: '#F9FAFB', borderRadius: 2 },
+              }
             }}
           />
         </Box>

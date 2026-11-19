@@ -32,6 +32,12 @@ const extractSafeIdea = (sub) => {
     return '';
   };
 
+  // STRICT REQUIREMENT: Only Idea submissions should appear! Skip proposals completely.
+  const subType = sub.submissionType || findVal(['submissiontype']) || 'Idea';
+  if (subType.toString().toLowerCase().includes('prop')) {
+    return null;
+  }
+
   const title = sub.publicVisibility?.customTitle?.trim() ||
                 findVal(['title', 'proposaltitle', 'ideatitle', 'projecttitle', 'projectname']) ||
                 'Innovative Idea';
@@ -40,10 +46,7 @@ const extractSafeIdea = (sub) => {
                       findVal(['abstract', 'description', 'summary', 'ideadetails', 'overview', 'details']) ||
                       '';
 
-  let category = findVal(['category', 'type', 'area', 'department', 'dept', 'subdepartment']) || 'General Innovation';
-  if (category && typeof category === 'string') {
-    category = category.charAt(0).toUpperCase() + category.slice(1);
-  }
+  const category = findVal(['category', 'type', 'area', 'department', 'dept']) || 'General Innovation';
   const innovationType = findVal(['innovationtype']) || '';
 
   return {
@@ -65,24 +68,18 @@ exports.getPublicIdeas = async (req, res, next) => {
   try {
     const { category, innovationType, search } = req.query;
 
-    // Count total idea submissions across the entire system
-    const totalIdeaSubmissions = await Submission.countDocuments({
-      status: { $ne: 'DELETED' }
-    });
-
-    // Submissions to display on public ideas portal:
-    // Display all active innovation submissions UNLESS explicitly marked as Unpublished
+    // Only Idea submissions explicitly marked as Published (strictly excluding any proposals)
     const query = {
-      status: { $ne: 'DELETED' },
-      'publicVisibility.status': { $ne: 'Unpublished' }
+      'publicVisibility.status': 'Published',
+      submissionType: { $not: /proposal/i }
     };
 
     const rawSubmissions = await Submission.find(query)
       .sort({ 'publicVisibility.publishedAt': -1, createdAt: -1 })
       .lean();
 
-    // Transform and sanitize strictly
-    let safeIdeas = rawSubmissions.map(extractSafeIdea);
+    // Transform and sanitize strictly (skipping any non-ideas)
+    let safeIdeas = rawSubmissions.map(extractSafeIdea).filter(Boolean);
 
     // Extract dynamic categories & innovation types for filter UI
     const allCategories = Array.from(new Set(safeIdeas.map(i => i.category).filter(Boolean)));
@@ -116,8 +113,7 @@ exports.getPublicIdeas = async (req, res, next) => {
       ideas: safeIdeas,
       categories: allCategories,
       innovationTypes: allInnovationTypes,
-      total: safeIdeas.length,
-      totalIdeaSubmissions,
+      total: safeIdeas.length
     }, 'Public ideas retrieved successfully'));
   } catch (err) {
     next(err);

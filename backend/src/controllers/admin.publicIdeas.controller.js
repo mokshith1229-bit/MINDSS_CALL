@@ -31,6 +31,11 @@ const formatAdminIdea = (sub) => {
     return '';
   };
 
+  const subType = sub.submissionType || findVal(['submissiontype']) || 'Idea';
+  if (subType.toString().toLowerCase().includes('prop')) {
+    return null;
+  }
+
   const title = findVal(['title', 'proposaltitle', 'ideatitle', 'projecttitle', 'projectname']) || 'Untitled Submission';
   const abstract = findVal(['abstract', 'description', 'summary', 'ideadetails', 'overview', 'details']) || '';
   const category = findVal(['category', 'type', 'area', 'department', 'dept']) || 'General Innovation';
@@ -69,14 +74,10 @@ exports.getAdminIdeas = async (req, res, next) => {
   try {
     const { status, search, type } = req.query;
 
-    // Default to Idea submissions, or allow all if requested
-    const query = {};
-    if (type && type !== 'all') {
-      query.submissionType = type;
-    } else {
-      // Show Ideas first, but allow Proposals if needed
-      query.submissionType = { $in: ['Idea', 'Proposal'] };
-    }
+    // ONLY Idea submissions appear in Public Ideas (strictly excluding any proposals)
+    const query = {
+      submissionType: { $not: /proposal/i }
+    };
 
     if (status && status !== 'all' && status !== 'All') {
       query['publicVisibility.status'] = status;
@@ -86,7 +87,7 @@ exports.getAdminIdeas = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    let ideas = rawSubmissions.map(formatAdminIdea);
+    let ideas = rawSubmissions.map(formatAdminIdea).filter(Boolean);
 
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
