@@ -48,6 +48,37 @@ const submissionSchema = new mongoose.Schema(
       enum: ['NEW', 'REVIEWING', 'AWAITING_RM_REVIEW', 'RM_REVIEW', 'AWAITING_HOD_REVIEW', 'HOD_REVIEW', 'EVALUATION', 'EVALUATION_REJECTED', 'FINANCE_APPROVED', 'APPROVAL_COMMITTEE', 'APPROVED', 'REJECTED', 'IMPLEMENTATION', 'COMPLETED'],
       default: 'NEW',
     },
+    publicVisibility: {
+      status: {
+        type: String,
+        enum: ['Draft', 'Published', 'Unpublished'],
+        default: 'Draft',
+      },
+      publishedAt: {
+        type: Date,
+        default: null,
+      },
+      publishedBy: {
+        type: String,
+        default: null,
+      },
+      customTitle: {
+        type: String,
+        default: '',
+      },
+      customDescription: {
+        type: String,
+        default: '',
+      },
+      coverImageUrl: {
+        type: String,
+        default: '',
+      },
+      featured: {
+        type: Boolean,
+        default: false,
+      },
+    },
     workflow: {
       rmMasterToken: { type: String },
       rmReviewToken: { type: String },

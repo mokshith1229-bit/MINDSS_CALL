@@ -31,6 +31,7 @@ const routeMeta = {
   '/settings':           { title: 'Settings',                section: 'Administration' },
   '/meeting':            { title: 'Meetings',                section: 'Workflow' },
   '/user-management':    { title: 'User Management',         section: 'Administration' },
+  '/public-ideas':       { title: 'Public Ideas',            section: 'Public Engagement' },
 };
 
 const sectionDefaults = {
@@ -38,7 +39,8 @@ const sectionDefaults = {
   'Workflow': '/auto-assign-email',
   'Projects': '/rd-ongoing-projects',
   'Analytics': '/reports',
-  'Administration': '/user-management'
+  'Administration': '/user-management',
+  'Public Engagement': '/public-ideas'
 };
 
 const Header = ({ sidebarOpen }) => {

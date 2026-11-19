@@ -24,6 +24,8 @@ import PilotProjectsList from '../pages/PilotProjectsList';
 import PilotProjectWorkspace from '../pages/PilotProjectWorkspace';
 import OngoingProjectWorkspace from '../pages/OngoingProjectWorkspace';
 import PublicEvaluatorReview from '../pages/PublicEvaluatorReview';
+import PublicIdeas from '../pages/PublicIdeas';
+import PublicIdeasManagement from '../pages/PublicIdeasManagement';
 import { authStore } from '../store/authStore';
 import UserManagement from '../pages/UserManagement';
 import FeatureManagement from '../pages/FeatureManagement';
@@ -70,6 +72,7 @@ const AppRoutes = () => {
       {/* Public form route — no layout, no sidebar, no login */}
       <Route path="/form/:slug" element={<PublicForm />} />
       <Route path="/track" element={<PublicTracking />} />
+      <Route path="/public/ideas" element={<PublicIdeas />} />
       <Route path="/review/:token" element={<PublicReview />} />
       <Route path="/batch-review/:token" element={<PublicBatchReview />} />
       <Route path="/rm-batch-review/:token" element={<RMBatchReview />} />
@@ -99,6 +102,7 @@ const AppRoutes = () => {
         <Route path="feature-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><FeatureManagement /></ProtectedRoute>} />
         <Route path="tracking-management" element={<ProtectedRoute allowedRoles={['DEVELOPER']}><TrackingManagement /></ProtectedRoute>} />
         <Route path="lab-calendar" element={<LabCalendar />} />
+        <Route path="public-ideas" element={<PublicIdeasManagement />} />
         
         {/* Role-specific Dashboards */}
         <Route path="dashboards/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />

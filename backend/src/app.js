@@ -27,6 +27,8 @@ const adminPilotRoutes = require('./routes/admin.pilot.routes');
 const fileRoutes = require('./routes/file.routes');
 const labRoutes = require('./routes/admin.lab.routes');
 const scheduleRoutes = require('./routes/admin.schedule.routes');
+const publicIdeasRoutes = require('./routes/public.ideas.routes');
+const adminPublicIdeasRoutes = require('./routes/admin.publicIdeas.routes');
 
 const app = express();
 
@@ -39,6 +41,7 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:3000',
   'https://mindss-call-three.vercel.app',
+  'https://mindss-call.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -94,10 +97,12 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/admin/forms', adminFormRoutes);
 app.use('/api/v1/admin/submissions', adminSubmissionRoutes);
+app.use('/api/v1/admin/public-ideas', adminPublicIdeasRoutes);
 app.use('/api/v1/admin/evaluations', adminEvaluationRoutes);
 app.use('/api/v1/admin/audit-logs', adminAuditRoutes);
 app.use('/api/v1/admin/email-logs', adminEmailLogRoutes);
 app.use('/api/v1/public/forms', publicFormRoutes);
+app.use('/api/v1/public/ideas', publicIdeasRoutes);
 app.use('/api/v1/public/reviews', publicSubmissionRoutes);
 app.use('/api/v1/public/evaluations', publicEvaluationRoutes);
 app.use('/api/v1/public/finance-reviews', publicFinanceRoutes);

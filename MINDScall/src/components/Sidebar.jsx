@@ -18,6 +18,7 @@ import {
   FolderOpen as ProjectsIcon,
   ManageAccounts as ManageAccountsIcon,
   Timeline as TimelineIcon,
+  Lightbulb as PublicIdeasIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
@@ -85,6 +86,12 @@ const navSections = [
     sectionLabel: 'Laboratory',
     items: [
       { label: 'Lab Calendar', icon: <TimelineIcon fontSize="small" />, path: '/lab-calendar', featureKey: 'module.rd_ongoing_projects' },
+    ],
+  },
+  {
+    sectionLabel: 'PUBLIC ENGAGEMENT',
+    items: [
+      { label: 'Public Ideas', icon: <PublicIdeasIcon fontSize="small" />, path: '/public-ideas', featureKey: 'module.public_ideas' },
     ],
   },
   {
