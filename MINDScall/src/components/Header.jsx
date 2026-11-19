@@ -27,6 +27,8 @@ const routeMeta = {
   '/finance-approval':   { title: 'Finance Review',          section: 'Workflow' },
   '/approval':           { title: 'Approval Committee',      section: 'Workflow' },
   '/rd-ongoing-projects':{ title: 'R&D Ongoing Projects',    section: 'Projects' },
+  '/rnd-completed':      { title: 'R&D Completed Projects',   section: 'Projects' },
+  '/pilot-projects':     { title: 'Pilot Projects',          section: 'Projects' },
   '/reports':            { title: 'Reports',                 section: 'Analytics' },
   '/settings':           { title: 'Settings',                section: 'Administration' },
   '/meeting':            { title: 'Meetings',                section: 'Workflow' },

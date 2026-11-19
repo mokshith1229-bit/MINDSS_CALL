@@ -20,6 +20,7 @@ import PublicApprovalReview from '../pages/PublicApprovalReview';
 import PublicTracking from '../pages/PublicTracking';
 import Login from '../pages/Login';
 import RDOngoingProjects from '../pages/RDOngoingProjects';
+import RDCompletedProjects from '../pages/RDCompletedProjects';
 import PilotProjectsList from '../pages/PilotProjectsList';
 import PilotProjectWorkspace from '../pages/PilotProjectWorkspace';
 import OngoingProjectWorkspace from '../pages/OngoingProjectWorkspace';
@@ -92,6 +93,7 @@ const AppRoutes = () => {
         <Route path="meeting-requests" element={<MeetingRequestsAdmin />} />
         <Route path="approval" element={<Approval />} />
         <Route path="rd-ongoing-projects" element={<RDOngoingProjects />} />
+        <Route path="rnd-completed" element={<RDCompletedProjects />} />
         <Route path="ongoing-projects/:id" element={<OngoingProjectWorkspace />} />
         <Route path="pilot-projects" element={<PilotProjectsList />} />
         <Route path="pilot-projects/:id" element={<PilotProjectWorkspace />} />
