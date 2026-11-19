@@ -20,21 +20,22 @@ import {
   Lightbulb as LightbulbIcon,
   Refresh as RefreshIcon,
   Share as ShareIcon,
-  AutoAwesome as FeaturedIcon
+  AutoAwesome as FeaturedIcon,
+  Public as PublicIcon
 } from '@mui/icons-material';
 import api from '../utils/api';
 
 const BRAND_GREEN = '#2E7D32';
 const BRAND_GREEN_DARK = '#1B5E20';
-const DEFAULT_PUBLIC_URL = 'https://mindss-call.vercel.app/public/ideas';
+const DEPLOYED_PUBLIC_URL = 'https://mindss-call-three.vercel.app/public/ideas';
 
 const getPublicUrl = () => {
   if (typeof window !== 'undefined' && window.location.origin) {
-    if (window.location.hostname === 'localhost') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return `${window.location.origin}/public/ideas`;
     }
   }
-  return DEFAULT_PUBLIC_URL;
+  return DEPLOYED_PUBLIC_URL;
 };
 
 const formatDate = (dateStr) => {
@@ -268,6 +269,73 @@ const PublicIdeasManagement = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* ── Official Public Link Banner ── */}
+      <Paper
+        sx={{
+          p: 2,
+          mb: 3.5,
+          borderRadius: 2.5,
+          bgcolor: '#F0FDF4',
+          border: '1px solid #BBF7D0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 2
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: '#DCFCE7', color: BRAND_GREEN, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PublicIcon />
+          </Box>
+          <Box>
+            <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Official Deployed Public Ideas Link
+            </Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#14532D', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+              {getPublicUrl()}
+            </Typography>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<CopyIcon />}
+            onClick={handleCopyLink}
+            sx={{
+              borderColor: '#86EFAC',
+              color: '#15803D',
+              bgcolor: '#FFFFFF',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              borderRadius: 2,
+              '&:hover': { bgcolor: '#F0FDF4', borderColor: BRAND_GREEN }
+            }}
+          >
+            Copy Public Link
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            endIcon={<OpenInNewIcon />}
+            onClick={handleOpenPublicPortal}
+            sx={{
+              bgcolor: BRAND_GREEN,
+              '&:hover': { bgcolor: BRAND_GREEN_DARK },
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              borderRadius: 2,
+              boxShadow: 'none'
+            }}
+          >
+            Open Live Portal
+          </Button>
+        </Box>
+      </Paper>
 
       {/* ── KPI Stat Cards ── */}
       <Grid container spacing={2.5} sx={{ mb: 3.5 }}>

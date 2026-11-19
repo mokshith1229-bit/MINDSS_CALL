@@ -117,7 +117,9 @@ const PublicIdeas = () => {
   };
 
   const handleShare = (idea) => {
-    const shareUrl = window.location.href;
+    const shareUrl = (typeof window !== 'undefined' && window.location.origin && !window.location.hostname.includes('localhost'))
+      ? window.location.href
+      : 'https://mindss-call-three.vercel.app/public/ideas';
     const text = `Explore "${idea.title}" on the MINDS Public Ideas Portal: ${shareUrl}`;
     if (navigator.share) {
       navigator.share({ title: idea.title, text, url: shareUrl }).catch(() => {});

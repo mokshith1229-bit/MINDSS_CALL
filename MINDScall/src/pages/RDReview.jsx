@@ -21,13 +21,25 @@ import {
   ArrowBack as ArrowBackIcon,
   Public as PublicIcon,
   CheckCircle as CheckCircleIcon,
-  OpenInNew as OpenInNewIcon
+  OpenInNew as OpenInNewIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import api from '../utils/api';
 import DataTable, { StatusChip } from '../components/DataTable';
 import { parseSubmissionFields, formatKey } from '../utils/submissionParser';
 import Timeline from '../components/Timeline';
 import { authStore } from '../store/authStore';
+
+const DEPLOYED_PUBLIC_IDEAS_URL = 'https://mindss-call-three.vercel.app/public/ideas';
+
+const getPublicIdeasUrl = () => {
+  if (typeof window !== 'undefined' && window.location.origin) {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return `${window.location.origin}/public/ideas`;
+    }
+  }
+  return DEPLOYED_PUBLIC_IDEAS_URL;
+};
 
 const RDReview = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -180,6 +192,12 @@ const RDReview = () => {
       console.error('Failed to toggle public visibility', err);
       setSnack({ open: true, msg: 'Failed to update public visibility status.', type: 'error' });
     }
+  };
+
+  const handleCopyPublicIdeasLink = () => {
+    const url = getPublicIdeasUrl();
+    navigator.clipboard.writeText(url);
+    setSnack({ open: true, msg: `Public portal link copied: ${url}`, type: 'success' });
   };
 
   const handleFormSelect = (id) => {
@@ -520,18 +538,29 @@ const RDReview = () => {
                             </Typography>
                           </Box>
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
                           {selectedSub.publicVisibility?.status === 'Published' && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              href="/public/ideas"
-                              target="_blank"
-                              endIcon={<OpenInNewIcon fontSize="small" />}
-                              sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#0288D1', color: '#0288D1' }}
-                            >
-                              View /public/ideas
-                            </Button>
+                            <>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<CopyIcon fontSize="small" />}
+                                onClick={handleCopyPublicIdeasLink}
+                                sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#0288D1', color: '#0288D1' }}
+                              >
+                                Copy Public Link
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                href={getPublicIdeasUrl()}
+                                target="_blank"
+                                endIcon={<OpenInNewIcon fontSize="small" />}
+                                sx={{ textTransform: 'none', fontWeight: 600, borderColor: '#0288D1', color: '#0288D1' }}
+                              >
+                                View Portal
+                              </Button>
+                            </>
                           )}
                           <Button
                             size="small"
