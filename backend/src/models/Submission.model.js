@@ -202,8 +202,19 @@ const submissionSchema = new mongoose.Schema(
           }]
         }
       }],
+      submitterName: { type: String, default: '' },
+      submitterCode: { type: String, default: '' },
+      department: { type: String, default: '' },
+      abstract: { type: String, default: '' },
+      origin: { type: String, default: '' },
       expectedBenefits: { type: String, default: '' },
       actualBenefits: { type: String, default: '' },
+      benefitMetrics: [{
+        description: { type: String, default: '' },
+        target: { type: String, default: '' },
+        value: { type: String, default: '' },
+        unit: { type: String, default: '' }
+      }],
       objectives: [{
         name: String,
         description: String,

@@ -591,6 +591,58 @@ export const formStore = {
     }
   },
 
+  async developerUpdateAbstractOrigin(id, data){
+    try {
+      const res = await api.patch(`/admin/submissions/${id}/developer-edit/abstract-origin`, data);
+      if (res.data && res.data.success) {
+        const updatedSub = res.data.data.submission;
+        const parsed = parseSubmissionFields(updatedSub);
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          ...parsed,
+          answers: updatedSub.answers || s.answers,
+          formData: updatedSub.formData || s.formData,
+          projectDetails: updatedSub.projectDetails || s.projectDetails,
+          timeline: updatedSub.timeline || s.timeline,
+          employeeName: data.submitterName ?? parsed.employeeName,
+          employeeCode: data.employeeCode ?? parsed.employeeCode,
+          dept: data.department ?? parsed.dept,
+          abstract: data.abstract ?? parsed.abstract,
+          origin: data.origin ?? parsed.origin
+        } : s);
+        notify();
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Failed to update project abstract & origin:', err);
+      throw err;
+    }
+  },
+
+  async developerUpdateBenefits(id, data){
+    try {
+      const res = await api.patch(`/admin/submissions/${id}/developer-edit/benefits`, data);
+      if (res.data && res.data.success) {
+        const updatedSub = res.data.data.submission;
+        const parsed = parseSubmissionFields(updatedSub);
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          ...parsed,
+          answers: updatedSub.answers || s.answers,
+          formData: updatedSub.formData || s.formData,
+          projectDetails: updatedSub.projectDetails || s.projectDetails,
+          timeline: updatedSub.timeline || s.timeline,
+          benefits: data.expectedBenefits ?? parsed.benefits
+        } : s);
+        notify();
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Failed to update project benefits:', err);
+      throw err;
+    }
+  },
+
   async addProjectUpdate(id, formData){
     try {
       const res = await api.post(`/admin/submissions/${id}/project-updates`, formData, {

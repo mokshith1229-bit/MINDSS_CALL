@@ -67,14 +67,16 @@ export const parseSubmissionFields = (sub) => {
   if (!sub) return {};
   const ans = sub.answers || {};
   const fd  = sub.formData || {};
+  const pd  = sub.projectDetails || {};
 
-  // ── Core Fields ──
-  let title        = find(fd, ans, TITLE_KW) || 'Untitled Submission';
-  let abstract     = find(fd, ans, ABSTRACT_KW) || 'No abstract provided';
-  let benefits     = find(fd, ans, BENEFITS_KW) || 'No benefits provided';
-  let dept         = find(fd, ans, DEPT_KW) || 'Unknown';
-  let employeeName = find(fd, ans, NAME_KW) || 'Unknown';
-  let employeeCode = find(fd, ans, CODE_KW) || 'Unknown';
+  // ── Core Fields (Developer overrides in projectDetails take precedence) ──
+  let title        = pd.title || find(fd, ans, TITLE_KW) || 'Untitled Submission';
+  let abstract     = pd.abstract || find(fd, ans, ABSTRACT_KW) || 'No abstract provided';
+  let benefits     = pd.expectedBenefits || find(fd, ans, BENEFITS_KW) || 'No benefits provided';
+  let dept         = pd.department || find(fd, ans, DEPT_KW) || 'Unknown';
+  let employeeName = pd.submitterName || find(fd, ans, NAME_KW) || 'Unknown';
+  let employeeCode = pd.submitterCode || find(fd, ans, CODE_KW) || 'Unknown';
+  let origin       = pd.origin || '';
 
   // ── Management Chain ──
   let rmName   = find(fd, ans, RM_NAME_KW) || '';
@@ -115,6 +117,7 @@ export const parseSubmissionFields = (sub) => {
     dept,
     employeeName,
     employeeCode,
+    origin,
 
     // Management chain
     rmValue,

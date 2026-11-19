@@ -1253,3 +1253,171 @@ exports.createManualProject = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Developer manual edit for Project Abstract & Origin
+// @route   PATCH /api/v1/admin/submissions/:id/developer-edit/abstract-origin
+// @access  Private (DEVELOPER only)
+exports.developerUpdateAbstractOrigin = async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'DEVELOPER') {
+      return next(new ApiError(403, 'Access denied: Developer role required for this action'));
+    }
+
+    const { submitterName, employeeCode, department, abstract, origin } = req.body;
+
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) {
+      return next(new ApiError(404, 'Submission not found'));
+    }
+
+    if (!submission.projectDetails) {
+      submission.projectDetails = {};
+    }
+
+    // Capture previous values for audit logging & timeline
+    const previousValues = {
+      submitterName: submission.projectDetails.submitterName || submission.answers?.employeeName || submission.formData?.['Full Name']?.value || '',
+      employeeCode: submission.projectDetails.submitterCode || submission.answers?.employeeCode || submission.formData?.['Employee Code']?.value || '',
+      department: submission.projectDetails.department || submission.answers?.department || submission.formData?.['Department']?.value || '',
+      abstract: submission.projectDetails.abstract || submission.answers?.abstract || submission.formData?.['Abstract']?.value || '',
+      origin: submission.projectDetails.origin || ''
+    };
+
+    // Apply updates to projectDetails (section-specific only)
+    if (submitterName !== undefined) submission.projectDetails.submitterName = submitterName.trim();
+    if (employeeCode !== undefined) submission.projectDetails.submitterCode = employeeCode.trim();
+    if (department !== undefined) submission.projectDetails.department = department.trim();
+    if (abstract !== undefined) submission.projectDetails.abstract = abstract.trim();
+    if (origin !== undefined) submission.projectDetails.origin = origin.trim();
+
+    // Synchronize to answers & formData so existing components & parsers see the new values
+    if (!submission.answers) submission.answers = {};
+    if (!submission.formData) submission.formData = {};
+
+    if (submitterName !== undefined) {
+      submission.answers.employeeName = submitterName.trim();
+      submission.answers.name = submitterName.trim();
+      submission.formData['Full Name'] = { value: submitterName.trim(), type: 'text', section: 'Submitter' };
+      submission.formData['Employee Name'] = { value: submitterName.trim(), type: 'text', section: 'Submitter' };
+    }
+    if (employeeCode !== undefined) {
+      submission.answers.employeeCode = employeeCode.trim();
+      submission.formData['Employee Code'] = { value: employeeCode.trim(), type: 'text', section: 'Submitter' };
+    }
+    if (department !== undefined) {
+      submission.answers.department = department.trim();
+      submission.answers.dept = department.trim();
+      submission.formData['Department'] = { value: department.trim(), type: 'text', section: 'Submitter' };
+    }
+    if (abstract !== undefined) {
+      submission.answers.abstract = abstract.trim();
+      submission.answers.description = abstract.trim();
+      submission.formData['Abstract'] = { value: abstract.trim(), type: 'textarea', section: 'Overview' };
+    }
+
+    submission.markModified('projectDetails');
+    submission.markModified('answers');
+    submission.markModified('formData');
+
+    // Add audit timeline record
+    submission.timeline.push({
+      stage: 'Developer Project Edit',
+      actionBy: req.user?.name || req.user?.email || 'Developer',
+      role: 'DEVELOPER',
+      remarks: `Updated Project Abstract & Origin (Submitter: ${submitterName !== undefined ? submitterName : previousValues.submitterName}, Dept: ${department !== undefined ? department : previousValues.department})`,
+      timestamp: new Date()
+    });
+
+    await submission.save();
+    await presignSubmission(submission);
+
+    res.status(200).json(new ApiResponse(200, {
+      submission,
+      previousValues,
+      updatedValues: {
+        submitterName: submission.projectDetails.submitterName,
+        employeeCode: submission.projectDetails.submitterCode,
+        department: submission.projectDetails.department,
+        abstract: submission.projectDetails.abstract,
+        origin: submission.projectDetails.origin
+      }
+    }, 'Project Abstract & Origin updated successfully by Developer'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Developer manual edit for Expected vs Actual Benefits
+// @route   PATCH /api/v1/admin/submissions/:id/developer-edit/benefits
+// @access  Private (DEVELOPER only)
+exports.developerUpdateBenefits = async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'DEVELOPER') {
+      return next(new ApiError(403, 'Access denied: Developer role required for this action'));
+    }
+
+    const { expectedBenefits, actualBenefits, benefitMetrics } = req.body;
+
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) {
+      return next(new ApiError(404, 'Submission not found'));
+    }
+
+    if (!submission.projectDetails) {
+      submission.projectDetails = {};
+    }
+
+    // Capture previous values for audit logging & timeline
+    const previousValues = {
+      expectedBenefits: submission.projectDetails.expectedBenefits || submission.answers?.benefits || '',
+      actualBenefits: submission.projectDetails.actualBenefits || '',
+      benefitMetrics: submission.projectDetails.benefitMetrics || []
+    };
+
+    // Apply updates to projectDetails (section-specific only)
+    if (expectedBenefits !== undefined) {
+      submission.projectDetails.expectedBenefits = expectedBenefits.trim();
+      if (!submission.answers) submission.answers = {};
+      submission.answers.benefits = expectedBenefits.trim();
+      if (!submission.formData) submission.formData = {};
+      submission.formData['Benefits'] = { value: expectedBenefits.trim(), type: 'textarea', section: 'Overview' };
+      submission.formData['Expected Benefits'] = { value: expectedBenefits.trim(), type: 'textarea', section: 'Overview' };
+    }
+
+    if (actualBenefits !== undefined) {
+      submission.projectDetails.actualBenefits = actualBenefits.trim();
+    }
+
+    if (benefitMetrics !== undefined && Array.isArray(benefitMetrics)) {
+      submission.projectDetails.benefitMetrics = benefitMetrics;
+    }
+
+    submission.markModified('projectDetails');
+    submission.markModified('answers');
+    submission.markModified('formData');
+
+    // Add audit timeline record
+    submission.timeline.push({
+      stage: 'Developer Project Edit',
+      actionBy: req.user?.name || req.user?.email || 'Developer',
+      role: 'DEVELOPER',
+      remarks: 'Updated Expected vs Actual Benefits',
+      timestamp: new Date()
+    });
+
+    await submission.save();
+    await presignSubmission(submission);
+
+    res.status(200).json(new ApiResponse(200, {
+      submission,
+      previousValues,
+      updatedValues: {
+        expectedBenefits: submission.projectDetails.expectedBenefits,
+        actualBenefits: submission.projectDetails.actualBenefits,
+        benefitMetrics: submission.projectDetails.benefitMetrics
+      }
+    }, 'Project Benefits updated successfully by Developer'));
+  } catch (err) {
+    next(err);
+  }
+};

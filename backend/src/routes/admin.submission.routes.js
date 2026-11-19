@@ -1,5 +1,24 @@
 const express = require('express');
-const { getSubmissions, getSubmission, updateSubmissionStatus, updateSubmissionReview, exportSubmissionsCSV, deleteSubmission, assignSubmissionEmail, updateFinanceReview, updateProjectDetails, addProjectUpdate, scheduleMeeting, completeMeeting, addTestMatrix, addSample, updateTestMatrixStatus, createManualProject } = require('../controllers/admin.submission.controller');
+const { 
+  getSubmissions, 
+  getSubmission, 
+  updateSubmissionStatus, 
+  updateSubmissionReview, 
+  exportSubmissionsCSV, 
+  deleteSubmission, 
+  assignSubmissionEmail, 
+  updateFinanceReview, 
+  updateProjectDetails, 
+  addProjectUpdate, 
+  scheduleMeeting, 
+  completeMeeting, 
+  addTestMatrix, 
+  addSample, 
+  updateTestMatrixStatus, 
+  createManualProject,
+  developerUpdateAbstractOrigin,
+  developerUpdateBenefits
+} = require('../controllers/admin.submission.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const auditLog = require('../middlewares/audit.middleware');
 const upload = require('../middlewares/upload.middleware');
@@ -42,6 +61,22 @@ router.route('/:id/finance-review')
 
 router.route('/:id/project-details')
   .patch(authorize(...allInternalRoles), auditLog('UPDATE_PROJECT_DETAILS', 'Submission'), updateProjectDetails);
+
+// Developer-Only Manual Editing for Project Abstract & Origin
+router.route('/:id/developer-edit/abstract-origin')
+  .patch(
+    authorize('DEVELOPER'),
+    auditLog('DEVELOPER_UPDATE_PROJECT_ABSTRACT_ORIGIN', 'Submission'),
+    developerUpdateAbstractOrigin
+  );
+
+// Developer-Only Manual Editing for Expected vs Actual Benefits
+router.route('/:id/developer-edit/benefits')
+  .patch(
+    authorize('DEVELOPER'),
+    auditLog('DEVELOPER_UPDATE_PROJECT_BENEFITS', 'Submission'),
+    developerUpdateBenefits
+  );
 
 router.route('/:id/project-updates')
   .post(
