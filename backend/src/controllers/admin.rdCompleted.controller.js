@@ -318,6 +318,41 @@ exports.deleteImport = async (req, res, next) => {
 };
 
 /**
+ * @desc    Update import data (rows, headers, sheetName)
+ * @route   PUT /api/v1/admin/rd-completed/:id
+ * @access  Private (Developer, Admin, Super Admin)
+ */
+exports.updateImport = async (req, res, next) => {
+  try {
+    const { rows, headers, sheetName } = req.body;
+
+    const importDoc = await RDCompletedImport.findById(req.params.id);
+    if (!importDoc) {
+      return next(new ApiError(404, 'Import record not found'));
+    }
+
+    if (Array.isArray(rows)) {
+      importDoc.rows = rows;
+      importDoc.rowCount = rows.length;
+    }
+    if (Array.isArray(headers) && headers.length > 0) {
+      importDoc.headers = headers;
+    }
+    if (sheetName) {
+      importDoc.sheetName = sheetName;
+    }
+
+    await importDoc.save();
+
+    res.status(200).json(
+      new ApiResponse(200, importDoc, 'Import data updated successfully')
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * @desc    Download the original uploaded Excel file
  * @route   GET /api/v1/admin/rd-completed/:id/download
  * @access  Private (Developer, Admin, Super Admin)

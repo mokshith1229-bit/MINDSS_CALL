@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Box, Typography, Paper, Card, Grid, Button, TextField,
+  Box, Typography, Paper, Grid, Button, TextField,
   InputAdornment, Chip, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TablePagination, TableSortLabel, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions, FormControl,
   InputLabel, Select, MenuItem, CircularProgress, Tooltip,
-  Snackbar, Alert, Divider, Stack
+  Snackbar, Alert, Stack
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -22,6 +22,10 @@ import {
   Refresh as RefreshIcon,
   FileDownload as ExportIcon,
   Clear as ClearIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Add as AddIcon,
+  Check as CheckIcon,
   InfoOutlined as InfoIcon
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
@@ -61,14 +65,15 @@ const RDCompletedProjects = () => {
   const {
     imports,
     activeImport,
-    kpis,
     isLoading,
     isUploading,
     isLoadingDetails,
+    isSaving,
     fetchImports,
     selectImport,
     uploadImport,
     deleteImport,
+    updateImportData,
     getDownloadUrl,
   } = useRDCompletedStore();
 
@@ -81,6 +86,27 @@ const RDCompletedProjects = () => {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [orderBy, setOrderBy] = useState('');
   const [order, setOrder] = useState('asc');
+
+  // Spreadsheet Editing State
+  const [isInlineEditMode, setIsInlineEditMode] = useState(false);
+  const [editedRows, setEditedRows] = useState([]);
+  const [isSavingTable, setIsSavingTable] = useState(false);
+
+  // Single Row Edit Modal State
+  const [editRowModalOpen, setEditRowModalOpen] = useState(false);
+  const [editingRowIndex, setEditingRowIndex] = useState(null);
+  const [editingRowData, setEditingRowData] = useState({});
+  const [isSavingRow, setIsSavingRow] = useState(false);
+
+  // Add New Record Modal State
+  const [addRowModalOpen, setAddRowModalOpen] = useState(false);
+  const [newRowData, setNewRowData] = useState({});
+  const [isAddingRow, setIsAddingRow] = useState(false);
+
+  // Delete Row Modal State
+  const [deleteRowModalOpen, setDeleteRowModalOpen] = useState(false);
+  const [deletingRowIndex, setDeletingRowIndex] = useState(null);
+  const [isDeletingRow, setIsDeletingRow] = useState(false);
 
   // Upload Dialog State
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -95,7 +121,7 @@ const RDCompletedProjects = () => {
   const [isParsing, setIsParsing] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Delete Dialog State
+  // Delete File Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importToDelete, setImportToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -113,6 +139,8 @@ const RDCompletedProjects = () => {
   // Reset pagination when active import or search changes
   useEffect(() => {
     setPage(0);
+    setIsInlineEditMode(false);
+    setEditedRows([]);
   }, [activeImport?._id, searchTerm]);
 
   // Set default sorting column when active import changes
@@ -125,7 +153,165 @@ const RDCompletedProjects = () => {
     }
   }, [activeImport?._id]);
 
-  // 3. Client-side Excel parsing for Upload Modal
+  // Sync editedRows when entering inline edit mode
+  const handleToggleInlineEdit = () => {
+    if (isInlineEditMode) {
+      // Cancel edit mode
+      setIsInlineEditMode(false);
+      setEditedRows([]);
+    } else {
+      if (!activeImport || !activeImport.rows) return;
+      setEditedRows(JSON.parse(JSON.stringify(activeImport.rows)));
+      setIsInlineEditMode(true);
+    }
+  };
+
+  const handleCellChange = (globalRowIndex, colHeader, value) => {
+    setEditedRows((prev) => {
+      const updated = [...prev];
+      updated[globalRowIndex] = {
+        ...updated[globalRowIndex],
+        [colHeader]: value,
+      };
+      return updated;
+    });
+  };
+
+  const handleSaveAllInlineChanges = async () => {
+    if (!activeImport) return;
+    setIsSavingTable(true);
+    try {
+      await updateImportData(activeImport._id, { rows: editedRows });
+      setIsInlineEditMode(false);
+      setToast({
+        open: true,
+        message: 'All spreadsheet changes saved successfully!',
+        severity: 'success',
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err.message || 'Failed to save spreadsheet changes.',
+        severity: 'error',
+      });
+    } finally {
+      setIsSavingTable(false);
+    }
+  };
+
+  // 3. Single Row Edit Modal Handlers
+  const handleOpenEditRowModal = (globalRowIndex, rowData) => {
+    setEditingRowIndex(globalRowIndex);
+    setEditingRowData({ ...rowData });
+    setEditRowModalOpen(true);
+  };
+
+  const handleSaveSingleRow = async () => {
+    if (editingRowIndex === null || !activeImport) return;
+    setIsSavingRow(true);
+    try {
+      const baseRows = isInlineEditMode ? editedRows : (activeImport.rows || []);
+      const updated = [...baseRows];
+      const cleanData = { ...editingRowData };
+      delete cleanData._globalIndex;
+      updated[editingRowIndex] = cleanData;
+
+      await updateImportData(activeImport._id, { rows: updated });
+      if (isInlineEditMode) {
+        setEditedRows(updated);
+      }
+      setEditRowModalOpen(false);
+      setToast({
+        open: true,
+        message: `Record #${editingRowIndex + 1} updated successfully!`,
+        severity: 'success',
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err.message || 'Failed to update record.',
+        severity: 'error',
+      });
+    } finally {
+      setIsSavingRow(false);
+    }
+  };
+
+  // 4. Add Record Modal Handlers
+  const handleOpenAddRowModal = () => {
+    const emptyRow = {};
+    (activeImport?.headers || []).forEach((h) => {
+      emptyRow[h] = '';
+    });
+    setNewRowData(emptyRow);
+    setAddRowModalOpen(true);
+  };
+
+  const handleConfirmAddRow = async () => {
+    if (!activeImport) return;
+    setIsAddingRow(true);
+    try {
+      const baseRows = isInlineEditMode ? editedRows : (activeImport.rows || []);
+      const cleanData = { ...newRowData };
+      delete cleanData._globalIndex;
+      const updated = [cleanData, ...baseRows];
+
+      await updateImportData(activeImport._id, { rows: updated });
+      if (isInlineEditMode) {
+        setEditedRows(updated);
+      }
+      setAddRowModalOpen(false);
+      setToast({
+        open: true,
+        message: 'New record added to spreadsheet successfully!',
+        severity: 'success',
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err.message || 'Failed to add record.',
+        severity: 'error',
+      });
+    } finally {
+      setIsAddingRow(false);
+    }
+  };
+
+  // 5. Delete Record Modal Handlers
+  const handleOpenDeleteRowModal = (globalRowIndex) => {
+    setDeletingRowIndex(globalRowIndex);
+    setDeleteRowModalOpen(true);
+  };
+
+  const handleConfirmDeleteRow = async () => {
+    if (deletingRowIndex === null || !activeImport) return;
+    setIsDeletingRow(true);
+    try {
+      const baseRows = isInlineEditMode ? editedRows : (activeImport.rows || []);
+      const updated = baseRows.filter((_, idx) => idx !== deletingRowIndex);
+
+      await updateImportData(activeImport._id, { rows: updated });
+      if (isInlineEditMode) {
+        setEditedRows(updated);
+      }
+      setDeleteRowModalOpen(false);
+      setToast({
+        open: true,
+        message: `Record #${deletingRowIndex + 1} deleted.`,
+        severity: 'success',
+      });
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err.message || 'Failed to delete record.',
+        severity: 'error',
+      });
+    } finally {
+      setIsDeletingRow(false);
+    }
+  };
+
+  // 6. Client-side Excel parsing for Upload Modal
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -181,7 +367,6 @@ const RDCompletedProjects = () => {
         return;
       }
 
-      // Convert sheet to 2D array
       const rawData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
       if (!rawData || rawData.length === 0) {
         setPreviewHeaders([]);
@@ -191,7 +376,6 @@ const RDCompletedProjects = () => {
         return;
       }
 
-      // Find first non-empty row as header
       let headerIdx = 0;
       while (
         headerIdx < rawData.length &&
@@ -297,7 +481,7 @@ const RDCompletedProjects = () => {
     }
   };
 
-  // 4. Download handlers
+  // 7. Download handlers
   const handleDownloadOriginal = async (importDoc) => {
     if (!importDoc) return;
     try {
@@ -325,7 +509,11 @@ const RDCompletedProjects = () => {
       return;
     }
     try {
-      const exportData = filteredRows;
+      const exportData = filteredRows.map((r) => {
+        const clean = { ...r };
+        delete clean._globalIndex;
+        return clean;
+      });
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, activeImport.sheetName || 'Sheet1');
@@ -338,7 +526,7 @@ const RDCompletedProjects = () => {
     }
   };
 
-  // 5. Delete handlers
+  // 8. Delete File handlers
   const handleOpenDeleteDialog = (imp) => {
     setImportToDelete(imp);
     setDeleteDialogOpen(true);
@@ -364,33 +552,33 @@ const RDCompletedProjects = () => {
     }
   };
 
-  // 6. Filtering & Sorting data
+  // 9. Filtering & Sorting data
   const filteredRows = useMemo(() => {
-    if (!activeImport || !activeImport.rows) return [];
-    let rows = activeImport.rows;
+    const sourceRows = isInlineEditMode ? editedRows : (activeImport?.rows || []);
+    if (!sourceRows.length) return [];
+
+    let rowsWithIndex = sourceRows.map((r, idx) => ({ ...r, _globalIndex: idx }));
 
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      rows = rows.filter((row) =>
-        Object.values(row).some((val) =>
-          val !== null && val !== undefined && String(val).toLowerCase().includes(term)
+      rowsWithIndex = rowsWithIndex.filter((row) =>
+        Object.entries(row).some(([key, val]) =>
+          key !== '_globalIndex' && val !== null && val !== undefined && String(val).toLowerCase().includes(term)
         )
       );
     }
 
     if (orderBy) {
-      rows = [...rows].sort((a, b) => {
+      rowsWithIndex = [...rowsWithIndex].sort((a, b) => {
         const valA = a[orderBy] !== undefined && a[orderBy] !== null ? a[orderBy] : '';
         const valB = b[orderBy] !== undefined && b[orderBy] !== null ? b[orderBy] : '';
 
-        // If numeric
         const numA = parseFloat(valA);
         const numB = parseFloat(valB);
         if (!isNaN(numA) && !isNaN(numB)) {
           return order === 'asc' ? numA - numB : numB - numA;
         }
 
-        // String comparison
         const strA = String(valA).toLowerCase();
         const strB = String(valB).toLowerCase();
         if (strA < strB) return order === 'asc' ? -1 : 1;
@@ -399,8 +587,8 @@ const RDCompletedProjects = () => {
       });
     }
 
-    return rows;
-  }, [activeImport, searchTerm, orderBy, order]);
+    return rowsWithIndex;
+  }, [activeImport, isInlineEditMode, editedRows, searchTerm, orderBy, order]);
 
   const paginatedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -408,6 +596,7 @@ const RDCompletedProjects = () => {
   }, [filteredRows, page, rowsPerPage]);
 
   const handleRequestSort = (property) => {
+    if (isInlineEditMode) return; // Prevent sorting while inline editing to keep stable indices
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
@@ -417,7 +606,7 @@ const RDCompletedProjects = () => {
     <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: '#F8FAFC', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       
       {/* Page Header */}
-      <Box sx={{ mb: 3.5, display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
             <Box
@@ -439,7 +628,7 @@ const RDCompletedProjects = () => {
             </Typography>
           </Box>
           <Typography variant="body2" sx={{ color: '#64748B', maxWidth: 700 }}>
-            View and manage completed R&D project records imported from Excel spreadsheets.
+            View, edit, and manage completed R&D project records imported from Excel spreadsheets.
           </Typography>
         </Box>
 
@@ -448,7 +637,7 @@ const RDCompletedProjects = () => {
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={() => fetchImports(activeImport?._id)}
-            disabled={isLoading}
+            disabled={isLoading || isInlineEditMode}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -466,6 +655,7 @@ const RDCompletedProjects = () => {
               variant="contained"
               startIcon={<UploadIcon />}
               onClick={handleOpenUploadModal}
+              disabled={isInlineEditMode}
               sx={{
                 bgcolor: BRAND_GREEN,
                 '&:hover': { bgcolor: BRAND_GREEN_DARK },
@@ -484,116 +674,13 @@ const RDCompletedProjects = () => {
         </Stack>
       </Box>
 
-      {/* KPI Cards Grid */}
-      <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
-        {/* Total Records */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2.5,
-              borderRadius: 2,
-              bgcolor: '#FFFFFF',
-              border: `1px solid ${BORDER_COLOR}`,
-              borderLeft: `4px solid ${BRAND_GREEN}`,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            }}
-          >
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Total Records
-            </Typography>
-            <Typography variant="h4" sx={{ color: '#1E293B', fontWeight: 700, mt: 0.5, mb: 0.5 }}>
-              {activeImport ? (activeImport.rowCount || activeImport.rows?.length || 0).toLocaleString() : (kpis.totalRecords || 0).toLocaleString()}
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#94A3B8' }}>
-              {activeImport ? `in active sheet "${activeImport.sheetName}"` : `across ${kpis.totalFiles || 0} workbooks`}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        {/* Total Excel Files */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2.5,
-              borderRadius: 2,
-              bgcolor: '#FFFFFF',
-              border: `1px solid ${BORDER_COLOR}`,
-              borderLeft: '4px solid #0284C7',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            }}
-          >
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Excel Workbooks
-            </Typography>
-            <Typography variant="h4" sx={{ color: '#1E293B', fontWeight: 700, mt: 0.5, mb: 0.5 }}>
-              {(kpis.totalFiles || imports.length || 0).toLocaleString()}
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#94A3B8' }}>
-              Imported spreadsheets
-            </Typography>
-          </Paper>
-        </Grid>
-
-        {/* Last Updated */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2.5,
-              borderRadius: 2,
-              bgcolor: '#FFFFFF',
-              border: `1px solid ${BORDER_COLOR}`,
-              borderLeft: '4px solid #D97706',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            }}
-          >
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Last Updated
-            </Typography>
-            <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 700, mt: 0.5, mb: 0.5, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {kpis.lastUpdated ? formatDate(kpis.lastUpdated) : 'No uploads yet'}
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {kpis.lastUploadedBy?.name ? `By ${kpis.lastUploadedBy.name}` : 'Awaiting initial import'}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        {/* Active Spreadsheet */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2.5,
-              borderRadius: 2,
-              bgcolor: '#FFFFFF',
-              border: `1px solid ${BORDER_COLOR}`,
-              borderLeft: '4px solid #7C3AED',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            }}
-          >
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Active Spreadsheet
-            </Typography>
-            <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 700, mt: 0.5, mb: 0.5, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {activeImport ? activeImport.originalName : 'None Selected'}
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#94A3B8' }}>
-              {activeImport ? `Sheet: ${activeImport.sheetName} (${activeImport.headers?.length || 0} cols)` : 'Upload or pick a workbook'}
-            </Typography>
-          </Paper>
-        </Grid>
-      </Grid>
-
       {/* File Selector & Details Banner */}
       {imports.length > 0 && (
         <Paper
           elevation={0}
           sx={{
             p: 2,
-            mb: 3,
+            mb: 2.5,
             bgcolor: '#FFFFFF',
             border: `1px solid ${BORDER_COLOR}`,
             borderRadius: 2,
@@ -614,6 +701,7 @@ const RDCompletedProjects = () => {
                 labelId="select-import-label"
                 value={activeImport?._id || ''}
                 label="Select Excel File"
+                disabled={isInlineEditMode}
                 onChange={(e) => selectImport(e.target.value)}
                 sx={{
                   bgcolor: '#F8FAFC',
@@ -630,7 +718,7 @@ const RDCompletedProjects = () => {
                       </Typography>
                       <Chip
                         size="small"
-                        label={`${imp.rowCount || 0} rows`}
+                        label={`${imp.rowCount || 0} records`}
                         sx={{ ml: 1, height: 20, fontSize: '0.7rem', bgcolor: '#E2E8F0' }}
                       />
                     </Box>
@@ -683,6 +771,7 @@ const RDCompletedProjects = () => {
                 size="small"
                 startIcon={<DownloadIcon />}
                 onClick={() => handleDownloadOriginal(activeImport)}
+                disabled={isInlineEditMode}
                 sx={{
                   textTransform: 'none',
                   fontWeight: 600,
@@ -699,6 +788,7 @@ const RDCompletedProjects = () => {
                 size="small"
                 startIcon={<ExportIcon />}
                 onClick={handleExportCurrentView}
+                disabled={isInlineEditMode}
                 sx={{
                   textTransform: 'none',
                   fontWeight: 600,
@@ -717,6 +807,7 @@ const RDCompletedProjects = () => {
                   color="error"
                   startIcon={<DeleteIcon />}
                   onClick={() => handleOpenDeleteDialog(activeImport)}
+                  disabled={isInlineEditMode}
                   sx={{
                     textTransform: 'none',
                     fontWeight: 600,
@@ -743,7 +834,66 @@ const RDCompletedProjects = () => {
           flex: 1,
         }}
       >
-        {/* Table Search & Toolbar */}
+        {/* Inline Edit Banner */}
+        {isInlineEditMode && (
+          <Box
+            sx={{
+              px: 2.5,
+              py: 1.5,
+              bgcolor: '#FEF3C7',
+              borderBottom: '1px solid #FDE68A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 1.5,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <EditIcon sx={{ color: '#D97706', fontSize: '1.2rem' }} />
+              <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400E' }}>
+                Spreadsheet Edit Mode Active — Click any cell in the table to modify values. Changes persist when saved.
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1.5}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<CloseIcon />}
+                onClick={handleToggleInlineEdit}
+                disabled={isSavingTable}
+                sx={{
+                  color: '#78350F',
+                  borderColor: '#D97706',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  bgcolor: '#FFFFFF',
+                  '&:hover': { bgcolor: '#FFFBEB' },
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={isSavingTable ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                onClick={handleSaveAllInlineChanges}
+                disabled={isSavingTable}
+                sx={{
+                  bgcolor: BRAND_GREEN,
+                  '&:hover': { bgcolor: BRAND_GREEN_DARK },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2.5,
+                }}
+              >
+                {isSavingTable ? 'Saving...' : 'Save All Changes'}
+              </Button>
+            </Stack>
+          </Box>
+        )}
+
+        {/* Table Search & Editing Toolbar */}
         <Box
           sx={{
             p: 2,
@@ -756,6 +906,7 @@ const RDCompletedProjects = () => {
             bgcolor: '#FCFDFD',
           }}
         >
+          {/* Search Field */}
           <TextField
             size="small"
             placeholder="Search across all columns..."
@@ -763,8 +914,8 @@ const RDCompletedProjects = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             disabled={!activeImport || !activeImport.rows?.length}
             sx={{
-              minWidth: { xs: '100%', sm: 320 },
-              maxWidth: 450,
+              minWidth: { xs: '100%', sm: 300 },
+              maxWidth: 420,
               '& .MuiOutlinedInput-root': {
                 bgcolor: '#FFFFFF',
                 borderRadius: 1.5,
@@ -786,12 +937,53 @@ const RDCompletedProjects = () => {
             }}
           />
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
+          {/* Right Toolbar: Edit Mode, Add Record, Row Count */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500, mr: 1 }}>
               {activeImport
-                ? `Showing ${filteredRows.length} of ${activeImport.rowCount || activeImport.rows?.length || 0} records`
+                ? `Showing ${filteredRows.length} of ${(isInlineEditMode ? editedRows.length : (activeImport.rowCount || activeImport.rows?.length || 0))} records`
                 : '0 records'}
             </Typography>
+
+            {isDevOrAdmin && activeImport && (
+              <>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenAddRowModal}
+                  sx={{
+                    borderColor: '#CBD5E1',
+                    color: '#1E293B',
+                    bgcolor: '#FFFFFF',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: '#F1F5F9', borderColor: '#94A3B8' },
+                  }}
+                >
+                  Add Record
+                </Button>
+
+                <Button
+                  variant={isInlineEditMode ? 'contained' : 'outlined'}
+                  size="small"
+                  startIcon={isInlineEditMode ? <CloseIcon /> : <EditIcon />}
+                  onClick={handleToggleInlineEdit}
+                  sx={{
+                    bgcolor: isInlineEditMode ? '#D97706' : '#FFFFFF',
+                    color: isInlineEditMode ? '#FFFFFF' : BRAND_GREEN,
+                    borderColor: isInlineEditMode ? '#D97706' : BRAND_GREEN,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    '&:hover': {
+                      bgcolor: isInlineEditMode ? '#B45309' : 'rgba(46, 125, 50, 0.05)',
+                    },
+                  }}
+                >
+                  {isInlineEditMode ? 'Exit Edit Mode' : 'Edit Table'}
+                </Button>
+              </>
+            )}
           </Box>
         </Box>
 
@@ -808,7 +1000,7 @@ const RDCompletedProjects = () => {
         {/* Table Content */}
         {!isLoading && !isLoadingDetails && activeImport && activeImport.headers?.length > 0 && (
           <>
-            <TableContainer sx={{ maxHeight: 'calc(100vh - 380px)', minHeight: 320 }}>
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)', minHeight: 320 }}>
               <Table stickyHeader size="small" sx={{ minWidth: 650 }}>
                 <TableHead>
                   <TableRow>
@@ -822,12 +1014,32 @@ const RDCompletedProjects = () => {
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                         py: 1.5,
-                        width: 60,
+                        width: 55,
                         borderBottom: `2px solid ${BORDER_COLOR}`,
                       }}
                     >
                       #
                     </TableCell>
+
+                    {/* Actions Column (Edit/Delete) */}
+                    {isDevOrAdmin && (
+                      <TableCell
+                        align="center"
+                        sx={{
+                          bgcolor: '#F1F5F9',
+                          color: '#475569',
+                          fontWeight: 700,
+                          fontSize: '0.78rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          py: 1.5,
+                          width: 90,
+                          borderBottom: `2px solid ${BORDER_COLOR}`,
+                        }}
+                      >
+                        Actions
+                      </TableCell>
+                    )}
 
                     {/* Dynamic Columns */}
                     {activeImport.headers.map((colHeader) => (
@@ -849,6 +1061,7 @@ const RDCompletedProjects = () => {
                           active={orderBy === colHeader}
                           direction={orderBy === colHeader ? order : 'asc'}
                           onClick={() => handleRequestSort(colHeader)}
+                          disabled={isInlineEditMode}
                           sx={{
                             '&.Mui-active': { color: BRAND_GREEN },
                             '& .MuiTableSortLabel-icon': { color: `${BRAND_GREEN} !important` },
@@ -863,50 +1076,101 @@ const RDCompletedProjects = () => {
 
                 <TableBody>
                   {paginatedRows.length > 0 ? (
-                    paginatedRows.map((row, idx) => (
-                      <TableRow
-                        key={idx}
-                        hover
-                        sx={{
-                          '&:nth-of-type(even)': { bgcolor: '#F8FAFC' },
-                          '&:hover': { bgcolor: '#F1F5F9 !important' },
-                        }}
-                      >
-                        {/* Row number */}
-                        <TableCell sx={{ color: '#94A3B8', fontSize: '0.8rem', py: 1.25, fontWeight: 500 }}>
-                          {page * rowsPerPage + idx + 1}
-                        </TableCell>
+                    paginatedRows.map((row, idx) => {
+                      const globalIdx = row._globalIndex !== undefined ? row._globalIndex : (page * rowsPerPage + idx);
 
-                        {/* Cell Values */}
-                        {activeImport.headers.map((colHeader) => {
-                          const val = row[colHeader];
-                          const displayVal = val !== undefined && val !== null && String(val).trim() !== ''
-                            ? String(val)
-                            : '—';
+                      return (
+                        <TableRow
+                          key={globalIdx}
+                          hover
+                          sx={{
+                            '&:nth-of-type(even)': { bgcolor: '#F8FAFC' },
+                            '&:hover': { bgcolor: '#F1F5F9 !important' },
+                          }}
+                        >
+                          {/* Row number */}
+                          <TableCell sx={{ color: '#94A3B8', fontSize: '0.8rem', py: 1.25, fontWeight: 500 }}>
+                            {page * rowsPerPage + idx + 1}
+                          </TableCell>
 
-                          return (
-                            <TableCell
-                              key={colHeader}
-                              sx={{
-                                color: displayVal === '—' ? '#94A3B8' : '#334155',
-                                fontSize: '0.825rem',
-                                py: 1.25,
-                                maxWidth: 360,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                              title={String(val || '')}
-                            >
-                              {displayVal}
+                          {/* Actions (Edit row dialog, Delete row dialog) */}
+                          {isDevOrAdmin && (
+                            <TableCell align="center" sx={{ py: 0.5, px: 1, whiteSpace: 'nowrap' }}>
+                              <Tooltip title="Edit this record">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenEditRowModal(globalIdx, row)}
+                                  sx={{ color: '#2563EB', '&:hover': { bgcolor: '#EFF6FF' } }}
+                                >
+                                  <EditIcon fontSize="small" sx={{ fontSize: '1rem' }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete this record">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenDeleteRowModal(globalIdx)}
+                                  sx={{ color: '#DC2626', '&:hover': { bgcolor: '#FEF2F2' }, ml: 0.5 }}
+                                >
+                                  <DeleteIcon fontSize="small" sx={{ fontSize: '1rem' }} />
+                                </IconButton>
+                              </Tooltip>
                             </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))
+                          )}
+
+                          {/* Cell Values (Text or Editable Input) */}
+                          {activeImport.headers.map((colHeader) => {
+                            const val = row[colHeader];
+
+                            if (isInlineEditMode) {
+                              return (
+                                <TableCell key={colHeader} sx={{ p: 0.75 }}>
+                                  <TextField
+                                    size="small"
+                                    fullWidth
+                                    value={val !== undefined && val !== null ? val : ''}
+                                    onChange={(e) => handleCellChange(globalIdx, colHeader, e.target.value)}
+                                    sx={{
+                                      '& .MuiInputBase-input': {
+                                        fontSize: '0.825rem',
+                                        py: 0.6,
+                                        px: 1,
+                                        bgcolor: '#FFFFFF',
+                                        borderRadius: '4px',
+                                      },
+                                    }}
+                                  />
+                                </TableCell>
+                              );
+                            }
+
+                            const displayVal = val !== undefined && val !== null && String(val).trim() !== ''
+                              ? String(val)
+                              : '—';
+
+                            return (
+                              <TableCell
+                                key={colHeader}
+                                sx={{
+                                  color: displayVal === '—' ? '#94A3B8' : '#334155',
+                                  fontSize: '0.825rem',
+                                  py: 1.25,
+                                  maxWidth: 360,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                                title={String(val || '')}
+                              >
+                                {displayVal}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={activeImport.headers.length + 1} sx={{ textAlign: 'center', py: 6 }}>
+                      <TableCell colSpan={activeImport.headers.length + (isDevOrAdmin ? 2 : 1)} sx={{ textAlign: 'center', py: 6 }}>
                         <Typography variant="body1" sx={{ color: '#64748B', fontWeight: 500 }}>
                           {searchTerm ? `No records matching "${searchTerm}"` : 'No records found in this worksheet.'}
                         </Typography>
@@ -988,6 +1252,220 @@ const RDCompletedProjects = () => {
       </Paper>
 
       {/* ========================================================= */}
+      {/* EDIT RECORD MODAL (Single Row)                            */}
+      {/* ========================================================= */}
+      <Dialog
+        open={editRowModalOpen}
+        onClose={() => !isSavingRow && setEditRowModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2.5, p: 1 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: 1.5,
+                bgcolor: '#EFF6FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#2563EB',
+              }}
+            >
+              <EditIcon />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', fontSize: '1.15rem' }}>
+                Edit Record #{editingRowIndex !== null ? editingRowIndex + 1 : ''}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Modify values for the selected row in "{activeImport?.originalName}"
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton size="small" onClick={() => setEditRowModalOpen(false)} disabled={isSavingRow}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ pt: 2.5, pb: 2.5 }}>
+          <Grid container spacing={2}>
+            {(activeImport?.headers || []).map((header) => (
+              <Grid item xs={12} sm={6} key={header}>
+                <TextField
+                  label={header}
+                  fullWidth
+                  size="small"
+                  value={editingRowData[header] !== undefined && editingRowData[header] !== null ? editingRowData[header] : ''}
+                  onChange={(e) =>
+                    setEditingRowData((prev) => ({
+                      ...prev,
+                      [header]: e.target.value,
+                    }))
+                  }
+                  sx={{
+                    '& .MuiOutlinedInput-root': { bgcolor: '#F8FAFC' },
+                  }}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setEditRowModalOpen(false)} disabled={isSavingRow} sx={{ color: '#64748B', textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveSingleRow}
+            disabled={isSavingRow}
+            startIcon={isSavingRow ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+            sx={{
+              bgcolor: BRAND_GREEN,
+              '&:hover': { bgcolor: BRAND_GREEN_DARK },
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+            }}
+          >
+            {isSavingRow ? 'Saving Changes...' : 'Save Record'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ========================================================= */}
+      {/* ADD NEW RECORD MODAL                                      */}
+      {/* ========================================================= */}
+      <Dialog
+        open={addRowModalOpen}
+        onClose={() => !isAddingRow && setAddRowModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2.5, p: 1 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: 1.5,
+                bgcolor: 'rgba(46, 125, 50, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: BRAND_GREEN,
+              }}
+            >
+              <AddIcon />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', fontSize: '1.15rem' }}>
+                Add New Record
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Insert a new project row into "{activeImport?.originalName}"
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton size="small" onClick={() => setAddRowModalOpen(false)} disabled={isAddingRow}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ pt: 2.5, pb: 2.5 }}>
+          <Grid container spacing={2}>
+            {(activeImport?.headers || []).map((header) => (
+              <Grid item xs={12} sm={6} key={header}>
+                <TextField
+                  label={header}
+                  fullWidth
+                  size="small"
+                  value={newRowData[header] || ''}
+                  onChange={(e) =>
+                    setNewRowData((prev) => ({
+                      ...prev,
+                      [header]: e.target.value,
+                    }))
+                  }
+                  sx={{
+                    '& .MuiOutlinedInput-root': { bgcolor: '#F8FAFC' },
+                  }}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setAddRowModalOpen(false)} disabled={isAddingRow} sx={{ color: '#64748B', textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmAddRow}
+            disabled={isAddingRow}
+            startIcon={isAddingRow ? <CircularProgress size={16} color="inherit" /> : <AddIcon />}
+            sx={{
+              bgcolor: BRAND_GREEN,
+              '&:hover': { bgcolor: BRAND_GREEN_DARK },
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+            }}
+          >
+            {isAddingRow ? 'Adding...' : 'Add Record to Table'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ========================================================= */}
+      {/* DELETE RECORD CONFIRMATION MODAL                          */}
+      {/* ========================================================= */}
+      <Dialog
+        open={deleteRowModalOpen}
+        onClose={() => !isDeletingRow && setDeleteRowModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: '#1E293B' }}>
+          Delete Record?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: '#475569', mb: 1 }}>
+            Are you sure you want to delete row #{deletingRowIndex !== null ? deletingRowIndex + 1 : ''}?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#DC2626', fontWeight: 500 }}>
+            This row will be permanently removed from the saved spreadsheet.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setDeleteRowModalOpen(false)}
+            disabled={isDeletingRow}
+            sx={{ color: '#64748B', textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDeleteRow}
+            disabled={isDeletingRow}
+            startIcon={isDeletingRow ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {isDeletingRow ? 'Deleting...' : 'Delete Row'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ========================================================= */}
       {/* EXCEL UPLOAD MODAL                                        */}
       {/* ========================================================= */}
       <Dialog
@@ -995,9 +1473,7 @@ const RDCompletedProjects = () => {
         onClose={handleCloseUploadModal}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: { borderRadius: 2.5, p: 1 },
-        }}
+        PaperProps={{ sx: { borderRadius: 2.5, p: 1 } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -1210,7 +1686,7 @@ const RDCompletedProjects = () => {
       </Dialog>
 
       {/* ========================================================= */}
-      {/* DELETE CONFIRMATION DIALOG                                */}
+      {/* DELETE WORKBOOK CONFIRMATION DIALOG                       */}
       {/* ========================================================= */}
       <Dialog
         open={deleteDialogOpen}

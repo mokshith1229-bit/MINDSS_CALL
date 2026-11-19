@@ -4,6 +4,7 @@ const {
   getImportById,
   createImport,
   deleteImport,
+  updateImport,
   downloadImportFile,
 } = require('../controllers/admin.rdCompleted.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
@@ -18,6 +19,7 @@ router.use(authorize('DEVELOPER', 'ADMIN', 'SUPER_ADMIN'));
 
 router.get('/', getImports);
 router.get('/:id', getImportById);
+router.put('/:id', auditLog('UPDATE_RD_COMPLETED_IMPORT', 'RDCompletedImport'), updateImport);
 router.get('/:id/download', downloadImportFile);
 
 router.post(

@@ -19,7 +19,6 @@ import {
   ManageAccounts as ManageAccountsIcon,
   Timeline as TimelineIcon,
   Lightbulb as PublicIdeasIcon,
-  TableChart as RDCompletedIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo.png';
@@ -79,7 +78,6 @@ const navSections = [
     sectionLabel: 'Projects',
     items: [
       { label: 'R&D Ongoing Projects', icon: <ProjectsIcon fontSize="small" />, path: '/rd-ongoing-projects', featureKey: 'module.rd_ongoing_projects' },
-      { label: 'R&D Completed', icon: <RDCompletedIcon fontSize="small" />, path: '/rnd-completed', featureKey: 'module.rd_completed' },
       { label: 'Pilot Projects', icon: <ProjectsIcon fontSize="small" />, path: '/pilot-projects', featureKey: 'module.pilot_projects' },
       { label: 'Meeting Requests', icon: <EmailIcon fontSize="small" />, path: '/meeting-requests', featureKey: 'module.meeting_requests' },
     ],

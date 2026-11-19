@@ -13,6 +13,7 @@ const useRDCompletedStore = create((set, get) => ({
   isLoading: false,
   isUploading: false,
   isLoadingDetails: false,
+  isSaving: false,
   error: null,
 
   fetchImports: async (selectedId = null) => {
@@ -94,6 +95,26 @@ const useRDCompletedStore = create((set, get) => ({
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to delete import';
       set({ isLoading: false, error: msg });
+      throw err;
+    }
+  },
+
+  updateImportData: async (id, updateData) => {
+    set({ isSaving: true, error: null });
+    try {
+      const res = await api.put(`/admin/rd-completed/${id}`, updateData);
+      const updated = res.data?.data;
+      set((state) => ({
+        activeImport: { ...state.activeImport, ...updated },
+        imports: state.imports.map((imp) =>
+          imp._id === id ? { ...imp, rowCount: updated.rowCount || updated.rows?.length || imp.rowCount } : imp
+        ),
+        isSaving: false,
+      }));
+      return updated;
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to update import data';
+      set({ error: msg, isSaving: false });
       throw err;
     }
   },
