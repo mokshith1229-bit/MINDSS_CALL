@@ -40,7 +40,10 @@ const extractSafeIdea = (sub) => {
                       findVal(['abstract', 'description', 'summary', 'ideadetails', 'overview', 'details']) ||
                       '';
 
-  const category = findVal(['category', 'type', 'area', 'department', 'dept']) || 'General Innovation';
+  let category = findVal(['category', 'type', 'area', 'department', 'dept', 'subdepartment']) || 'General Innovation';
+  if (category && typeof category === 'string') {
+    category = category.charAt(0).toUpperCase() + category.slice(1);
+  }
   const innovationType = findVal(['innovationtype']) || '';
 
   return {
@@ -62,9 +65,16 @@ exports.getPublicIdeas = async (req, res, next) => {
   try {
     const { category, innovationType, search } = req.query;
 
-    // Only ideas explicitly marked as Published
+    // Count total idea submissions across the entire system
+    const totalIdeaSubmissions = await Submission.countDocuments({
+      status: { $ne: 'DELETED' }
+    });
+
+    // Submissions to display on public ideas portal:
+    // Display all active innovation submissions UNLESS explicitly marked as Unpublished
     const query = {
-      'publicVisibility.status': 'Published'
+      status: { $ne: 'DELETED' },
+      'publicVisibility.status': { $ne: 'Unpublished' }
     };
 
     const rawSubmissions = await Submission.find(query)
@@ -106,7 +116,8 @@ exports.getPublicIdeas = async (req, res, next) => {
       ideas: safeIdeas,
       categories: allCategories,
       innovationTypes: allInnovationTypes,
-      total: safeIdeas.length
+      total: safeIdeas.length,
+      totalIdeaSubmissions,
     }, 'Public ideas retrieved successfully'));
   } catch (err) {
     next(err);
