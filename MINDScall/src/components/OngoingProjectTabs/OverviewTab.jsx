@@ -647,7 +647,7 @@ const OverviewTab = ({ project, onUpdate }) => {
             <Box sx={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 3, mb: 2.5 }}>
               <Box sx={{ minWidth: 180, pr: { md: 3 } }}>
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                  Proposer / Submitter
+                  Name of the Proposer
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#1E293B', fontWeight: 500, fontSize: '0.875rem' }}>
                   {submitterDisplay}

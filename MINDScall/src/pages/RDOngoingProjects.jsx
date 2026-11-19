@@ -29,10 +29,10 @@ const RDOngoingProjects = () => {
     title: '',
     submissionType: 'Proposal',
     projectOwner: 'chtech.in',
-    employeeName: currentUser?.name || '',
-    proposerName: currentUser?.name || '',
+    employeeName: '',
+    proposerName: '',
     hodName: '',
-    department: currentUser?.department || 'R&D',
+    department: currentUser?.department || 'Engineering',
     submitterEmail: currentUser?.email || '',
     implementationStatus: 'Approved',
     wbsCode: '',
@@ -45,10 +45,10 @@ const RDOngoingProjects = () => {
     const user = authStore.getState()?.user;
     setNewProjectData({
       ...defaultProjectData,
-      employeeName: user?.name || '',
-      proposerName: user?.name || '',
+      employeeName: '',
+      proposerName: '',
       hodName: '',
-      department: user?.department || 'R&D',
+      department: user?.department || 'Engineering',
       submitterEmail: user?.email || '',
     });
     setAttemptedSubmit(false);
@@ -65,7 +65,12 @@ const RDOngoingProjects = () => {
     try {
       setIsSubmitting(true);
       setCreateError('');
-      const created = await formStore.createManualProject(newProjectData);
+      const payload = {
+        ...newProjectData,
+        employeeName: newProjectData.proposerName?.trim() || newProjectData.employeeName?.trim() || currentUser?.name || 'R&D Team',
+        proposerName: newProjectData.proposerName?.trim() || newProjectData.employeeName?.trim() || currentUser?.name || 'R&D Team',
+      };
+      const created = await formStore.createManualProject(payload);
       setOpenCreateDialog(false);
       setNewProjectData(defaultProjectData);
       if (created && created.id) {
@@ -150,7 +155,7 @@ const RDOngoingProjects = () => {
       </Box>
     )},
     { field: 'parsedTitle', headerName: 'Project Title', flex: 1, minWidth: 220, renderCell: (params) => <Typography variant="body2" sx={{ fontWeight: 600, color: '#323130' }}>{params.value || 'Untitled'}</Typography> },
-    { field: 'proposer', headerName: 'Proposer', width: 160, renderCell: (params) => {
+    { field: 'proposer', headerName: 'Name of the Proposer', width: 180, renderCell: (params) => {
       const proposer = params.row.employeeName || params.row.projectDetails?.submitterName || params.row.projectDetails?.proposerName || params.row.answers?.proposerName || params.row.answers?.employeeName || 'N/A';
       return <Typography variant="body2" sx={{ color: '#323130' }}>{proposer}</Typography>;
     }},
@@ -412,25 +417,33 @@ const RDOngoingProjects = () => {
             <Grid xs={12} sm={6}>
               <TextField
                 label="Name of the Proposer"
-                placeholder="e.g., Dr. Rajesh Kumar"
+                placeholder="Name of the Proposer (e.g. Dr. Rajesh Kumar)"
                 fullWidth
                 size="small"
-                value={newProjectData.proposerName || newProjectData.employeeName}
+                value={newProjectData.proposerName}
                 onChange={(e) => setNewProjectData({ 
                   ...newProjectData, 
                   employeeName: e.target.value,
                   proposerName: e.target.value 
                 })}
+                InputLabelProps={{
+                  shrink: true,
+                  sx: { fontWeight: 600, color: '#1E293B', fontSize: '0.85rem' }
+                }}
               />
             </Grid>
             <Grid xs={12} sm={6}>
               <TextField
                 label="HOD"
-                placeholder="e.g., Dr. Amit Sharma"
+                placeholder="HOD (e.g. Dr. Amit Sharma)"
                 fullWidth
                 size="small"
                 value={newProjectData.hodName}
                 onChange={(e) => setNewProjectData({ ...newProjectData, hodName: e.target.value })}
+                InputLabelProps={{
+                  shrink: true,
+                  sx: { fontWeight: 600, color: '#1E293B', fontSize: '0.85rem' }
+                }}
               />
             </Grid>
           </Grid>
