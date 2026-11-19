@@ -30,6 +30,8 @@ const RDOngoingProjects = () => {
     submissionType: 'Proposal',
     projectOwner: 'chtech.in',
     employeeName: currentUser?.name || '',
+    proposerName: currentUser?.name || '',
+    hodName: '',
     department: currentUser?.department || 'R&D',
     submitterEmail: currentUser?.email || '',
     implementationStatus: 'Approved',
@@ -44,6 +46,8 @@ const RDOngoingProjects = () => {
     setNewProjectData({
       ...defaultProjectData,
       employeeName: user?.name || '',
+      proposerName: user?.name || '',
+      hodName: '',
       department: user?.department || 'R&D',
       submitterEmail: user?.email || '',
     });
@@ -88,7 +92,11 @@ const RDOngoingProjects = () => {
     const matchSearch = search.trim() === '' || 
       (s.businessId && s.businessId.toLowerCase().includes(search.toLowerCase())) ||
       (s.trackingId && s.trackingId.toLowerCase().includes(search.toLowerCase())) ||
-      (s.parsedTitle && s.parsedTitle.toLowerCase().includes(search.toLowerCase()));
+      (s.parsedTitle && s.parsedTitle.toLowerCase().includes(search.toLowerCase())) ||
+      (s.employeeName && s.employeeName.toLowerCase().includes(search.toLowerCase())) ||
+      (s.projectDetails?.submitterName && s.projectDetails.submitterName.toLowerCase().includes(search.toLowerCase())) ||
+      (s.projectDetails?.hodName && s.projectDetails.hodName.toLowerCase().includes(search.toLowerCase())) ||
+      (s.answers?.hodName && s.answers.hodName.toLowerCase().includes(search.toLowerCase()));
       
     const status = s.projectDetails?.implementationStatus || 'Approved';
     const matchType = filterType === 'all' || 
@@ -129,21 +137,29 @@ const RDOngoingProjects = () => {
   };
 
   const columns = [
-    { field: 'trackingId', headerName: 'Tracking ID', width: 140, renderCell: (params) => (
+    { field: 'trackingId', headerName: 'Tracking ID', width: 130, renderCell: (params) => (
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <Typography variant="body2" sx={{ fontWeight: 600, color: '#0078D4' }}>{params.value || params.row.businessId || 'N/A'}</Typography>
         {params.row.wbsCode && <Typography variant="caption" sx={{ color: '#605E5C', fontWeight: 600 }}>{params.row.wbsCode}</Typography>}
       </Box>
     )},
-    { field: 'submissionType', headerName: 'Type', width: 120, renderCell: (params) => (
+    { field: 'submissionType', headerName: 'Type', width: 110, renderCell: (params) => (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {params.value === 'Proposal' ? <Receipt fontSize="small" sx={{ color: '#4338CA' }} /> : <Star fontSize="small" sx={{ color: '#D97706' }} />}
         <Typography variant="body2">{params.value || 'Unknown'}</Typography>
       </Box>
     )},
-    { field: 'parsedTitle', headerName: 'Project Title', flex: 1, minWidth: 250, renderCell: (params) => <Typography variant="body2" sx={{ fontWeight: 600, color: '#323130' }}>{params.value || 'Untitled'}</Typography> },
-    { field: 'projectOwner', headerName: 'Owner', width: 180, renderCell: (params) => {
-      const owner = 'chtech.in';
+    { field: 'parsedTitle', headerName: 'Project Title', flex: 1, minWidth: 220, renderCell: (params) => <Typography variant="body2" sx={{ fontWeight: 600, color: '#323130' }}>{params.value || 'Untitled'}</Typography> },
+    { field: 'proposer', headerName: 'Proposer', width: 160, renderCell: (params) => {
+      const proposer = params.row.employeeName || params.row.projectDetails?.submitterName || params.row.projectDetails?.proposerName || params.row.answers?.proposerName || params.row.answers?.employeeName || 'N/A';
+      return <Typography variant="body2" sx={{ color: '#323130' }}>{proposer}</Typography>;
+    }},
+    { field: 'hod', headerName: 'HOD', width: 150, renderCell: (params) => {
+      const hod = params.row.projectDetails?.hodName || params.row.hodName || params.row.answers?.hodName || params.row.answers?.hod || params.row.workflow?.hodReview?.reviewerName || 'N/A';
+      return <Typography variant="body2" sx={{ color: '#323130' }}>{hod}</Typography>;
+    }},
+    { field: 'projectOwner', headerName: 'Owner', width: 140, renderCell: (params) => {
+      const owner = params.row.projectDetails?.owner || params.row.projectOwner || 'chtech.in';
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Avatar sx={{ width: 24, height: 24, bgcolor: '#0078D4', fontSize: '0.75rem' }}>
@@ -153,7 +169,7 @@ const RDOngoingProjects = () => {
         </Box>
       );
     }},
-    { field: 'implementationStatus', headerName: 'Status', width: 150, renderCell: (params) => {
+    { field: 'implementationStatus', headerName: 'Status', width: 140, renderCell: (params) => {
         const status = params.row.projectDetails?.implementationStatus || 'Approved';
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -391,28 +407,42 @@ const RDOngoingProjects = () => {
             </Grid>
           </Grid>
 
+          {/* Two columns: Name of the Proposer and HOD */}
           <Grid container spacing={2}>
             <Grid xs={12} sm={6}>
               <TextField
-                label="Submitter / Lead Name"
+                label="Name of the Proposer"
                 placeholder="e.g., Dr. Rajesh Kumar"
                 fullWidth
                 size="small"
-                value={newProjectData.employeeName}
-                onChange={(e) => setNewProjectData({ ...newProjectData, employeeName: e.target.value })}
+                value={newProjectData.proposerName || newProjectData.employeeName}
+                onChange={(e) => setNewProjectData({ 
+                  ...newProjectData, 
+                  employeeName: e.target.value,
+                  proposerName: e.target.value 
+                })}
               />
             </Grid>
             <Grid xs={12} sm={6}>
               <TextField
-                label="WBS Code (Optional)"
-                placeholder="Auto-generated if blank (e.g. MCP-012)"
+                label="HOD"
+                placeholder="e.g., Dr. Amit Sharma"
                 fullWidth
                 size="small"
-                value={newProjectData.wbsCode}
-                onChange={(e) => setNewProjectData({ ...newProjectData, wbsCode: e.target.value })}
+                value={newProjectData.hodName}
+                onChange={(e) => setNewProjectData({ ...newProjectData, hodName: e.target.value })}
               />
             </Grid>
           </Grid>
+
+          <TextField
+            label="WBS Code (Optional)"
+            placeholder="Auto-generated if blank (e.g. MCP-012)"
+            fullWidth
+            size="small"
+            value={newProjectData.wbsCode}
+            onChange={(e) => setNewProjectData({ ...newProjectData, wbsCode: e.target.value })}
+          />
 
           <TextField
             label="Initial Abstract / Overview (Optional)"

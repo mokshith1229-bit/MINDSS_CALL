@@ -74,14 +74,14 @@ export const parseSubmissionFields = (sub) => {
   let abstract     = pd.abstract || find(fd, ans, ABSTRACT_KW) || 'No abstract provided';
   let benefits     = pd.expectedBenefits || find(fd, ans, BENEFITS_KW) || 'No benefits provided';
   let dept         = pd.department || find(fd, ans, DEPT_KW) || 'Unknown';
-  let employeeName = pd.submitterName || find(fd, ans, NAME_KW) || 'Unknown';
+  let employeeName = pd.proposerName || pd.submitterName || find(fd, ans, NAME_KW) || 'Unknown';
   let employeeCode = pd.submitterCode || find(fd, ans, CODE_KW) || 'Unknown';
   let origin       = pd.origin || '';
 
   // ── Management Chain ──
   let rmName   = find(fd, ans, RM_NAME_KW) || '';
   let rmEmail  = find(fd, ans, RM_EMAIL_KW) || '';
-  let hodName  = find(fd, ans, HOD_NAME_KW) || '';
+  let hodName  = pd.hodName || find(fd, ans, HOD_NAME_KW) || (sub.workflow?.hodReview?.reviewerName) || '';
   let hodEmail = find(fd, ans, HOD_EMAIL_KW) || '';
 
   // ── Budget ──

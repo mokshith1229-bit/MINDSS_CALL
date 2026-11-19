@@ -605,6 +605,7 @@ export const formStore = {
           projectDetails: updatedSub.projectDetails || s.projectDetails,
           timeline: updatedSub.timeline || s.timeline,
           employeeName: data.submitterName ?? parsed.employeeName,
+          hodName: data.hodName ?? parsed.hodName,
           employeeCode: data.employeeCode ?? parsed.employeeCode,
           dept: data.department ?? parsed.dept,
           abstract: data.abstract ?? parsed.abstract,

@@ -1108,6 +1108,8 @@ exports.createManualProject = async (req, res, next) => {
       submissionType = 'Proposal',
       projectOwner,
       employeeName,
+      proposerName,
+      hodName,
       department,
       abstract,
       implementationStatus = 'Approved',
@@ -1179,7 +1181,8 @@ exports.createManualProject = async (req, res, next) => {
     }
 
     const resolvedOwner = projectOwner || 'chtech.in';
-    const resolvedEmployeeName = employeeName || req.user?.name || 'R&D Team';
+    const resolvedEmployeeName = proposerName || employeeName || req.user?.name || 'R&D Team';
+    const resolvedHodName = hodName ? hodName.trim() : '';
     const resolvedDept = department || 'R&D';
     const resolvedEmail = submitterEmail || req.user?.email || '';
 
@@ -1190,7 +1193,10 @@ exports.createManualProject = async (req, res, next) => {
       abstract: abstract || '',
       description: abstract || '',
       employeeName: resolvedEmployeeName,
+      proposerName: resolvedEmployeeName,
       name: resolvedEmployeeName,
+      hodName: resolvedHodName,
+      hod: resolvedHodName,
       department: resolvedDept,
       dept: resolvedDept,
       submissionType: type,
@@ -1200,7 +1206,10 @@ exports.createManualProject = async (req, res, next) => {
     const formData = {
       'Project Title': { value: title.trim(), type: 'text', section: 'Overview' },
       'Abstract': { value: abstract || '', type: 'textarea', section: 'Overview' },
+      'Name of the Proposer': { value: resolvedEmployeeName, type: 'text', section: 'Employee Information' },
       'Full Name': { value: resolvedEmployeeName, type: 'text', section: 'Employee Information' },
+      'HOD': { value: resolvedHodName, type: 'text', section: 'Employee Information' },
+      'Head of Department': { value: resolvedHodName, type: 'text', section: 'Employee Information' },
       'Department': { value: resolvedDept, type: 'text', section: 'Employee Information' },
     };
 
@@ -1222,6 +1231,11 @@ exports.createManualProject = async (req, res, next) => {
         progressPercentage: 0,
         expectedBenefits: '',
         actualBenefits: '',
+        submitterName: resolvedEmployeeName,
+        proposerName: resolvedEmployeeName,
+        hodName: resolvedHodName,
+        department: resolvedDept,
+        abstract: abstract || '',
         updates: [],
         objectives: [],
         initiation: {
@@ -1229,6 +1243,13 @@ exports.createManualProject = async (req, res, next) => {
           approvalDate: new Date(),
           remarks: abstract || '',
           status: 'IN_PROGRESS'
+        }
+      },
+      workflow: {
+        hodReview: {
+          reviewerName: resolvedHodName,
+          decision: 'APPROVED',
+          timestamp: new Date()
         }
       },
       timeline: [
@@ -1263,7 +1284,7 @@ exports.developerUpdateAbstractOrigin = async (req, res, next) => {
       return next(new ApiError(403, 'Access denied: Developer role required for this action'));
     }
 
-    const { submitterName, employeeCode, department, abstract, origin } = req.body;
+    const { submitterName, proposerName, hodName, employeeCode, department, abstract, origin } = req.body;
 
     const submission = await Submission.findById(req.params.id);
     if (!submission) {
@@ -1274,9 +1295,12 @@ exports.developerUpdateAbstractOrigin = async (req, res, next) => {
       submission.projectDetails = {};
     }
 
+    const resolvedSubmitter = proposerName !== undefined ? proposerName : submitterName;
+
     // Capture previous values for audit logging & timeline
     const previousValues = {
       submitterName: submission.projectDetails.submitterName || submission.answers?.employeeName || submission.formData?.['Full Name']?.value || '',
+      hodName: submission.projectDetails.hodName || submission.answers?.hodName || submission.formData?.['HOD']?.value || '',
       employeeCode: submission.projectDetails.submitterCode || submission.answers?.employeeCode || submission.formData?.['Employee Code']?.value || '',
       department: submission.projectDetails.department || submission.answers?.department || submission.formData?.['Department']?.value || '',
       abstract: submission.projectDetails.abstract || submission.answers?.abstract || submission.formData?.['Abstract']?.value || '',
@@ -1284,7 +1308,11 @@ exports.developerUpdateAbstractOrigin = async (req, res, next) => {
     };
 
     // Apply updates to projectDetails (section-specific only)
-    if (submitterName !== undefined) submission.projectDetails.submitterName = submitterName.trim();
+    if (resolvedSubmitter !== undefined) {
+      submission.projectDetails.submitterName = resolvedSubmitter.trim();
+      submission.projectDetails.proposerName = resolvedSubmitter.trim();
+    }
+    if (hodName !== undefined) submission.projectDetails.hodName = hodName.trim();
     if (employeeCode !== undefined) submission.projectDetails.submitterCode = employeeCode.trim();
     if (department !== undefined) submission.projectDetails.department = department.trim();
     if (abstract !== undefined) submission.projectDetails.abstract = abstract.trim();
@@ -1294,11 +1322,22 @@ exports.developerUpdateAbstractOrigin = async (req, res, next) => {
     if (!submission.answers) submission.answers = {};
     if (!submission.formData) submission.formData = {};
 
-    if (submitterName !== undefined) {
-      submission.answers.employeeName = submitterName.trim();
-      submission.answers.name = submitterName.trim();
-      submission.formData['Full Name'] = { value: submitterName.trim(), type: 'text', section: 'Submitter' };
-      submission.formData['Employee Name'] = { value: submitterName.trim(), type: 'text', section: 'Submitter' };
+    if (resolvedSubmitter !== undefined) {
+      submission.answers.employeeName = resolvedSubmitter.trim();
+      submission.answers.proposerName = resolvedSubmitter.trim();
+      submission.answers.name = resolvedSubmitter.trim();
+      submission.formData['Full Name'] = { value: resolvedSubmitter.trim(), type: 'text', section: 'Submitter' };
+      submission.formData['Employee Name'] = { value: resolvedSubmitter.trim(), type: 'text', section: 'Submitter' };
+      submission.formData['Name of the Proposer'] = { value: resolvedSubmitter.trim(), type: 'text', section: 'Submitter' };
+    }
+    if (hodName !== undefined) {
+      submission.answers.hodName = hodName.trim();
+      submission.answers.hod = hodName.trim();
+      submission.formData['HOD'] = { value: hodName.trim(), type: 'text', section: 'Submitter' };
+      submission.formData['Head of Department'] = { value: hodName.trim(), type: 'text', section: 'Submitter' };
+      if (!submission.workflow) submission.workflow = {};
+      if (!submission.workflow.hodReview) submission.workflow.hodReview = {};
+      submission.workflow.hodReview.reviewerName = hodName.trim();
     }
     if (employeeCode !== undefined) {
       submission.answers.employeeCode = employeeCode.trim();
@@ -1318,13 +1357,14 @@ exports.developerUpdateAbstractOrigin = async (req, res, next) => {
     submission.markModified('projectDetails');
     submission.markModified('answers');
     submission.markModified('formData');
+    submission.markModified('workflow');
 
     // Add audit timeline record
     submission.timeline.push({
       stage: 'Developer Project Edit',
       actionBy: req.user?.name || req.user?.email || 'Developer',
       role: 'DEVELOPER',
-      remarks: `Updated Project Abstract & Origin (Submitter: ${submitterName !== undefined ? submitterName : previousValues.submitterName}, Dept: ${department !== undefined ? department : previousValues.department})`,
+      remarks: `Updated Project Abstract & Origin (Proposer: ${resolvedSubmitter !== undefined ? resolvedSubmitter : previousValues.submitterName}, HOD: ${hodName !== undefined ? hodName : previousValues.hodName}, Dept: ${department !== undefined ? department : previousValues.department})`,
       timestamp: new Date()
     });
 
@@ -1336,6 +1376,8 @@ exports.developerUpdateAbstractOrigin = async (req, res, next) => {
       previousValues,
       updatedValues: {
         submitterName: submission.projectDetails.submitterName,
+        proposerName: submission.projectDetails.proposerName,
+        hodName: submission.projectDetails.hodName,
         employeeCode: submission.projectDetails.submitterCode,
         department: submission.projectDetails.department,
         abstract: submission.projectDetails.abstract,

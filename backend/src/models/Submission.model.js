@@ -217,6 +217,8 @@ const submissionSchema = new mongoose.Schema(
         }
       }],
       submitterName: { type: String, default: '' },
+      proposerName: { type: String, default: '' },
+      hodName: { type: String, default: '' },
       submitterCode: { type: String, default: '' },
       department: { type: String, default: '' },
       abstract: { type: String, default: '' },

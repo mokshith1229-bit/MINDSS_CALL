@@ -111,6 +111,7 @@ const OverviewTab = ({ project, onUpdate }) => {
   const [isEditingAbstractOrigin, setIsEditingAbstractOrigin] = useState(false);
   const [savingAbstractOrigin, setSavingAbstractOrigin] = useState(false);
   const [editSubmitterName, setEditSubmitterName] = useState('');
+  const [editHodName, setEditHodName] = useState('');
   const [editEmployeeCode, setEditEmployeeCode] = useState('');
   const [editDepartment, setEditDepartment] = useState('');
   const [editOrigin, setEditOrigin] = useState('');
@@ -127,7 +128,8 @@ const OverviewTab = ({ project, onUpdate }) => {
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   // Current display values
-  const currentSubmitterName = project?.employeeName || pDetails.submitterName || 'Unknown';
+  const currentSubmitterName = project?.employeeName || pDetails.proposerName || pDetails.submitterName || 'Unknown';
+  const currentHodName = pDetails.hodName || project?.hodName || project?.answers?.hodName || project?.workflow?.hodReview?.reviewerName || '';
   const currentEmployeeCode = project?.employeeCode || pDetails.submitterCode || '';
   const currentDept = project?.dept || pDetails.department || 'Unknown';
   const currentOrigin = project?.origin || pDetails.origin || project?.trackingId || project?.businessId || 'Internal Submission';
@@ -184,7 +186,8 @@ const OverviewTab = ({ project, onUpdate }) => {
 
   // ── Section 1 Handlers (Abstract & Origin) ──
   const handleStartEditAbstractOrigin = () => {
-    setEditSubmitterName(project?.employeeName || pDetails.submitterName || '');
+    setEditSubmitterName(project?.employeeName || pDetails.proposerName || pDetails.submitterName || '');
+    setEditHodName(pDetails.hodName || project?.hodName || project?.answers?.hodName || project?.workflow?.hodReview?.reviewerName || '');
     setEditEmployeeCode(project?.employeeCode || pDetails.submitterCode || '');
     setEditDepartment(project?.dept || pDetails.department || '');
     setEditOrigin(project?.origin || pDetails.origin || project?.trackingId || project?.businessId || '');
@@ -201,6 +204,8 @@ const OverviewTab = ({ project, onUpdate }) => {
       setSavingAbstractOrigin(true);
       await formStore.developerUpdateAbstractOrigin(project.id, {
         submitterName: editSubmitterName,
+        proposerName: editSubmitterName,
+        hodName: editHodName,
         employeeCode: editEmployeeCode,
         department: editDepartment,
         origin: editOrigin,
@@ -638,11 +643,11 @@ const OverviewTab = ({ project, onUpdate }) => {
         {!isEditingAbstractOrigin ? (
           /* Read-Only Mode */
           <Box>
-            {/* Metadata Row: Submitter, Department, Origin */}
+            {/* Metadata Row: Submitter, Department, HOD, Origin */}
             <Box sx={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 3, mb: 2.5 }}>
-              <Box sx={{ minWidth: 200, pr: { md: 4 } }}>
+              <Box sx={{ minWidth: 180, pr: { md: 3 } }}>
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                  Submitter
+                  Proposer / Submitter
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#1E293B', fontWeight: 500, fontSize: '0.875rem' }}>
                   {submitterDisplay}
@@ -651,7 +656,7 @@ const OverviewTab = ({ project, onUpdate }) => {
 
               <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: '#E2E8F0' }} />
 
-              <Box sx={{ minWidth: 180, pr: { md: 4 } }}>
+              <Box sx={{ minWidth: 160, pr: { md: 3 } }}>
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
                   Department
                 </Typography>
@@ -662,7 +667,18 @@ const OverviewTab = ({ project, onUpdate }) => {
 
               <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: '#E2E8F0' }} />
 
-              <Box sx={{ minWidth: 180 }}>
+              <Box sx={{ minWidth: 160, pr: { md: 3 } }}>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
+                  HOD
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#1E293B', fontWeight: 500, fontSize: '0.875rem' }}>
+                  {currentHodName || 'N/A'}
+                </Typography>
+              </Box>
+
+              <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: '#E2E8F0' }} />
+
+              <Box sx={{ minWidth: 160 }}>
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
                   Origin / Source
                 </Typography>
@@ -720,9 +736,9 @@ const OverviewTab = ({ project, onUpdate }) => {
           /* Developer Edit Mode */
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={4}>
                 <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
-                  Submitter Name
+                  Name of the Proposer
                 </Typography>
                 <TextField
                   fullWidth
@@ -733,7 +749,20 @@ const OverviewTab = ({ project, onUpdate }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  HOD
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={editHodName}
+                  onChange={(e) => setEditHodName(e.target.value)}
+                  placeholder="e.g. Dr. Amit Sharma"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
                 <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
                   Employee Code
                 </Typography>
@@ -746,7 +775,7 @@ const OverviewTab = ({ project, onUpdate }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={6}>
                 <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
                   Department
                 </Typography>
@@ -759,7 +788,7 @@ const OverviewTab = ({ project, onUpdate }) => {
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={6}>
                 <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
                   Origin / Source Information
                 </Typography>
