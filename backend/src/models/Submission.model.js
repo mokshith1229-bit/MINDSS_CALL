@@ -152,9 +152,23 @@ const submissionSchema = new mongoose.Schema(
       owner: { type: String, default: 'chtech.in' },
       implementationStatus: { 
         type: String, 
-        enum: ['Approved', 'Not Started', 'Planning', 'In Progress', 'Pilot Testing', 'Near Completion', 'Completed', 'On Hold'],
+        enum: ['Approved', 'Initiation Pending', 'Not Started', 'Planning', 'In Progress', 'Pilot Testing', 'Near Completion', 'Completed', 'On Hold'],
         default: 'Approved' 
       },
+      lastStatusUpdate: {
+        date: { type: Date, default: Date.now },
+        updatedBy: { type: String, default: '' },
+        previousStatus: { type: String, default: '' },
+        newStatus: { type: String, default: '' },
+        remarks: { type: String, default: '' }
+      },
+      statusHistory: [{
+        previousStatus: { type: String, default: '' },
+        newStatus: { type: String, default: '' },
+        changedBy: { type: String, default: '' },
+        timestamp: { type: Date, default: Date.now },
+        remarks: { type: String, default: '' }
+      }],
       progressPercentage: { type: Number, default: 0, min: 0, max: 100 },
       updates: [{
         title: String,

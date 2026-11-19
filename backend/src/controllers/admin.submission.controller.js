@@ -1421,3 +1421,111 @@ exports.developerUpdateBenefits = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Developer manual edit for Project Status Management
+// @route   PATCH /api/v1/admin/submissions/:id/developer-edit/status
+// @access  Private (DEVELOPER only)
+exports.developerUpdateProjectStatus = async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'DEVELOPER') {
+      return next(new ApiError(403, 'Access denied: Developer role required for this action'));
+    }
+
+    const { newStatus, remarks } = req.body;
+
+    const allowedStatuses = [
+      'Approved',
+      'Initiation Pending',
+      'Not Started',
+      'Planning',
+      'In Progress',
+      'Pilot Testing',
+      'Near Completion',
+      'Completed',
+      'On Hold'
+    ];
+
+    if (!newStatus || !allowedStatuses.includes(newStatus)) {
+      return next(new ApiError(400, `Invalid status value. Must be one of: ${allowedStatuses.join(', ')}`));
+    }
+
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) {
+      return next(new ApiError(404, 'Submission not found'));
+    }
+
+    // Rule: Enable this feature only for projects that have entered R&D Ongoing Projects
+    const ongoingEligible = 
+      ['APPROVED', 'COMPLETED', 'IMPLEMENTATION'].includes(submission.status) || 
+      !!submission.projectDetails?.implementationStatus;
+
+    if (!ongoingEligible) {
+      return next(new ApiError(400, 'Project has not yet entered R&D Ongoing Projects stage'));
+    }
+
+    if (!submission.projectDetails) {
+      submission.projectDetails = {};
+    }
+
+    const previousStatus = submission.projectDetails.implementationStatus || 'Approved';
+
+    submission.projectDetails.implementationStatus = newStatus;
+
+    // Handle overall submission status if completed or reverted
+    if (newStatus === 'Completed') {
+      submission.status = 'COMPLETED';
+    } else if (submission.status === 'COMPLETED') {
+      submission.status = 'APPROVED';
+    }
+
+    const updater = req.user?.name || req.user?.email || 'Developer';
+    const now = new Date();
+
+    // Record last status update metadata
+    submission.projectDetails.lastStatusUpdate = {
+      date: now,
+      updatedBy: updater,
+      previousStatus,
+      newStatus,
+      remarks: remarks ? remarks.trim() : ''
+    };
+
+    // Maintain complete status change history
+    if (!Array.isArray(submission.projectDetails.statusHistory)) {
+      submission.projectDetails.statusHistory = [];
+    }
+
+    submission.projectDetails.statusHistory.push({
+      previousStatus,
+      newStatus,
+      changedBy: updater,
+      timestamp: now,
+      remarks: remarks ? remarks.trim() : ''
+    });
+
+    // Add audit timeline record
+    submission.timeline.push({
+      stage: 'Developer Project Status Override',
+      actionBy: updater,
+      role: 'DEVELOPER',
+      remarks: `Status manually updated from "${previousStatus}" to "${newStatus}"${remarks ? `. Remarks: ${remarks.trim()}` : ''}`,
+      timestamp: now
+    });
+
+    submission.markModified('projectDetails');
+    submission.markModified('timeline');
+
+    await submission.save();
+    await presignSubmission(submission);
+
+    res.status(200).json(new ApiResponse(200, {
+      submission,
+      previousStatus,
+      newStatus,
+      lastStatusUpdate: submission.projectDetails.lastStatusUpdate,
+      statusHistory: submission.projectDetails.statusHistory
+    }, 'Project status successfully updated by Developer'));
+  } catch (err) {
+    next(err);
+  }
+};

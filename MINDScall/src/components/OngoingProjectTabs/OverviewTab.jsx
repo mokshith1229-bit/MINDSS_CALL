@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   Box, Typography, Grid, Paper, TextField, Button, Chip,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  IconButton, Divider, CircularProgress, Snackbar, Alert, Tooltip
+  IconButton, Divider, CircularProgress, Snackbar, Alert, Tooltip,
+  FormControl, Select, MenuItem, InputLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -12,10 +13,77 @@ import {
   TrackChanges as TrackChangesIcon,
   BarChart as BarChartIcon,
   Edit as EditIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Tune as TuneIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 import { authStore } from '../../store/authStore';
 import { formStore } from '../../store/formStore';
+
+const LIFECYCLE_STATUSES = [
+  'Approved',
+  'Initiation Pending',
+  'Planning',
+  'In Progress',
+  'Pilot Testing',
+  'Near Completion',
+  'Completed',
+  'On Hold'
+];
+
+const getStatusChipProps = (st) => {
+  switch (st) {
+    case 'Completed':
+      return { bgcolor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0' };
+    case 'Near Completion':
+      return { bgcolor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0' };
+    case 'In Progress':
+    case 'Pilot Testing':
+      return { bgcolor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' };
+    case 'Planning':
+      return { bgcolor: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A' };
+    case 'On Hold':
+      return { bgcolor: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' };
+    case 'Initiation Pending':
+    case 'Not Started':
+      return { bgcolor: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1' };
+    case 'Approved':
+    default:
+      return { bgcolor: '#DBEAFE', color: '#1D4ED8', border: '1px solid #93C5FD' };
+  }
+};
+
+const getStatusDotColor = (st) => {
+  switch (st) {
+    case 'Completed':
+    case 'Near Completion':
+      return { bgcolor: '#10B981' };
+    case 'In Progress':
+    case 'Pilot Testing':
+      return { bgcolor: '#3B82F6' };
+    case 'Planning':
+      return { bgcolor: '#F59E0B' };
+    case 'On Hold':
+      return { bgcolor: '#EF4444' };
+    default:
+      return { bgcolor: '#6B7280' };
+  }
+};
+
+const formatLastUpdatedDate = (dateVal) => {
+  if (!dateVal) return 'N/A';
+  try {
+    return new Date(dateVal).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return 'N/A';
+  }
+};
 
 const OverviewTab = ({ project, onUpdate }) => {
   const currentUser = authStore.getState().user;
@@ -26,6 +94,18 @@ const OverviewTab = ({ project, onUpdate }) => {
   // ── Existing Objectives State ──
   const [objectives, setObjectives] = useState(pDetails.objectives || []);
   const [newObj, setNewObj] = useState('');
+
+  // ── Section 0: Project Status Management State (Developer Only) ──
+  const currentStatus = pDetails.implementationStatus || 'Approved';
+  const lastStatusUpdate = pDetails.lastStatusUpdate || null;
+  const statusHistory = Array.isArray(pDetails.statusHistory) ? pDetails.statusHistory : [];
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState(currentStatus);
+  const [statusRemarks, setStatusRemarks] = useState('');
+
+  const lastUpdatedBy = lastStatusUpdate?.updatedBy || project?.employeeName || 'System Admin';
+  const lastUpdatedDate = lastStatusUpdate?.date || project?.updatedAt || project?.createdAt;
 
   // ── Section 1: Abstract & Origin State (Developer Only) ──
   const [isEditingAbstractOrigin, setIsEditingAbstractOrigin] = useState(false);
@@ -64,7 +144,45 @@ const OverviewTab = ({ project, onUpdate }) => {
     ? currentAbstract.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
     : [];
 
-  // ── Section 1 Handlers ──
+  // ── Section 0 Handlers (Status Management) ──
+  const handleStartEditStatus = () => {
+    setSelectedStatus(pDetails.implementationStatus || 'Approved');
+    setStatusRemarks('');
+    setIsEditingStatus(true);
+  };
+
+  const handleCancelEditStatus = () => {
+    setIsEditingStatus(false);
+    setStatusRemarks('');
+  };
+
+  const handleSaveStatus = async () => {
+    try {
+      setSavingStatus(true);
+      await formStore.developerUpdateProjectStatus(project.id, {
+        newStatus: selectedStatus,
+        remarks: statusRemarks
+      });
+      setToast({
+        open: true,
+        message: `Project status successfully updated to "${selectedStatus}".`,
+        severity: 'success'
+      });
+      setIsEditingStatus(false);
+      setStatusRemarks('');
+    } catch (err) {
+      console.error(err);
+      setToast({
+        open: true,
+        message: err?.response?.data?.message || 'Failed to update project status.',
+        severity: 'error'
+      });
+    } finally {
+      setSavingStatus(false);
+    }
+  };
+
+  // ── Section 1 Handlers (Abstract & Origin) ──
   const handleStartEditAbstractOrigin = () => {
     setEditSubmitterName(project?.employeeName || pDetails.submitterName || '');
     setEditEmployeeCode(project?.employeeCode || pDetails.submitterCode || '');
@@ -102,7 +220,7 @@ const OverviewTab = ({ project, onUpdate }) => {
     }
   };
 
-  // ── Section 2 Handlers ──
+  // ── Section 2 Handlers (Benefits) ──
   const handleStartEditBenefits = () => {
     setEditExpBenefits(pDetails.expectedBenefits || project?.benefits || '');
     setEditActBenefits(pDetails.actualBenefits || '');
@@ -168,6 +286,254 @@ const OverviewTab = ({ project, onUpdate }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      
+      {/* ─────────────────────────────────────────────────────────────
+          0. PROJECT STATUS MANAGEMENT SECTION
+      ───────────────────────────────────────────────────────────── */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2.5, md: 3 },
+          bgcolor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: '12px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+        }}
+      >
+        {/* Section Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5, flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '8px',
+                bgcolor: '#4F46E5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                flexShrink: 0
+              }}
+            >
+              <TuneIcon sx={{ fontSize: 18 }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
+              Project Status Management
+            </Typography>
+            {isEditingStatus && (
+              <Chip
+                size="small"
+                label="Developer Editing"
+                sx={{ bgcolor: '#FEF3C7', color: '#B45309', fontWeight: 700, fontSize: '0.7rem', height: 22 }}
+              />
+            )}
+          </Box>
+
+          {/* Developer Edit Controls */}
+          {isDeveloper && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {!isEditingStatus ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EditIcon sx={{ fontSize: 15 }} />}
+                  onClick={handleStartEditStatus}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    borderColor: '#CBD5E1',
+                    color: '#334155',
+                    borderRadius: '8px',
+                    px: 1.75,
+                    '&:hover': { bgcolor: '#F8FAFC', borderColor: '#4F46E5', color: '#4F46E5' }
+                  }}
+                >
+                  Edit Status
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    size="small"
+                    onClick={handleCancelEditStatus}
+                    disabled={savingStatus}
+                    sx={{ textTransform: 'none', fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveStatus}
+                    disabled={savingStatus}
+                    startIcon={savingStatus ? <CircularProgress size={14} color="inherit" /> : <SaveIcon sx={{ fontSize: 16 }} />}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      bgcolor: '#4F46E5',
+                      '&:hover': { bgcolor: '#4338CA' },
+                      boxShadow: 'none',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    Save Changes
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        {/* Section Body */}
+        {!isEditingStatus ? (
+          /* Read-Only Mode */
+          <Box>
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.75 }}>
+                  Current Project Status
+                </Typography>
+                <Chip
+                  label={currentStatus}
+                  size="small"
+                  sx={{
+                    ...getStatusChipProps(currentStatus),
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    height: 28,
+                    px: 1,
+                    borderRadius: '6px'
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
+                  Last Updated Date
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#1E293B', fontWeight: 600, fontSize: '0.875rem' }}>
+                  {formatLastUpdatedDate(lastUpdatedDate)}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
+                  Last Updated By
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#1E293B', fontWeight: 600, fontSize: '0.875rem' }}>
+                  {lastUpdatedBy}
+                </Typography>
+              </Grid>
+            </Grid>
+
+            {/* Status Change History */}
+            {statusHistory.length > 0 && (
+              <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #F1F5F9' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                  <HistoryIcon sx={{ fontSize: 16, color: '#64748B' }} />
+                  <Typography variant="caption" sx={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Status Change History ({statusHistory.length})
+                  </Typography>
+                </Box>
+                <TableContainer sx={{ border: '1px solid #E2E8F0', borderRadius: '8px', bgcolor: '#F8FAFC' }}>
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: '#F1F5F9' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>Status Transition</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>Changed By</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>Date & Time</TableCell>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>Remarks</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {[...statusHistory].reverse().map((item, idx) => (
+                        <TableRow key={idx} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                          <TableCell sx={{ fontSize: '0.8rem', py: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748B' }}>
+                                {item.previousStatus || 'Initial'}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#94A3B8' }}>&rarr;</Typography>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                                {item.newStatus}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.8rem', color: '#334155', py: 1 }}>
+                            {item.changedBy || 'Developer'}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.75rem', color: '#64748B', py: 1 }}>
+                            {formatLastUpdatedDate(item.timestamp)}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.8rem', color: '#475569', fontStyle: item.remarks ? 'normal' : 'italic', py: 1 }}>
+                            {item.remarks || 'No remarks provided'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          /* Developer Edit Mode */
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  Project Lifecycle Status
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    sx={{ bgcolor: '#fff' }}
+                  >
+                    {LIFECYCLE_STATUSES.map(st => (
+                      <MenuItem key={st} value={st}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ width: 8, height: 8, borderRadius: '50%', ...getStatusDotColor(st) }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>{st}</Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  Current Status Before Change
+                </Typography>
+                <Box sx={{ height: 40, display: 'flex', alignItems: 'center', px: 2, bgcolor: '#F8FAFC', borderRadius: '4px', border: '1px solid #E2E8F0' }}>
+                  <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>
+                    {currentStatus}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  Status Change Remarks (Optional)
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  size="small"
+                  value={statusRemarks}
+                  onChange={(e) => setStatusRemarks(e.target.value)}
+                  placeholder="Explain reason for manual status override (e.g., Transitioned to Planning phase post initiation review)..."
+                  sx={{ bgcolor: '#fff' }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+      </Paper>
       
       {/* ─────────────────────────────────────────────────────────────
           1. PROJECT ABSTRACT & ORIGIN SECTION
