@@ -668,6 +668,35 @@ export const formStore = {
     }
   },
 
+  async developerUpdateProjectHeader(id, data){
+    try {
+      const res = await api.patch(`/admin/submissions/${id}/developer-edit/header`, data);
+      if (res.data && res.data.success) {
+        const updatedSub = res.data.data.submission;
+        const parsed = parseSubmissionFields(updatedSub);
+        _submissions = _submissions.map(s => s.id === id ? {
+          ...s,
+          ...parsed,
+          parsedTitle: data.title !== undefined ? data.title : parsed.title,
+          title: data.title !== undefined ? data.title : parsed.title,
+          wbsCode: data.wbsCode !== undefined ? data.wbsCode : updatedSub.wbsCode,
+          employeeName: data.proposerName !== undefined ? data.proposerName : parsed.employeeName,
+          hodName: data.hodName !== undefined ? data.hodName : parsed.hodName,
+          answers: updatedSub.answers || s.answers,
+          formData: updatedSub.formData || s.formData,
+          projectDetails: updatedSub.projectDetails || s.projectDetails,
+          timeline: updatedSub.timeline || s.timeline,
+          status: updatedSub.status ? updatedSub.status.toLowerCase() : s.status
+        } : s);
+        notify();
+        return res.data;
+      }
+    } catch (err) {
+      console.error('Failed to update project header:', err);
+      throw err;
+    }
+  },
+
   async addProjectUpdate(id, formData){
     try {
       const res = await api.post(`/admin/submissions/${id}/project-updates`, formData, {

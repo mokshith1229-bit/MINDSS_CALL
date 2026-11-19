@@ -1571,3 +1571,112 @@ exports.developerUpdateProjectStatus = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Developer manual edit for Project Header (Title, WBS Code, Proposer, HOD, Owner)
+// @route   PATCH /api/v1/admin/submissions/:id/developer-edit/header
+// @access  Private (DEVELOPER only)
+exports.developerUpdateHeaderDetails = async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'DEVELOPER') {
+      return next(new ApiError(403, 'Access denied: Developer role required for this action'));
+    }
+
+    const { title, wbsCode, proposerName, hodName, owner } = req.body;
+
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) {
+      return next(new ApiError(404, 'Submission not found'));
+    }
+
+    if (!submission.projectDetails) {
+      submission.projectDetails = {};
+    }
+
+    const previousValues = {
+      title: submission.title || submission.answers?.title || submission.answers?.projectTitle || '',
+      wbsCode: submission.wbsCode || '',
+      proposerName: submission.projectDetails.proposerName || submission.projectDetails.submitterName || submission.answers?.employeeName || '',
+      hodName: submission.projectDetails.hodName || submission.answers?.hodName || '',
+      owner: submission.projectDetails.owner || ''
+    };
+
+    if (title !== undefined && title.trim()) {
+      const cleanTitle = title.trim();
+      submission.title = cleanTitle;
+      submission.projectDetails.title = cleanTitle;
+      if (!submission.answers) submission.answers = {};
+      submission.answers.title = cleanTitle;
+      submission.answers.projectTitle = cleanTitle;
+      submission.answers.proposalTitle = cleanTitle;
+      if (!submission.formData) submission.formData = {};
+      submission.formData['Project Title'] = { value: cleanTitle, type: 'text', section: 'Overview' };
+    }
+
+    if (wbsCode !== undefined) {
+      submission.wbsCode = wbsCode.trim() || 'N/A';
+    }
+
+    if (proposerName !== undefined) {
+      const trimmed = proposerName.trim();
+      submission.projectDetails.submitterName = trimmed;
+      submission.projectDetails.proposerName = trimmed;
+      if (!submission.answers) submission.answers = {};
+      submission.answers.employeeName = trimmed;
+      submission.answers.proposerName = trimmed;
+      submission.answers.name = trimmed;
+      if (!submission.formData) submission.formData = {};
+      submission.formData['Full Name'] = { value: trimmed, type: 'text', section: 'Submitter' };
+      submission.formData['Name of the Proposer'] = { value: trimmed, type: 'text', section: 'Submitter' };
+    }
+
+    if (hodName !== undefined) {
+      const trimmed = hodName.trim();
+      submission.projectDetails.hodName = trimmed;
+      if (!submission.answers) submission.answers = {};
+      submission.answers.hodName = trimmed;
+      submission.answers.hod = trimmed;
+      if (!submission.formData) submission.formData = {};
+      submission.formData['HOD'] = { value: trimmed, type: 'text', section: 'Submitter' };
+      submission.formData['Head of Department'] = { value: trimmed, type: 'text', section: 'Submitter' };
+      if (!submission.workflow) submission.workflow = {};
+      if (!submission.workflow.hodReview) submission.workflow.hodReview = {};
+      submission.workflow.hodReview.reviewerName = trimmed;
+    }
+
+    if (owner !== undefined && owner.trim()) {
+      submission.projectDetails.owner = owner.trim();
+    }
+
+    submission.markModified('projectDetails');
+    submission.markModified('answers');
+    submission.markModified('formData');
+    submission.markModified('workflow');
+
+    // Add audit timeline record
+    submission.timeline.push({
+      stage: 'Developer Project Header Edit',
+      actionBy: req.user?.name || req.user?.email || 'Developer',
+      role: 'DEVELOPER',
+      remarks: `Updated Project Header details: Title="${title !== undefined ? title : previousValues.title}", WBS="${wbsCode !== undefined ? wbsCode : previousValues.wbsCode}", Proposer="${proposerName !== undefined ? proposerName : previousValues.proposerName}", HOD="${hodName !== undefined ? hodName : previousValues.hodName}", Owner="${owner !== undefined ? owner : previousValues.owner}"`,
+      timestamp: new Date()
+    });
+    submission.markModified('timeline');
+
+    await submission.save();
+    await presignSubmission(submission);
+
+    res.status(200).json(new ApiResponse(200, {
+      submission,
+      previousValues,
+      updatedValues: {
+        title: submission.title || submission.answers?.title,
+        wbsCode: submission.wbsCode,
+        proposerName: submission.projectDetails.proposerName,
+        hodName: submission.projectDetails.hodName,
+        owner: submission.projectDetails.owner
+      }
+    }, 'Project Header details updated successfully by Developer'));
+  } catch (err) {
+    next(err);
+  }
+};

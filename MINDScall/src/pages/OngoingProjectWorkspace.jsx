@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Box, Typography, Paper, Button, Avatar, Chip, LinearProgress, CircularProgress, Alert
+  Box, Typography, Paper, Button, Avatar, Chip, LinearProgress, CircularProgress, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid, IconButton, Tooltip, Snackbar
 } from '@mui/material';
 import {
   ArrowBack, Description, Assignment,
   FolderOpen, Autorenew, History,
   AccountTree, Speed, ReceiptLong, Forum, WarningAmber, AssignmentTurnedIn,
-  PictureAsPdf, GridOn, Science, FactCheck
+  PictureAsPdf, GridOn, Science, FactCheck,
+  Edit as EditIcon, Close as CloseIcon
 } from '@mui/icons-material';
 import { formStore } from '../store/formStore';
+import { authStore } from '../store/authStore';
 import { exportProjectToPDF, exportProjectToExcel } from '../utils/exportReportUtils';
 import OverviewTab from '../components/OngoingProjectTabs/OverviewTab';
 import ProjectInitiationTab from '../components/OngoingProjectTabs/ProjectInitiationTab';
@@ -74,6 +77,57 @@ const OngoingProjectWorkspace = () => {
   const status = pDetails.implementationStatus || 'Approved';
   const progress = pDetails.progressPercentage || 0;
   const owner = pDetails.owner || 'Unassigned';
+  const proposerName = pDetails.proposerName || pDetails.submitterName || project.employeeName || '';
+  const hodName = pDetails.hodName || project.hodName || project.answers?.hodName || '';
+
+  const currentUser = authStore.getState()?.user;
+  const isDeveloper = currentUser?.role === 'DEVELOPER';
+
+  // Edit Header State (Title, WBS, Proposer, HOD, Owner)
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editWbsCode, setEditWbsCode] = useState('');
+  const [editProposerName, setEditProposerName] = useState('');
+  const [editHodName, setEditHodName] = useState('');
+  const [editOwner, setEditOwner] = useState('');
+  const [editError, setEditError] = useState('');
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+
+  const handleOpenEditModal = () => {
+    setEditTitle(project.parsedTitle || project.title || '');
+    setEditWbsCode(project.wbsCode && project.wbsCode !== 'N/A' ? project.wbsCode : '');
+    setEditProposerName(pDetails.proposerName || pDetails.submitterName || project.employeeName || '');
+    setEditHodName(pDetails.hodName || project.hodName || project.answers?.hodName || '');
+    setEditOwner(pDetails.owner || project.projectOwner || 'chtech.in');
+    setEditError('');
+    setOpenEditModal(true);
+  };
+
+  const handleSaveHeader = async () => {
+    if (!editTitle.trim()) {
+      setEditError('Project Title is required');
+      return;
+    }
+    try {
+      setSavingHeader(true);
+      setEditError('');
+      await formStore.developerUpdateProjectHeader(project.id, {
+        title: editTitle.trim(),
+        wbsCode: editWbsCode.trim(),
+        proposerName: editProposerName.trim(),
+        hodName: editHodName.trim(),
+        owner: editOwner.trim()
+      });
+      setToast({ open: true, message: 'Project details and WBS code updated successfully!', severity: 'success' });
+      setOpenEditModal(false);
+    } catch (err) {
+      console.error(err);
+      setEditError(err.response?.data?.message || err.message || 'Failed to update project details.');
+    } finally {
+      setSavingHeader(false);
+    }
+  };
 
   const handleUpdate = async (updates) => {
     try {
@@ -197,6 +251,24 @@ const OngoingProjectWorkspace = () => {
                   px: 0.5
                 }}
               />
+              {isDeveloper && (
+                <Tooltip title="Edit Project Details & WBS">
+                  <IconButton
+                    size="small"
+                    onClick={handleOpenEditModal}
+                    sx={{
+                      color: '#0078D4',
+                      bgcolor: '#F0F9FF',
+                      border: '1px solid #BAE6FD',
+                      '&:hover': { bgcolor: '#E0F2FE', color: '#0284C7' },
+                      p: 0.5,
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <EditIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
 
             {/* METADATA LINE */}
@@ -227,6 +299,22 @@ const OngoingProjectWorkspace = () => {
                   }}
                 />
               </Box>
+              {proposerName && (
+                <>
+                  <Typography component="span" sx={{ color: '#CBD5E1' }}>|</Typography>
+                  <Typography component="span" sx={{ fontSize: 'inherit', color: 'inherit' }}>
+                    <Box component="span" sx={{ fontWeight: 600 }}>Proposer:</Box> {proposerName}
+                  </Typography>
+                </>
+              )}
+              {hodName && (
+                <>
+                  <Typography component="span" sx={{ color: '#CBD5E1' }}>|</Typography>
+                  <Typography component="span" sx={{ fontSize: 'inherit', color: 'inherit' }}>
+                    <Box component="span" sx={{ fontWeight: 600 }}>HOD:</Box> {hodName}
+                  </Typography>
+                </>
+              )}
             </Box>
           </Box>
         </Box>
@@ -235,6 +323,24 @@ const OngoingProjectWorkspace = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', md: 'flex-end' }, minWidth: { xs: '100%', md: 240 }, flexShrink: 0 }}>
           {/* EXPORT BUTTONS & OWNER */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            {isDeveloper && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<EditIcon sx={{ fontSize: 15 }} />}
+                onClick={handleOpenEditModal}
+                sx={{
+                  textTransform: 'none',
+                  color: '#0078D4',
+                  borderColor: '#0078D4',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  '&:hover': { bgcolor: 'rgba(0, 120, 212, 0.04)', borderColor: '#0078D4' }
+                }}
+              >
+                Edit Details
+              </Button>
+            )}
             <Button size="small" variant="outlined" startIcon={<PictureAsPdf />} onClick={() => exportProjectToPDF(project)} sx={{ textTransform: 'none', color: '#D32F2F', borderColor: '#D32F2F', fontSize: '0.75rem', '&:hover': { bgcolor: 'rgba(211, 47, 47, 0.04)', borderColor: '#D32F2F' } }}>PDF</Button>
             <Button size="small" variant="outlined" startIcon={<GridOn />} onClick={() => exportProjectToExcel(project)} sx={{ textTransform: 'none', color: '#107C10', borderColor: '#107C10', fontSize: '0.75rem', '&:hover': { bgcolor: 'rgba(16, 124, 16, 0.04)', borderColor: '#107C10' } }}>Excel</Button>
             <Avatar
@@ -426,6 +532,160 @@ const OngoingProjectWorkspace = () => {
           </TabPanel>
         </Box>
       </Box>
+
+      {/* DEVELOPER EDIT PROJECT HEADER MODAL */}
+      <Dialog
+        open={openEditModal}
+        onClose={() => !savingHeader && setOpenEditModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: '12px', p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                bgcolor: '#EBF3FC',
+                color: '#0078D4',
+                borderRadius: '8px',
+                p: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <EditIcon sx={{ fontSize: 22 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1E293B' }}>
+                Edit Project Information & WBS
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Modify project name/title, WBS code, proposer, HOD, and owner.
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton onClick={() => setOpenEditModal(false)} disabled={savingHeader} size="small">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2.5 }}>
+          {editError && (
+            <Alert severity="error" onClose={() => setEditError('')}>
+              {editError}
+            </Alert>
+          )}
+
+          <TextField
+            label="Project Name / Title"
+            placeholder="e.g. Study on Rubind-Modified Binder"
+            required
+            fullWidth
+            multiline
+            rows={2}
+            size="small"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            InputLabelProps={{ shrink: true, sx: { fontWeight: 600, color: '#1E293B' } }}
+          />
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="WBS Code"
+                placeholder="e.g. MCP-012"
+                fullWidth
+                size="small"
+                value={editWbsCode}
+                onChange={(e) => setEditWbsCode(e.target.value)}
+                InputLabelProps={{ shrink: true, sx: { fontWeight: 600, color: '#1E293B' } }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Project Owner / Lead"
+                placeholder="e.g. chtech.in"
+                fullWidth
+                size="small"
+                value={editOwner}
+                onChange={(e) => setEditOwner(e.target.value)}
+                InputLabelProps={{ shrink: true, sx: { fontWeight: 600, color: '#1E293B' } }}
+              />
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Name of the Proposer"
+                placeholder="e.g. Dr. Rajesh Kumar"
+                fullWidth
+                size="small"
+                value={editProposerName}
+                onChange={(e) => setEditProposerName(e.target.value)}
+                InputLabelProps={{ shrink: true, sx: { fontWeight: 600, color: '#1E293B' } }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="HOD"
+                placeholder="e.g. Dr. Amit Sharma"
+                fullWidth
+                size="small"
+                value={editHodName}
+                onChange={(e) => setEditHodName(e.target.value)}
+                InputLabelProps={{ shrink: true, sx: { fontWeight: 600, color: '#1E293B' } }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenEditModal(false)}
+            disabled={savingHeader}
+            sx={{ textTransform: 'none', color: '#64748B' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveHeader}
+            disabled={savingHeader}
+            startIcon={savingHeader ? <CircularProgress size={18} color="inherit" /> : <EditIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              bgcolor: '#0078D4',
+              '&:hover': { bgcolor: '#006CBE' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '6px',
+              px: 2.5
+            }}
+          >
+            {savingHeader ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* TOAST SNACKBAR */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={() => setToast({ ...toast, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setToast({ ...toast, open: false })}
+          severity={toast.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

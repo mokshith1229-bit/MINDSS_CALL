@@ -18,7 +18,8 @@ const {
   createManualProject,
   developerUpdateAbstractOrigin,
   developerUpdateBenefits,
-  developerUpdateProjectStatus
+  developerUpdateProjectStatus,
+  developerUpdateHeaderDetails
 } = require('../controllers/admin.submission.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const auditLog = require('../middlewares/audit.middleware');
@@ -85,6 +86,14 @@ router.route('/:id/developer-edit/status')
     authorize('DEVELOPER'),
     auditLog('DEVELOPER_UPDATE_PROJECT_STATUS', 'Submission'),
     developerUpdateProjectStatus
+  );
+
+// Developer-Only Manual Editing for Project Header Details (Title, WBS Code, Proposer, HOD, Owner)
+router.route('/:id/developer-edit/header')
+  .patch(
+    authorize('DEVELOPER'),
+    auditLog('DEVELOPER_UPDATE_PROJECT_HEADER', 'Submission'),
+    developerUpdateHeaderDetails
   );
 
 router.route('/:id/project-updates')
