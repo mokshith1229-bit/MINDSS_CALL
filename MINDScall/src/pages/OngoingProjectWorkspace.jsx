@@ -46,6 +46,20 @@ const OngoingProjectWorkspace = () => {
   const [loading, setLoading] = useState(true);
   const [tabIndex, setTabIndex] = useState(0);
 
+  // Edit Header State (Title, WBS, Proposer, HOD, Owner) - must be called before early returns
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editWbsCode, setEditWbsCode] = useState('');
+  const [editProposerName, setEditProposerName] = useState('');
+  const [editHodName, setEditHodName] = useState('');
+  const [editOwner, setEditOwner] = useState('');
+  const [editError, setEditError] = useState('');
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+
+  const currentUser = authStore.getState()?.user;
+  const isDeveloper = currentUser?.role === 'DEVELOPER';
+
   useEffect(() => {
     formStore.init();
     const unsub = formStore.subscribe(() => {
@@ -79,20 +93,6 @@ const OngoingProjectWorkspace = () => {
   const owner = pDetails.owner || 'Unassigned';
   const proposerName = pDetails.proposerName || pDetails.submitterName || project.employeeName || '';
   const hodName = pDetails.hodName || project.hodName || project.answers?.hodName || '';
-
-  const currentUser = authStore.getState()?.user;
-  const isDeveloper = currentUser?.role === 'DEVELOPER';
-
-  // Edit Header State (Title, WBS, Proposer, HOD, Owner)
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [savingHeader, setSavingHeader] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editWbsCode, setEditWbsCode] = useState('');
-  const [editProposerName, setEditProposerName] = useState('');
-  const [editHodName, setEditHodName] = useState('');
-  const [editOwner, setEditOwner] = useState('');
-  const [editError, setEditError] = useState('');
-  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
 
   const handleOpenEditModal = () => {
     setEditTitle(project.parsedTitle || project.title || '');
